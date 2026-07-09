@@ -1,0 +1,189 @@
+/* Global Dark Mode Styles - Covers Everything */
+
+:root {
+    --color-bg-primary: #ffffff;
+    --color-bg-secondary: #f9fafb;
+    --color-bg-tertiary: #f3f4f6;
+    --color-text-primary: #111827;
+    --color-text-secondary: #6b7280;
+    --color-text-tertiary: #9ca3af;
+    --color-border: #e5e7eb;
+}
+
+html.dark {
+    --color-bg-primary: #1f2937;
+    --color-bg-secondary: #111827;
+    --color-bg-tertiary: #374151;
+    --color-text-primary: #f3f4f6;
+    --color-text-secondary: #d1d5db;
+    --color-text-tertiary: #9ca3af;
+    --color-border: #4b5563;
+    background-color: #111827 !important;
+}
+
+html.dark,
+html.dark body {
+    background-color: #111827 !important;
+    color: #f3f4f6 !important;
+}
+
+/* Force all text to be light in dark mode */
+html.dark * {
+    color: inherit !important;
+}
+
+html.dark p,
+html.dark span,
+html.dark div,
+html.dark a,
+html.dark label,
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6,
+html.dark li,
+html.dark li::marker {
+    color: #f3f4f6 !important;
+}
+
+/* Backgrounds */
+html.dark [style*="background: white"],
+html.dark [style*="background: rgb(255"],
+html.dark [style*="background-color: white"],
+html.dark [style*="background-color: rgb(255"],
+html.dark [style*="background: #fff"],
+html.dark [style*="background: #ffffff"] {
+    background-color: #1f2937 !important;
+}
+
+/* Light gray backgrounds */
+html.dark [style*="background: #f"],
+html.dark [style*="background: rgb(249"],
+html.dark [style*="background: rgb(243"] {
+    background-color: #374151 !important;
+}
+
+/* Inputs and form elements */
+html.dark input[type="text"],
+html.dark input[type="email"],
+html.dark input[type="password"],
+html.dark input[type="tel"],
+html.dark input[type="number"],
+html.dark textarea,
+html.dark select {
+    background-color: #374151 !important;
+    color: #1f2937 !important;
+    border-color: #4b5563 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+    color: #9ca3af !important;
+}
+
+/* Tables */
+html.dark table {
+    border-color: #4b5563 !important;
+}
+
+html.dark th,
+html.dark td {
+    border-color: #4b5563 !important;
+    color: #f3f4f6 !important;
+}
+
+html.dark th {
+    background-color: #1f2937 !important;
+    color: #f3f4f6 !important;
+}
+
+html.dark tbody tr {
+    border-color: #4b5563 !important;
+}
+
+html.dark tbody tr:hover {
+    background-color: #111827 !important;
+}
+
+/* Modal/Dialog styles */
+html.dark .modal,
+html.dark dialog {
+    background-color: #1f2937 !important;
+    border-color: #4b5563 !important;
+    color: #f3f4f6 !important;
+}
+
+/* Code blocks */
+html.dark code {
+    background-color: #1f2937 !important;
+    color: #f3f4f6 !important;
+    border-color: #4b5563 !important;
+}
+
+html.dark pre {
+    background-color: #1f2937 !important;
+    color: #f3f4f6 !important;
+    border-color: #4b5563 !important;
+}
+
+/* Buttons with light backgrounds */
+html.dark button {
+    color: inherit !important;
+}
+
+/* Remove colors from white/light gray */
+html.dark [class*="white"],
+html.dark [class*="bg-gray-50"],
+html.dark [class*="bg-white"] {
+    background-color: #1f2937 !important;
+    color: #f3f4f6 !important;
+}
+
+/* Cards and panels */
+html.dark .card,
+html.dark .panel,
+html.dark [role="dialog"],
+html.dark [role="region"] {
+    background-color: #1f2937 !important;
+    border-color: #4b5563 !important;
+    color: #f3f4f6 !important;
+}
+
+/* Alert messages */
+html.dark .alert,
+html.dark [role="alert"] {
+    border-color: #4b5563 !important;
+    background-color: #374151 !important;
+}
+
+/* Borders */
+html.dark [style*="border"],
+html.dark hr {
+    border-color: #4b5563 !important;
+}
+
+/* Scrollbar */
+html.dark ::-webkit-scrollbar {
+    background: #1f2937 !important;
+}
+
+html.dark ::-webkit-scrollbar-track {
+    background: #111827 !important;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+    background: #4b5563 !important;
+    border-radius: 10px;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+    background: #6b7280 !important;
+}
+
+/* Gradient overrides */
+html.dark [style*="gradient"] {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+}
+
