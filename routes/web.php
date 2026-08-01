@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\LandingController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WalletController;
@@ -8,9 +9,7 @@ use App\Http\Controllers\MerchantController;
 use App\Http\Controllers\NotificationController;
 
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [LandingController::class, 'index'])->name('landing');
 
 Route::get('/dashboard', function () {
     if (auth()->user()->isMerchant()) {
