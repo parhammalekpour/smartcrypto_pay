@@ -101,6 +101,11 @@ Route::middleware(['auth', 'role:merchant'])->group(function () {
     
     // Settlements
     Route::get('/merchant/settlements', [MerchantController::class, 'settlements'])->name('merchant.settlements');
+
+    // Customers
+    Route::get('/merchant/customers', [MerchantController::class, 'customers'])->name('merchant.customers');
+    Route::post('/merchant/customers', [MerchantController::class, 'storeCustomer'])->name('merchant.customers.store');
+    Route::get('/merchant/customers/{customer}', [MerchantController::class, 'showCustomer'])->name('merchant.customers.show');
     
     // Settings
     Route::get('/merchant/settings', [MerchantController::class, 'settings'])->name('merchant.settings');

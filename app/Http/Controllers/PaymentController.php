@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
+use App\Models\Customer;
 use App\Models\PaymentRequest;
 use App\Models\Wallet;
 use App\Models\Transaction;
@@ -43,28 +44,38 @@ class PaymentController extends Controller
         $pendingCount = PaymentRequest::where('merchant_id', auth()->id())
             ->where('status', 'pending')
             ->count();
-
+ 
         $paidCount = PaymentRequest::where('merchant_id', auth()->id())
             ->where('status', 'paid')
             ->count();
-
-        return view('merchant.payments', compact('payments', 'pendingCount', 'paidCount'));
+ 
+        $customers = auth()->user()->customers()->orderBy('name')->get();
+ 
+        return view('merchant.payments', compact('payments', 'pendingCount', 'paidCount', 'customers'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'invoice_number' => 'required',
+            'invoice_number' => 'required|string|max:255',
             'amount' => 'required|numeric|min:0.00000001',
             'currency' => 'required',
-            'recipient_username' => 'required|exists:users,name'
+            'recipient_username' => 'required|string|max:255',
         ]);
-
+ 
         $recipient = User::where('name', $request->recipient_username)->first();
-
+        $customer = Customer::where('merchant_id', auth()->id())
+            ->where('name', $request->recipient_username)
+            ->first();
+ 
+        if (!$recipient) {
+            return back()->withErrors(['recipient_username' => 'نام کاربری گیرنده یافت نشد یا باید در سیستم ثبت شده باشد']);
+        }
+ 
         PaymentRequest::create([
             'merchant_id' => auth()->id(),
             'recipient_user_id' => $recipient->id,
+            'customer_id' => $customer ? $customer->id : null,
             'invoice_number' => $request->invoice_number,
             'amount' => $request->amount,
             'currency' => $request->currency,

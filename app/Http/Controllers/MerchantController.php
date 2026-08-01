@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Customer;
 use App\Models\PaymentRequest;
 use App\Models\Transaction;
 
@@ -152,6 +153,40 @@ class MerchantController extends Controller
             ->paginate(20);
         
         return view('merchant.invoices', compact('invoices'));
+    }
+
+    public function customers()
+    {
+        $customers = auth()->user()->customers()
+            ->withCount('paymentRequests')
+            ->latest()
+            ->paginate(20);
+
+        return view('merchant.customers', compact('customers'));
+    }
+
+    public function storeCustomer(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        auth()->user()->customers()->create($request->only('name', 'email', 'phone'));
+
+        return redirect()->route('merchant.customers')->with('success', 'مشتری جدید با موفقیت اضافه شد');
+    }
+
+    public function showCustomer(Customer $customer)
+    {
+        if ($customer->merchant_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $invoices = $customer->paymentRequests()->latest()->get();
+
+        return view('merchant.customer-cardex', compact('customer', 'invoices'));
     }
 
     public function settlements()

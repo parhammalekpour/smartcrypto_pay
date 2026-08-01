@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="fa" id="htmlElement">
+<html dir="rtl" lang="fa" id="htmlElement" style="font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -160,15 +160,19 @@
                         درخواست‌های پرداخت
                     </a>
 
-                    <a href="{{ route('merchant.invoices') }}" class="sidebar-item">
+                    <a href="{{ route('merchant.invoices') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.invoices') active @endif">
                         فاکتورها
                     </a>
 
-                    <a href="{{ route('merchant.settlements') }}" class="sidebar-item">
+                    <a href="{{ route('merchant.settlements') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.settlements') active @endif">
                         تسویه‌حساب
                     </a>
 
-                    <a href="{{ route('merchant.wallets') }}" class="sidebar-item">
+                    <a href="{{ route('merchant.customers') }}" class="sidebar-item @if(in_array(Route::currentRouteName(), ['merchant.customers', 'merchant.customers.show'])) active @endif">
+                        مشتریان
+                    </a>
+
+                    <a href="{{ route('merchant.wallets') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.wallets') active @endif">
                         کیف پول‌های من
                     </a>
 
