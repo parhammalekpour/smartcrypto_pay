@@ -164,8 +164,13 @@
                         فاکتورها
                     </a>
 
-                    <a href="{{ route('merchant.settlements') }}" class="sidebar-item">
+                    <a href="{{ route('merchant.settlements') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.settlements') active @endif">
                         تسویه‌حساب
+                    </a>
+
+                    <a href="{{ route('merchant.customers') }}" class="sidebar-item @if(in_array(Route::currentRouteName(), ['merchant.customers', 'merchant.customers.show'])) active @endif">
+                        <i class="fas fa-users"></i>
+                        مشتری‌ها
                     </a>
 
                     <a href="{{ route('merchant.wallets') }}" class="sidebar-item">

@@ -39,8 +39,15 @@
             </div>
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">نام کاربری گیرنده</label>
-                <input type="text" name="recipient_username" required placeholder="نام کاربری" 
+                <input list="customer-list" type="text" name="recipient_username" required placeholder="نام کاربری" 
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900">
+                @if(isset($customers) && $customers->count())
+                    <datalist id="customer-list">
+                        @foreach($customers as $customer)
+                            <option value="{{ $customer->name }}" label="{{ $customer->email }}{{ $customer->phone ? ' | '.$customer->phone : '' }}"></option>
+                        @endforeach
+                    </datalist>
+                @endif
             </div>
         </div>
 

@@ -82,6 +82,11 @@ class User extends Authenticatable
         return $this->hasMany(PaymentRequest::class, 'merchant_id')->latest();
     }
 
+    public function paymentRequests()
+    {
+        return $this->hasMany(PaymentRequest::class, 'recipient_user_id')->latest();
+    }
+
     public function hasRole($role)
     {
         return $this->role === $role;

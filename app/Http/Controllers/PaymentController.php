@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 use App\Models\PaymentRequest;
 use App\Models\Wallet;
@@ -43,12 +44,14 @@ class PaymentController extends Controller
         $pendingCount = PaymentRequest::where('merchant_id', auth()->id())
             ->where('status', 'pending')
             ->count();
-
+ 
         $paidCount = PaymentRequest::where('merchant_id', auth()->id())
             ->where('status', 'paid')
             ->count();
-
-        return view('merchant.payments', compact('payments', 'pendingCount', 'paidCount'));
+ 
+        $customers = User::where('role', 'user')->orderBy('name')->get();
+ 
+        return view('merchant.payments', compact('payments', 'pendingCount', 'paidCount', 'customers'));
     }
 
     public function store(Request $request)
@@ -57,10 +60,15 @@ class PaymentController extends Controller
             'invoice_number' => 'required',
             'amount' => 'required|numeric|min:0.00000001',
             'currency' => 'required',
-            'recipient_username' => 'required|exists:users,name'
+            'recipient_username' => [
+                'required',
+                Rule::exists('users', 'name')->where('role', 'user')
+            ],
         ]);
 
-        $recipient = User::where('name', $request->recipient_username)->first();
+        $recipient = User::where('name', $request->recipient_username)
+            ->where('role', 'user')
+            ->first();
 
         PaymentRequest::create([
             'merchant_id' => auth()->id(),
