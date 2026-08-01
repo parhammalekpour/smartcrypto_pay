@@ -105,6 +105,9 @@ Route::middleware(['auth', 'role:merchant'])->group(function () {
     // Customers
     Route::get('/merchant/customers', [MerchantController::class, 'customers'])->name('merchant.customers');
     Route::post('/merchant/customers', [MerchantController::class, 'storeCustomer'])->name('merchant.customers.store');
+    Route::get('/merchant/customers/{customer}/edit', [MerchantController::class, 'editCustomer'])->name('merchant.customers.edit');
+    Route::put('/merchant/customers/{customer}', [MerchantController::class, 'updateCustomer'])->name('merchant.customers.update');
+    Route::delete('/merchant/customers/{customer}', [MerchantController::class, 'destroyCustomer'])->name('merchant.customers.destroy');
     Route::get('/merchant/customers/{customer}', [MerchantController::class, 'showCustomer'])->name('merchant.customers.show');
     
     // Settings

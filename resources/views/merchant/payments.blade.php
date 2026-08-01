@@ -43,7 +43,7 @@
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900">
                 <datalist id="customer-list">
                     @foreach($customers as $customer)
-                        <option value="{{ $customer->name }}">{{ $customer->email }} {{ $customer->phone }}</option>
+                        <option value="{{ $customer->user->name ?? $customer->name }}">{{ $customer->email }} {{ $customer->phone }}</option>
                     @endforeach
                 </datalist>
                 @if($customers->count())

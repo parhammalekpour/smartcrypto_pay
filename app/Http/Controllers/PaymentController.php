@@ -64,14 +64,15 @@ class PaymentController extends Controller
         ]);
  
         $recipient = User::where('name', $request->recipient_username)->first();
-        $customer = Customer::where('merchant_id', auth()->id())
-            ->where('name', $request->recipient_username)
-            ->first();
- 
+
         if (!$recipient) {
             return back()->withErrors(['recipient_username' => 'نام کاربری گیرنده یافت نشد یا باید در سیستم ثبت شده باشد']);
         }
- 
+
+        $customer = Customer::where('merchant_id', auth()->id())
+            ->where('user_id', $recipient->id)
+            ->first();
+
         PaymentRequest::create([
             'merchant_id' => auth()->id(),
             'recipient_user_id' => $recipient->id,

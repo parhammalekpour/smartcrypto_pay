@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Customer;
 use App\Models\PaymentRequest;
 use App\Models\Transaction;
+use App\Models\User;
 
 class MerchantController extends Controller
 {
@@ -158,6 +159,7 @@ class MerchantController extends Controller
     public function customers()
     {
         $customers = auth()->user()->customers()
+            ->with(['user'])
             ->withCount('paymentRequests')
             ->latest()
             ->paginate(20);
@@ -168,14 +170,85 @@ class MerchantController extends Controller
     public function storeCustomer(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
+            'username' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
             'phone' => 'nullable|string|max:20',
         ]);
 
-        auth()->user()->customers()->create($request->only('name', 'email', 'phone'));
+        $user = User::where('name', $request->username)
+            ->where('email', $request->email)
+            ->first();
+
+        if (!$user) {
+            return back()->withErrors(['username' => 'نام کاربری یا ایمیل صحیح نیست. ابتدا باید یک کاربر با این نام کاربری و ایمیل در سیستم وجود داشته باشد.']);
+        }
+
+        if (auth()->user()->customers()->where('user_id', $user->id)->exists()) {
+            return back()->withErrors(['username' => 'این مشتری قبلاً ثبت شده است.']);
+        }
+
+        auth()->user()->customers()->create([
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $request->phone,
+        ]);
 
         return redirect()->route('merchant.customers')->with('success', 'مشتری جدید با موفقیت اضافه شد');
+    }
+
+    public function editCustomer(Customer $customer)
+    {
+        if ($customer->merchant_id !== auth()->id()) {
+            abort(403);
+        }
+
+        return view('merchant.customer-edit', compact('customer'));
+    }
+
+    public function updateCustomer(Request $request, Customer $customer)
+    {
+        if ($customer->merchant_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'username' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        $user = User::where('name', $request->username)
+            ->where('email', $request->email)
+            ->first();
+
+        if (!$user) {
+            return back()->withErrors(['username' => 'نام کاربری یا ایمیل صحیح نیست.']);
+        }
+
+        if (auth()->user()->customers()->where('user_id', $user->id)->where('id', '!=', $customer->id)->exists()) {
+            return back()->withErrors(['username' => 'این مشتری قبلاً ثبت شده است.']);
+        }
+
+        $customer->update([
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $request->phone,
+        ]);
+
+        return redirect()->route('merchant.customers')->with('success', 'مشتری با موفقیت بروزرسانی شد');
+    }
+
+    public function destroyCustomer(Customer $customer)
+    {
+        if ($customer->merchant_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $customer->delete();
+
+        return redirect()->route('merchant.customers')->with('success', 'مشتری با موفقیت حذف شد');
     }
 
     public function showCustomer(Customer $customer)

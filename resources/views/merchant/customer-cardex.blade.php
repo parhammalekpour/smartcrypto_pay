@@ -8,7 +8,8 @@
 <div class="bg-white rounded-lg shadow p-6 mb-6">
     <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
         <div>
-            <h3 class="text-xl font-semibold text-gray-800">{{ $customer->name }}</h3>
+            <h3 class="text-xl font-semibold text-gray-800">{{ $customer->user->name ?? $customer->name }}</h3>
+            <p class="text-sm text-gray-500">نام کاربری: {{ $customer->user->name ?? $customer->name }}</p>
             <p class="text-sm text-gray-500">ایمیل: {{ $customer->email ?: 'ثبت نشده' }}</p>
             <p class="text-sm text-gray-500">شماره تلفن: {{ $customer->phone ?: 'ثبت نشده' }}</p>
         </div>

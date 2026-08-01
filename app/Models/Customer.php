@@ -12,6 +12,7 @@ class Customer extends Model
 
     protected $fillable = [
         'merchant_id',
+        'user_id',
         'name',
         'email',
         'phone',
@@ -20,6 +21,11 @@ class Customer extends Model
     public function merchant()
     {
         return $this->belongsTo(User::class, 'merchant_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function paymentRequests()
