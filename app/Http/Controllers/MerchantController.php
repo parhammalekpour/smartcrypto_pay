@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use App\Models\PaymentRequest;
 use App\Models\Transaction;
+use App\Models\User;
 
 class MerchantController extends Controller
 {
@@ -167,6 +169,87 @@ class MerchantController extends Controller
     public function settings()
     {
         return view('merchant.settings');
+    }
+
+    public function customers(Request $request)
+    {
+        $search = $request->input('search');
+
+        $customers = User::where('role', 'user')
+            ->withCount([
+                'paymentRequests as merchant_pending_count' => function ($query) {
+                    $query->where('merchant_id', auth()->id())->where('status', 'pending');
+                },
+                'paymentRequests as merchant_paid_count' => function ($query) {
+                    $query->where('merchant_id', auth()->id())->where('status', 'paid');
+                },
+                'paymentRequests as merchant_cancelled_count' => function ($query) {
+                    $query->where('merchant_id', auth()->id())->where('status', 'cancelled');
+                },
+                'paymentRequests as merchant_total_invoices_count' => function ($query) {
+                    $query->where('merchant_id', auth()->id());
+                },
+            ])
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('name')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('merchant.customers', compact('customers', 'search'));
+    }
+
+    public function storeCustomer(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'phone' => 'nullable|string|max:20',
+            'password' => 'nullable|string|min:8',
+        ]);
+
+        $password = $validated['password'] ?? Str::random(12);
+
+        $customer = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'password' => bcrypt($password),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $message = 'مشتری جدید با موفقیت اضافه شد';
+        if (! $request->filled('password')) {
+            $message .= '؛ رمز عبور موقت: ' . $password;
+        }
+
+        return redirect()->route('merchant.customers')->with('success', $message);
+    }
+
+    public function showCustomer($id)
+    {
+        $customer = User::where('role', 'user')->findOrFail($id);
+
+        $invoices = PaymentRequest::where('merchant_id', auth()->id())
+            ->where('recipient_user_id', $customer->id)
+            ->latest()
+            ->get();
+
+        $totals = [
+            'count' => $invoices->count(),
+            'total_amount' => $invoices->sum('amount'),
+            'pending' => $invoices->where('status', 'pending')->count(),
+            'paid' => $invoices->where('status', 'paid')->count(),
+            'cancelled' => $invoices->where('status', 'cancelled')->count(),
+        ];
+
+        return view('merchant.customer-show', compact('customer', 'invoices', 'totals'));
     }
 
     public function updateMerchantSettings(Request $request)
