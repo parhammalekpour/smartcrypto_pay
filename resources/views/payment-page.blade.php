@@ -174,6 +174,18 @@
     @if($payment->status === 'pending')
         <form method="POST" action="{{ route('payment.pay', $payment->token) }}">
             @csrf
+
+            @php
+                $two = auth()->check() ? \App\Models\TwoFactor::where('user_id', auth()->id())->first() : null;
+            @endphp
+
+            @if($two && $two->enabled_at)
+                <div style="margin-bottom:16px;">
+                    <label for="two_factor_token" style="display:block;margin-bottom:6px;font-weight:600;color:#333;">کد احراز هویت دو مرحله‌ای (۲FA)</label>
+                    <input id="two_factor_token" name="two_factor_token" required class="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="مثلاً ۶ رقمی از اپ Authenticator">
+                </div>
+            @endif
+
             <button type="submit" class="btn">
                 Pay Now
             </button>

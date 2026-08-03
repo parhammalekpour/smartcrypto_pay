@@ -222,10 +222,23 @@
                                 <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">افزایش امنیت حساب با فعال کردن تایید دو مرحله ای</p>
                             </div>
                         </div>
-                        <label class="flex items-center cursor-pointer mt-3">
-                            <input type="checkbox" name="notifications_2fa" value="1" @if(auth()->user()->notifications_2fa) checked @endif class="w-5 h-5 text-indigo-600 dark:text-indigo-500 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
-                            <span class="mr-3 font-semibold text-gray-700 dark:text-gray-300">فعال‌سازی</span>
-                        </label>
+                        @php
+                            $two = \App\Models\TwoFactor::where('user_id', auth()->id())->first();
+                        @endphp
+
+                        <div class="mt-3">
+                            @if($two && $two->enabled_at)
+                                <p class="text-sm text-green-700 dark:text-green-300 mb-2">✅ احراز هویت دو مرحله‌ای فعال است</p>
+                                <a href="{{ route('2fa.show') }}" class="inline-block px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">مدیریت 2FA</a>
+                                <form action="{{ route('2fa.disable') }}" method="POST" class="inline-block ml-3">
+                                    @csrf
+                                    <button type="submit" class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">غیرفعال کردن</button>
+                                </form>
+                            @else
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">2FA فعال نیست. برای فعال‌سازی وارد صفحه تنظیمات 2FA شوید.</p>
+                                <a href="{{ route('2fa.show') }}" class="inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">رفتن به تنظیمات 2FA</a>
+                            @endif
+                        </div>
                     </div>
 
                     <!-- Email Verification -->
