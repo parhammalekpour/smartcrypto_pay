@@ -82,6 +82,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+// Two-Factor routes available to all authenticated users
+Route::middleware('auth')->group(function () {
+    Route::get('/user/2fa', [\App\Http\Controllers\TwoFactorController::class, 'show'])->name('2fa.show');
+    Route::post('/user/2fa/enable', [\App\Http\Controllers\TwoFactorController::class, 'enable'])->name('2fa.enable');
+    Route::post('/user/2fa/disable', [\App\Http\Controllers\TwoFactorController::class, 'disable'])->name('2fa.disable');
+});
+
 Route::middleware(['auth', 'role:merchant'])->group(function () {
     // Main Dashboard
     Route::get('/merchant', [MerchantController::class, 'dashboard'])->name('merchant.dashboard');
