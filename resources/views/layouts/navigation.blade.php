@@ -1,4 +1,4 @@
-<nav x-data="{ open: false, notificationOpen: false, notificationCount: 0, notifications: [] }" class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300" @load="
+<nav x-data="{ open: false, notificationOpen: false, notificationCount: 0, notifications: [] }" class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300" style="font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; direction: rtl;" @load="
     setInterval(() => {
         fetch('{{ route('notifications.unread-count') }}')
             .then(r => r.json())

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>ارائه پروژه - ساختار فنی</title>
+    <style>
+        body { font-family: Tahoma, Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+        .container { max-width: 900px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px #ccc; padding: 32px; }
+        h1, h2 { color: #2c3e50; }
+        ul, li { line-height: 2; }
+        .section { background: #f0f4fa; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+        .section-title { font-weight: bold; color: #2980b9; }
+        code { background: #eaeaea; padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>ساختار فنی پروژه SmartCrypto Pay</h1>
+    <div class="section">
+        <div class="section-title">دیتابیس و مدل‌ها</div>
+        <ul>
+            <li>مدل‌ها: User, Merchant, Wallet, Transaction, Notification و ...</li>
+            <li>ارتباط بین مدل‌ها: هر کاربر یک یا چند کیف پول، هر تراکنش وابسته به کاربر و پذیرنده</li>
+            <li>دیتابیس: معمولاً MySQL/PostgreSQL</li>
+        </ul>
+    </div>
+    <div class="section">
+        <div class="section-title">کنترلرها و ویوها</div>
+        <ul>
+            <li>کنترلرها: مدیریت درخواست‌های کاربر و پذیرنده، تراکنش‌ها، احراز هویت</li>
+            <li>ویوها: صفحات SPA با استفاده از React.js یا Blade (در صورت استفاده از Laravel)</li>
+        </ul>
+    </div>
+    <div class="section">
+        <div class="section-title">امنیت و اسکافولد</div>
+        <ul>
+            <li>استفاده از JWT یا Passport برای احراز هویت</li>
+            <li>میدل‌ورهای امنیتی: Auth, Throttle, CORS, Role-based Access</li>
+            <li>گیت‌ها: Policy/Permission برای کنترل دسترسی</li>
+        </ul>
+    </div>
+    <div class="section">
+        <div class="section-title">امکانات و کتابخانه‌های خاص</div>
+        <ul>
+            <li>SPA (Single Page Application) با React.js یا Vue.js</li>
+            <li>استفاده از کتابخانه‌های امنیتی مانند bcrypt و helmet</li>
+            <li>امکان توسعه API برای اتصال به سایر سرویس‌ها</li>
+        </ul>
+    </div>
+</div>
+</body>
+</html>

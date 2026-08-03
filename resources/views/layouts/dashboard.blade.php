@@ -196,10 +196,6 @@
                         کیف پول‌های من
                     </a>
 
-                    <a href="{{ route('user.send') }}" class="sidebar-item">
-                        <i class="fas fa-paper-plane"></i>
-                        ارسال ارز دیجیتال
-                    </a>
 
                     <a href="{{ route('user.receive') }}" class="sidebar-item">
                         <i class="fas fa-inbox"></i>

@@ -413,14 +413,31 @@ class WalletController extends Controller
 
     public function getPrices()
     {
+        // Prefer a background-fetched file for maximum reliability if present
+        $path = storage_path('app/crypto_prices.json');
+        if (file_exists($path)) {
+            $content = json_decode(file_get_contents($path), true);
+            if (is_array($content) && isset($content['btc']) && isset($content['eth'])) {
+                return response()->json($content)
+                    ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                    ->header('Pragma', 'no-cache')
+                    ->header('Expires', '0');
+            }
+        }
+
+        // Fallback: query live service (with caching inside service)
         $cryptoPrice = new CryptoPrice();
-        
-        return response()->json([
+
+        $resp = response()->json([
             'btc' => $cryptoPrice->getPrice('BTC'),
             'eth' => $cryptoPrice->getPrice('ETH'),
             'usd' => 1,
             'timestamp' => now()->getTimestamp()
         ]);
+
+        return $resp->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                    ->header('Pragma', 'no-cache')
+                    ->header('Expires', '0');
     }
 
     public function rejectPayment($id)

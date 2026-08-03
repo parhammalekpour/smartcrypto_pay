@@ -25,6 +25,17 @@ class LandingController extends Controller
 
         $activeTab = 'login';
 
+        // If there are validation errors for registration fields, keep the register tab active
+        $errors = session('errors');
+        if ($errors && (
+            $errors->has('name') ||
+            $errors->has('role') ||
+            $errors->has('password') ||
+            $errors->has('password_confirmation')
+        )) {
+            $activeTab = 'register';
+        }
+
         if (
             $request->routeIs('register') ||
             $request->routeIs('landing.register.form') ||

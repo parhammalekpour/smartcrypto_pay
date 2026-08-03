@@ -306,7 +306,6 @@ class AutoRefreshManager {
         }
         
         const sourceMap = {
-            'form_submit': '📝 فرم ارسال شد - ',
             'ajax_success': '🔄 آپدیت دریافت شد - ',
             'fetch_success': '⬇️  درخواست موفق - ',
             'jquery_ajax': '🔗 درخواست موفق - ',

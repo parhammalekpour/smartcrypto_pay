@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Customer;
 use App\Models\PaymentRequest;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Wallet;
+use App\Models\Notification;
 
 class MerchantController extends Controller
 {
@@ -338,6 +341,126 @@ class MerchantController extends Controller
             default:
                 return 'addr_' . bin2hex(random_bytes(16));
         }
+    }
+
+    public function send(Request $request)
+    {
+        // Allow optional pre-selected sender wallet via query param
+        $wallets = auth()->user()->wallets ?? collect();
+        $preselected = $request->query('sender_wallet_id');
+        return view('merchant.send', compact('wallets', 'preselected'));
+    }
+
+    public function transfer(Request $request)
+    {
+        $request->validate([
+            'wallet_address'   => 'required',
+            'sender_wallet_id' => 'required|integer',
+            'amount'           => 'required|numeric|min:0.00000001'
+        ]);
+
+        $senderWallet = Wallet::where(
+            'id',
+            $request->sender_wallet_id
+        )->where(
+            'user_id',
+            auth()->id()
+        )->firstOrFail();
+
+        $receiverWallet = Wallet::where(
+            'wallet_address',
+            $request->wallet_address
+        )->first();
+
+        if (!$receiverWallet) {
+            return back()->withErrors([
+                'wallet_address' => 'Wallet not found'
+            ])->withInput();
+        }
+
+        if ($senderWallet->id === $receiverWallet->id) {
+            return back()->withErrors([
+                'wallet_address' => 'Cannot transfer to the same wallet'
+            ])->withInput();
+        }
+
+        if (
+            $senderWallet->currency !==
+            $receiverWallet->currency
+        ) {
+            return back()->withErrors([
+                'wallet_address' => 'Wallet currency mismatch'
+            ])->withInput();
+        }
+
+        if ($senderWallet->balance < $request->amount) {
+            return back()->withErrors([
+                'amount' => 'Insufficient balance'
+            ])->withInput();
+        }
+
+        DB::transaction(function () use (
+            $senderWallet,
+            $receiverWallet,
+            $request
+        ) {
+
+            $senderWallet->decrement(
+                'balance',
+                $request->amount
+            );
+
+            $receiverWallet->increment(
+                'balance',
+                $request->amount
+            );
+
+            // Create transaction for sender
+            Transaction::create([
+                'wallet_id'   => $senderWallet->id,
+                'sender_id'   => auth()->id(),
+                'recipient_id' => $receiverWallet->user_id,
+                'type'        => 'transfer',
+                'amount'      => $request->amount,
+                'status'      => 'completed',
+                'reference'   => 'TRX-' . time(),
+                'description' => $request->description ?? 'Transfer Sent'
+            ]);
+
+            // Create transaction for recipient
+            Transaction::create([
+                'wallet_id'   => $receiverWallet->id,
+                'sender_id'   => auth()->id(),
+                'recipient_id' => $receiverWallet->user_id,
+                'type'        => 'deposit',
+                'amount'      => $request->amount,
+                'status'      => 'completed',
+                'reference'   => 'TRX-' . time(),
+                'description' => 'Transfer Received'
+            ]);
+
+            // Create notifications
+            Notification::createNotification(
+                auth()->id(),
+                'انتقال موفق',
+                $request->amount . ' ' . $senderWallet->currency . ' به ' . $receiverWallet->user->name . ' ارسال شد',
+                'success',
+                'fa-paper-plane'
+            );
+
+            Notification::createNotification(
+                $receiverWallet->user_id,
+                'دریافت انتقال',
+                $request->amount . ' ' . $receiverWallet->currency . ' از ' . auth()->user()->name . ' دریافت شد',
+                'success',
+                'fa-inbox'
+            );
+        });
+
+        return back()->with(
+            'success',
+            'Transfer completed successfully'
+        );
     }
 
     public function index()

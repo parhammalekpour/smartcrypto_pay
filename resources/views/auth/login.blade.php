@@ -1,6 +1,12 @@
 <x-guest-layout>
+    <div class="mb-8 text-center">
+        <p class="text-sm font-semibold uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">CryptoPay</p>
+        <h1 class="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">ورود به حساب کاربری</h1>
+        <p class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400 max-w-md mx-auto">برای دسترسی به کیف پول، گزارش تراکنش و مدیریت پرداخت‌های رمزنگاری شده وارد شوید.</p>
+    </div>
+
     <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    <x-auth-session-status class="mb-6" :status="session('status')" />
 
     <form method="POST" action="{{ route('login') }}">
         @csrf
@@ -25,21 +31,21 @@
         </div>
 
         <!-- Remember Me -->
-        <div class="block mt-4">
+        <div class="mt-4 sm:flex sm:items-center sm:justify-between gap-4">
             <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
+                <input id="remember_me" type="checkbox" class="rounded border-slate-300 text-sky-600 shadow-sm focus:ring-sky-500" name="remember">
+                <span class="ms-2 text-sm text-slate-600 dark:text-slate-300">{{ __('Remember me') }}</span>
             </label>
-        </div>
 
-        <div class="flex items-center justify-end mt-4">
             @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
+                <a class="text-sm text-sky-600 hover:text-sky-700 transition rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900" href="{{ route('password.request') }}">
                     {{ __('Forgot your password?') }}
                 </a>
             @endif
+        </div>
 
-            <x-primary-button class="ms-3">
+        <div class="mt-6">
+            <x-primary-button class="w-full">
                 {{ __('Log in') }}
             </x-primary-button>
         </div>

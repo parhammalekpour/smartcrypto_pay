@@ -56,10 +56,13 @@ Route::middleware(['auth', 'role:user'])->group(function () {
     
     // Transfer
     Route::post('/wallet/transfer', [WalletController::class, 'transfer'])->name('wallet.transfer');
-    
-    // Crypto Prices
-    Route::get('/api/crypto-prices', [WalletController::class, 'getPrices'])->name('api.crypto-prices');
 });
+
+// Public crypto prices endpoint (also aliased as /api/crypto-prices)
+Route::get('/api/crypto-prices', [WalletController::class, 'getPrices'])->name('api.crypto-prices');
+
+// Public crypto prices endpoint (no auth) - useful for client-side fetches that may not send cookies
+Route::get('/public/crypto-prices', [WalletController::class, 'getPrices'])->name('public.api.crypto-prices');
 
 // Notifications - Available for both users and merchants
 Route::middleware('auth')->group(function () {
@@ -91,6 +94,10 @@ Route::middleware(['auth', 'role:merchant'])->group(function () {
     // Wallets
     Route::get('/merchant/wallets', [MerchantController::class, 'wallets'])->name('merchant.wallets');
     Route::post('/merchant/wallets', [MerchantController::class, 'storeWallet'])->name('merchant.wallets.store');
+
+    // Merchant: Send / Withdraw (allow merchants to send to external wallets)
+    Route::get('/merchant/send', [MerchantController::class, 'send'])->name('merchant.send');
+    Route::post('/merchant/send', [MerchantController::class, 'transfer'])->name('merchant.send.post');
     
     // Transactions
     Route::get('/merchant/transactions', [MerchantController::class, 'transactions'])->name('merchant.transactions');

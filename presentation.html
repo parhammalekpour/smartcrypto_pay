@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ارائه پروژه CryptoPay</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: radial-gradient(circle at top right, rgba(96, 165, 250, 0.15), transparent 25%),
+                        radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.14), transparent 20%),
+                        #0f172a;
+        }
+        .card {
+            width: min(1200px, 100%);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35);
+            background: rgba(15, 23, 42, 0.94);
+            backdrop-filter: blur(16px);
+        }
+        .hero {
+            padding: 32px 40px;
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(14, 165, 233, 0.08));
+        }
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(2rem, 4vw, 3rem);
+            letter-spacing: 0.02em;
+        }
+        .hero p {
+            margin: 16px 0 0;
+            font-size: 1rem;
+            line-height: 1.9;
+            max-width: 920px;
+            color: #cbd5e1;
+        }
+        .hero .tags {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .tag {
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.16);
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            padding: 32px 40px 40px;
+        }
+        .panel {
+            background: rgba(15, 23, 42, 0.87);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            border-radius: 24px;
+            padding: 24px;
+            min-height: 540px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .panel h2 {
+            margin: 0;
+            font-size: 1.4rem;
+            letter-spacing: 0.01em;
+        }
+        .panel p {
+            margin: 0;
+            color: #cbd5e1;
+            line-height: 1.8;
+        }
+        .panel ul {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 10px;
+        }
+        .panel li {
+            padding: 14px 16px;
+            background: rgba(148, 163, 184, 0.08);
+            border-radius: 16px;
+            font-size: 0.96rem;
+            color: #e2e8f0;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+        .stats .stat {
+            padding: 18px 20px;
+            border-radius: 20px;
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.09);
+        }
+        .stat strong {
+            display: block;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: #f8fafc;
+        }
+        .stat span {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+        .footer {
+            padding: 22px 40px 34px;
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 18px;
+        }
+        .footer div {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 20px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(59, 130, 246, 0.12);
+            color: #eff6ff;
+            font-weight: 700;
+            text-decoration: none;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            background: rgba(59, 130, 246, 0.22);
+        }
+        @media (max-width: 980px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 680px) {
+            .hero, .grid, .footer {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <section class="hero">
+            <h1>معماری و کلیت پروژه CryptoPay</h1>
+            <p>این پروژه یک پلتفرم پرداخت رمزنگاری شده با دو پنل مختلف طراحی‌شده برای کاربران عادی و فروشندگان است. برنامه با Laravel 12 و Blade ساخته شده و از راهکارهای سرور-ساید رندر استفاده می‌کند. در لایه فرانت‌اند از Tailwind CSS، Alpine.js، Axios و Vite بهره گرفته شده است.</p>
+            <div class="tags">
+                <span class="tag">Laravel 12</span>
+                <span class="tag">Blade Templates</span>
+                <span class="tag">Tailwind CSS</span>
+                <span class="tag">Alpine.js</span>
+                <span class="tag">Axios</span>
+                <span class="tag">Vite</span>
+                <span class="tag">SQLite / MySQL</span>
+            </div>
+        </section>
+        <div class="grid">
+            <section class="panel">
+                <h2>پنل کاربر (User)</h2>
+                <p>قسمت کاربر برای مدیریت کیف پول‌های دیجیتال، ارسال و دریافت ارز، مشاهده تراکنش‌ها و پرداخت فاکتورها طراحی شده است.</p>
+                <ul>
+                    <li>داشبورد دارایی با محاسبه موجودی دلاری بر اساس قیمت‌های لحظه‌ای</li>
+                    <li>لیست کیف پول‌ها با ارزهای BTC، ETH و USDT</li>
+                    <li>انتقال رتبه‌ای داخلی بین آدرس‌های کیف پول با بررسی تطابق ارز</li>
+                    <li>مشاهده تاریخچه تراکنش‌ها با فیلتر نوع، ارز و جستجو</li>
+                    <li>پرداخت فاکتورهای فروشنده و بازگشت خطا برای موجودی ناکافی</li>
+                    <li>تنظیمات پروفایل و گزینه‌های نمایش مانند دارک مود و اعلان‌ها</li>
+                </ul>
+            </section>
+            <section class="panel">
+                <h2>پنل فروشنده / مارکت (Merchant)</h2>
+                <p>پنل فروشنده برای ایجاد درخواست پرداخت، پیگیری فاکتورها، تسویه‌ها و تحلیل آماری درآمد ساخته شده است.</p>
+                <ul>
+                    <li>داشبورد فروشنده با میزان درآمد، پرداخت‌های در انتظار و پرداخت‌های تکمیل‌شده</li>
+                    <li>ایجاد درخواست پرداخت با شماره فاکتور و آدرس گیرنده</li>
+                    <li>مدیریت کیف پول‌های فروشنده و ساخت آدرس‌های جدید</li>
+                    <li>مشاهده تراکنش‌ها و دریافت‌های مرتبط با والت‌های فروشنده</li>
+                    <li>صفحه تسویه‌حساب و فاکتورهای pending/pay</li>
+                    <li>تنظیمات کسب‌وکار شامل نام فروشگاه، ایمیل، آدرس، مجوز و وب‌سایت</li>
+                </ul>
+            </section>
+        </div>
+        <div class="stats">
+            <div class="stat">
+                <strong>مدل‌های اصلی</strong>
+                <span>Users, Wallets, Transactions, PaymentRequests, Notifications</span>
+            </div>
+            <div class="stat">
+                <strong>تخصیص نقش‌ها</strong>
+                <span>admin, merchant, user به کمک RoleMiddleware و فیلد role در جدول users</span>
+            </div>
+            <div class="stat">
+                <strong>امنیت و گیت‌ها</strong>
+                <span>middleware auth, verified, role; بررسی مالکیت در کنترلرها; CSRF در فرم‌ها</span>
+            </div>
+            <div class="stat">
+                <strong>سرویس ویژه</strong>
+                <span>CryptoPrice برای دریافت قیمت Binance با کش و استفاده از fallback</span>
+            </div>
+        </div>
+        <div class="footer">
+            <div>این پروژه سرور-ساید است و به صورت SPA با React ساخته نشده است. از Blade و قالب‌های Laravel برای رندر صفحات استفاده می‌کند.</div>
+            <a class="button" href="#" onclick="toggleSummary(); return false;">نمایش خلاصه</a>
+        </div>
+    </div>
+    <script>
+        function toggleSummary() {
+            alert('CryptoPay یک پلتفرم Laravel با دو نقش کاربر و فروشنده است؛ از Blade، Tailwind، Alpine.js و Axios برای ایجاد یک رابط تعاملی استفاده می‌کند.');
+        }
+    </script>
+</body>
+</html>

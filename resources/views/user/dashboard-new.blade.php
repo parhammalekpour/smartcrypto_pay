@@ -21,6 +21,7 @@
             <p class="text-xs text-white/70 mt-2">تمام کیف پول‌ها</p>
         </div>
 
+
         <!-- Received Transactions -->
         <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
             <div class="flex items-center justify-between mb-4">
@@ -260,19 +261,66 @@
 // Real-time balance update using latest crypto prices
 let walletBalances = @json($wallets->map(fn($w) => ['currency' => $w->currency, 'balance' => $w->balance])->values());
 let cryptoPrices = { btc: 0, eth: 0, usd: 1 };
+let previousPrices = { btc: null, eth: null };
 
-// Fetch prices immediately on page load
+function formatPrice(price) {
+    return '$' + price.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+function formatChange(current, previous) {
+    if (previous === null || previous === 0) {
+        return '---';
+    }
+    const diff = current - previous;
+    const pct = previous === 0 ? 0 : (diff / previous) * 100;
+    const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '–';
+    return `${arrow} ${Math.abs(diff).toFixed(2)} (${Math.abs(pct).toFixed(2)}%)`;
+}
+
+function updateCryptoPriceCards() {
+    const btcEl = document.querySelector('[data-btc-price]');
+    const ethEl = document.querySelector('[data-eth-price]');
+    const btcChangeEl = document.querySelector('[data-btc-change]');
+    const ethChangeEl = document.querySelector('[data-eth-change]');
+    const updatedEl = document.querySelector('[data-price-updated]');
+
+    if (btcEl) {
+        btcEl.textContent = formatPrice(cryptoPrices.btc);
+    }
+    if (ethEl) {
+        ethEl.textContent = formatPrice(cryptoPrices.eth);
+    }
+    if (btcChangeEl) {
+        btcChangeEl.textContent = formatChange(cryptoPrices.btc, previousPrices.btc);
+        btcChangeEl.classList.toggle('text-emerald-400', cryptoPrices.btc > (previousPrices.btc || 0));
+        btcChangeEl.classList.toggle('text-rose-400', cryptoPrices.btc < (previousPrices.btc || 0));
+    }
+    if (ethChangeEl) {
+        ethChangeEl.textContent = formatChange(cryptoPrices.eth, previousPrices.eth);
+        ethChangeEl.classList.toggle('text-emerald-400', cryptoPrices.eth > (previousPrices.eth || 0));
+        ethChangeEl.classList.toggle('text-rose-400', cryptoPrices.eth < (previousPrices.eth || 0));
+    }
+    if (updatedEl) {
+        updatedEl.textContent = 'آخرین بروزرسانی: ' + new Date().toLocaleTimeString('fa-IR');
+    }
+}
+
 async function fetchPricesAndUpdate() {
     try {
-        const response = await fetch('{{ route("api.crypto-prices") }}');
+        const response = await fetch('{{ route("public.api.crypto-prices") }}' + '?t=' + Date.now(), { cache: 'no-store' });
         const data = await response.json();
-        
-        console.log('Fetched prices from API:', data);
-        
+
+        previousPrices.btc = cryptoPrices.btc || previousPrices.btc;
+        previousPrices.eth = cryptoPrices.eth || previousPrices.eth;
+
         cryptoPrices.btc = parseFloat(data.btc) || 0;
         cryptoPrices.eth = parseFloat(data.eth) || 0;
-        
+
         updateTotalBalance();
+        updateCryptoPriceCards();
     } catch (error) {
         console.error('Failed to fetch crypto prices:', error);
     }
@@ -280,10 +328,9 @@ async function fetchPricesAndUpdate() {
 
 function updateTotalBalance() {
     let total = 0;
-    
+
     walletBalances.forEach(wallet => {
-        let price = 1; // Default for USD
-        
+        let price = 1;
         if (wallet.currency === 'BTC') {
             price = cryptoPrices.btc;
         } else if (wallet.currency === 'ETH') {
@@ -291,28 +338,21 @@ function updateTotalBalance() {
         } else if (wallet.currency === 'USDT' || wallet.currency === 'USD') {
             price = 1;
         }
-        
-        console.log(`Wallet ${wallet.currency}: ${wallet.balance} * ${price} = ${wallet.balance * price}`);
+
         total += wallet.balance * price;
     });
-    
-    console.log('Total balance USD:', total);
-    
-    // Update the total balance element
+
     const balanceElement = document.querySelector('[data-total-balance]');
     if (balanceElement) {
-        balanceElement.textContent = '$' + total.toLocaleString('en-US', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
-        });
+        balanceElement.textContent = formatPrice(total);
     }
 }
 
 // Fetch prices immediately
 fetchPricesAndUpdate();
 
-// Fetch prices every 10 seconds
-setInterval(fetchPricesAndUpdate, 10000);
+// Fetch prices every 5 seconds
+setInterval(fetchPricesAndUpdate, 5000);
 </script>
 
 @endsection

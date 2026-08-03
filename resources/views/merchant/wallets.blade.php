@@ -6,11 +6,62 @@
 
 @section('content')
 
-<!-- Add Wallet Button -->
-<div class="mb-6 flex justify-end">
-    <button onclick="openAddWalletModal()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center gap-2">
-        <i class="fas fa-plus"></i>اضافه کردن کیف پول جدید
-    </button>
+<!-- Live Prices + Add Wallet -->
+<div class="mb-6 grid grid-cols-1 lg:grid-cols-[1.8fr_minmax(320px,360px)] gap-4 items-stretch">
+    <div class="rounded-[28px] bg-slate-950 border border-slate-800 p-5 shadow-xl h-full">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <p class="text-sm text-slate-400">قیمت‌های لحظه‌ای بازار</p>
+                <h2 class="text-2xl font-semibold text-white">BTC / ETH</h2>
+            </div>
+            <span class="inline-flex items-center gap-2 rounded-full bg-indigo-500/15 text-indigo-200 px-3 py-1 text-xs uppercase tracking-[0.14em]">
+                <i class="fas fa-chart-line text-xs"></i>
+                TradingView
+            </span>
+        </div>
+
+        <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="rounded-3xl bg-slate-900/95 border border-slate-800 p-4">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase">Bitcoin</p>
+                        <p class="mt-3 text-3xl font-semibold text-white" data-live-btc-price>$0.00</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-slate-300">BTC</span>
+                </div>
+                <p class="mt-4 text-sm" data-live-btc-change>---</p>
+            </div>
+            <div class="rounded-3xl bg-slate-900/95 border border-slate-800 p-4">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase">Ethereum</p>
+                        <p class="mt-3 text-3xl font-semibold text-white" data-live-eth-price>$0.00</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-slate-300">ETH</span>
+                </div>
+                <p class="mt-4 text-sm" data-live-eth-change>---</p>
+            </div>
+        </div>
+
+        <p class="mt-4 text-xs text-slate-500" data-live-price-updated>آخرین بروزرسانی: -</p>
+    </div>
+
+    <div class="flex flex-col justify-between rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm lg:max-w-[360px] h-full">
+        <div>
+            <div class="flex items-center justify-between gap-4 mb-4">
+                <div>
+                    <p class="text-sm text-slate-500">عملیات سریع</p>
+                    <h3 class="text-lg font-semibold text-slate-900">افزودن کیف پول</h3>
+                </div>
+                <i class="fas fa-wallet text-indigo-600 text-xl"></i>
+            </div>
+            <p class="text-sm text-slate-600 leading-6">یک کیف پول جدید بسازید تا ارزش دلاری آن در قسمت کیف پول‌ها نمایش داده شود.</p>
+        </div>
+        <button onclick="openAddWalletModal()" class="mt-6 w-full bg-indigo-600 text-white px-5 py-3 rounded-2xl font-semibold hover:bg-indigo-700 transition">
+            <i class="fas fa-plus mr-2"></i>
+            اضافه کردن کیف پول
+        </button>
+    </div>
 </div>
 
 <!-- Wallets Grid -->
@@ -61,7 +112,9 @@
                 <div class="mb-4">
                     <p class="text-gray-500 text-xs mb-1">موجودی</p>
                     <p class="text-3xl font-bold text-gray-800">{{ number_format($wallet->balance, 8) }}</p>
-                    <p class="text-xs text-gray-400 mt-1">≈ ${{ number_format($wallet->balance * ($wallet->currency === 'BTC' ? 45000 : ($wallet->currency === 'ETH' ? 2500 : 1)), 2) }}</p>
+                    <p class="text-xs text-gray-400 mt-2">
+                        ارزش دلاری: <span class="font-semibold usd-price" data-currency="{{ $wallet->currency }}" data-balance="{{ $wallet->balance }}">≈ $0.00</span>
+                    </p>
                 </div>
 
                 <!-- Address -->
@@ -83,7 +136,7 @@
                 </div>
 
                 <!-- Actions -->
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-3 gap-2">
                     <button class="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-semibold hover:bg-indigo-100 transition flex items-center justify-center gap-1"
                         onclick="copyAddress('{{ $wallet->wallet_address }}')">
                         <i class="fas fa-copy"></i>کپی نشانی
@@ -92,6 +145,9 @@
                         onclick="viewOnExplorer('{{ $wallet->wallet_address }}', '{{ $wallet->currency }}')">
                         <i class="fas fa-external-link"></i>مشاهده
                     </button>
+                    <a href="{{ route('merchant.send', ['sender_wallet_id' => $wallet->id]) }}" class="p-2 bg-green-50 text-green-600 rounded-lg text-sm font-semibold hover:bg-green-100 transition flex items-center justify-center gap-1">
+                        <i class="fas fa-paper-plane"></i>ارسال
+                    </a>
                 </div>
             </div>
         @endforeach
@@ -141,6 +197,94 @@
 
 @push('scripts')
 <script>
+    let cryptoPrices = { btc: 0, eth: 0, usd: 1 };
+    let previousPrices = { btc: null, eth: null };
+
+    function formatPrice(price) {
+        return '$' + price.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function formatChange(current, previous) {
+        if (previous === null) {
+            return '---';
+        }
+
+        const diff = current - previous;
+        const pct = previous === 0 ? 0 : (diff / previous) * 100;
+        const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '–';
+        const sign = diff === 0 ? '–' : arrow;
+        return `${sign} ${formatPrice(Math.abs(diff))} (${Math.abs(pct).toFixed(2)}%)`;
+    }
+
+    function updateLivePriceCards() {
+        const btcPriceEl = document.querySelector('[data-live-btc-price]');
+        const ethPriceEl = document.querySelector('[data-live-eth-price]');
+        const btcChangeEl = document.querySelector('[data-live-btc-change]');
+        const ethChangeEl = document.querySelector('[data-live-eth-change]');
+        const updatedEl = document.querySelector('[data-live-price-updated]');
+
+        if (btcPriceEl) {
+            btcPriceEl.textContent = formatPrice(cryptoPrices.btc);
+        }
+        if (ethPriceEl) {
+            ethPriceEl.textContent = formatPrice(cryptoPrices.eth);
+        }
+        if (btcChangeEl) {
+            btcChangeEl.textContent = formatChange(cryptoPrices.btc, previousPrices.btc);
+            btcChangeEl.classList.toggle('text-emerald-400', cryptoPrices.btc > (previousPrices.btc || 0));
+            btcChangeEl.classList.toggle('text-rose-400', cryptoPrices.btc < (previousPrices.btc || 0));
+        }
+        if (ethChangeEl) {
+            ethChangeEl.textContent = formatChange(cryptoPrices.eth, previousPrices.eth);
+            ethChangeEl.classList.toggle('text-emerald-400', cryptoPrices.eth > (previousPrices.eth || 0));
+            ethChangeEl.classList.toggle('text-rose-400', cryptoPrices.eth < (previousPrices.eth || 0));
+        }
+        if (updatedEl) {
+            updatedEl.textContent = 'آخرین بروزرسانی: ' + new Date().toLocaleTimeString('fa-IR');
+        }
+    }
+
+    function updateWalletPrices() {
+        const priceElements = document.querySelectorAll('.usd-price');
+        priceElements.forEach(element => {
+            const currency = element.getAttribute('data-currency');
+            const balance = parseFloat(element.getAttribute('data-balance')) || 0;
+            let price = 1;
+
+            if (currency === 'BTC') {
+                price = cryptoPrices.btc;
+            } else if (currency === 'ETH') {
+                price = cryptoPrices.eth;
+            } else if (currency === 'USDT' || currency === 'USD') {
+                price = 1;
+            }
+
+            const usdValue = balance * price;
+            element.textContent = '≈ ' + formatPrice(usdValue);
+        });
+    }
+
+    async function fetchAndDisplayPrices() {
+        try {
+            const response = await fetch('{{ route("public.api.crypto-prices") }}' + '?t=' + Date.now(), { cache: 'no-store' });
+            const data = await response.json();
+
+            previousPrices.btc = cryptoPrices.btc || previousPrices.btc;
+            previousPrices.eth = cryptoPrices.eth || previousPrices.eth;
+
+            cryptoPrices.btc = parseFloat(data.btc) || 0;
+            cryptoPrices.eth = parseFloat(data.eth) || 0;
+
+            updateLivePriceCards();
+            updateWalletPrices();
+        } catch (error) {
+            console.error('Failed to fetch crypto prices:', error);
+        }
+    }
+
     function openAddWalletModal() {
         document.getElementById('addWalletModal').classList.remove('hidden');
     }
@@ -151,15 +295,11 @@
 
     function copyAddress(address) {
         navigator.clipboard.writeText(address).then(() => {
-            // Show success message
             const toast = document.createElement('div');
             toast.className = 'fixed bottom-4 left-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
             toast.textContent = 'نشانی کپی شد!';
             document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
+            setTimeout(() => toast.remove(), 3000);
         }).catch(err => {
             console.error('Failed to copy:', err);
             alert('خرابی در کپی نشانی');
@@ -168,7 +308,6 @@
 
     function viewOnExplorer(address, currency) {
         let explorerUrl = '';
-        
         switch(currency) {
             case 'BTC':
                 explorerUrl = `https://blockchair.com/bitcoin/address/${address}`;
@@ -183,9 +322,11 @@
                 alert('اطلاعات Blockchain Explorer برای این ارز موجود نیست');
                 return;
         }
-        
         window.open(explorerUrl, '_blank');
     }
+
+    fetchAndDisplayPrices();
+    setInterval(fetchAndDisplayPrices, 5000);
 </script>
 @endpush
 
