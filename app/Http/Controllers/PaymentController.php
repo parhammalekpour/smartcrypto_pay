@@ -158,6 +158,51 @@ class PaymentController extends Controller
             ]);
         }
 
+        // If user has 2FA enabled, require a valid TOTP code
+        $two = \App\Models\TwoFactor::where('user_id', auth()->id())->first();
+        if ($two && $two->secret_enc) {
+            $token = $request->input('two_factor_token');
+            if (!$token) {
+                return back()->withErrors(['two_factor_token' => 'Two-factor authentication token required']);
+            }
+
+            try {
+                $secret = \Illuminate\Support\Facades\Crypt::decryptString($two->secret_enc);
+            } catch (\Throwable $e) {
+                return back()->withErrors(['two_factor_token' => '2FA configuration error']);
+            }
+
+            if (!\App\Services\TOTP::verifyCode($secret, $token, 1)) {
+                // audit log for failed 2FA attempt
+                try {
+                    DB::table('audit_logs')->insert([
+                        'actor_id' => auth()->id(),
+                        'user_id' => auth()->id(),
+                        'action' => '2fa_failed_payment',
+                        'resource_type' => 'payment_request',
+                        'resource_id' => $payment->id,
+                        'diff' => json_encode(['ip' => $request->ip()]),
+                        'created_at' => now(),
+                    ]);
+                } catch (\Throwable $e) {}
+
+                return back()->withErrors(['two_factor_token' => 'Invalid two-factor token']);
+            }
+
+            // audit log for successful 2FA
+            try {
+                DB::table('audit_logs')->insert([
+                    'actor_id' => auth()->id(),
+                    'user_id' => auth()->id(),
+                    'action' => '2fa_passed_payment',
+                    'resource_type' => 'payment_request',
+                    'resource_id' => $payment->id,
+                    'diff' => json_encode(['ip' => $request->ip()]),
+                    'created_at' => now(),
+                ]);
+            } catch (\Throwable $e) {}
+        }
+
         // کیف پول merchant (اگر نبود ساخته می‌شود)
         $merchantWallet = Wallet::firstOrCreate(
             [

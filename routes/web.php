@@ -98,6 +98,11 @@ Route::middleware(['auth', 'role:merchant'])->group(function () {
     // Merchant: Send / Withdraw (allow merchants to send to external wallets)
     Route::get('/merchant/send', [MerchantController::class, 'send'])->name('merchant.send');
     Route::post('/merchant/send', [MerchantController::class, 'transfer'])->name('merchant.send.post');
+
+    // Two-Factor Authentication management
+    Route::get('/user/2fa', [\App\Http\Controllers\TwoFactorController::class, 'show'])->name('2fa.show');
+    Route::post('/user/2fa/enable', [\App\Http\Controllers\TwoFactorController::class, 'enable'])->name('2fa.enable');
+    Route::post('/user/2fa/disable', [\App\Http\Controllers\TwoFactorController::class, 'disable'])->name('2fa.disable');
     
     // Transactions
     Route::get('/merchant/transactions', [MerchantController::class, 'transactions'])->name('merchant.transactions');
