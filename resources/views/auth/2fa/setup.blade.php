@@ -5,10 +5,13 @@
     <h2>Setup Two-Factor Authentication (TOTP)</h2>
 
     <p>Secret: <code>{{ $secret }}</code></p>
-    <p>OTPAuth URL (for QR code generation):</p>
-    <pre>{{ $otpUrl }}</pre>
+    <p>Scan the QR code below with an authenticator app (Google Authenticator, Authy) or enter the secret manually:</p>
 
-    <p>Use an authenticator app (Google Authenticator, Authy) to scan the QR code generated from the OTPAuth URL or enter the secret manually.</p>
+    <div style="margin:12px 0;">
+        <img src="https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl={{ urlencode($otpUrl) }}" alt="QR Code">
+    </div>
+
+    <p style="font-size:0.9em;color:#666;">If the QR code doesn't work, enter the secret into your authenticator app manually.</p>
 
     <form method="POST" action="{{ route('2fa.enable') }}">
         @csrf

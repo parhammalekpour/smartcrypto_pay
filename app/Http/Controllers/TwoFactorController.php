@@ -40,9 +40,11 @@ class TwoFactorController extends Controller
 
         $enc = Crypt::encryptString($request->secret);
 
+        $codes = $this->generateBackupCodes();
+
         $two = TwoFactor::updateOrCreate(
             ['user_id' => $user->id, 'method' => 'totp'],
-            ['secret_enc' => $enc, 'enabled_at' => now(), 'backup_codes' => $this->generateBackupCodes()]
+            ['secret_enc' => $enc, 'enabled_at' => now(), 'backup_codes' => $codes]
         );
 
         // audit log
@@ -58,7 +60,8 @@ class TwoFactorController extends Controller
             ]);
         } catch (\Throwable $e) {}
 
-        return redirect()->route('user.settings')->with('success', 'Two-factor authentication enabled');
+        // Show backup codes to the user once after enabling
+        return view('auth.2fa.enabled', ['codes' => $codes]);
     }
 
     public function disable(Request $request)
