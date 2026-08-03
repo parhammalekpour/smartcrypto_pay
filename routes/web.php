@@ -89,7 +89,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/user/2fa/disable', [\App\Http\Controllers\TwoFactorController::class, 'disable'])->name('2fa.disable');
 });
 
-Route::middleware(['auth', 'role:merchant'])->group(function () {
+Route::middleware(['auth', 'role:merchant', 'verified'])->group(function () {
     // Main Dashboard
     Route::get('/merchant', [MerchantController::class, 'dashboard'])->name('merchant.dashboard');
     
