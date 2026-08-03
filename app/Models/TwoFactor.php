@@ -22,6 +22,7 @@ class TwoFactor extends Model
     protected $casts = [
         'backup_codes' => 'array',
         'enabled_at' => 'datetime',
+        'backup_shown_at' => 'datetime',
     ];
 
     public function user()

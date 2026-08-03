@@ -7,6 +7,7 @@ use App\Services\TOTP;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class TwoFactorController extends Controller
 {
@@ -40,11 +41,16 @@ class TwoFactorController extends Controller
 
         $enc = Crypt::encryptString($request->secret);
 
-        $codes = $this->generateBackupCodes();
+        $codesPlain = $this->generateBackupCodes();
+
+        // Hash backup codes before storing
+        $codesHashed = array_map(function($c) {
+            return Hash::make($c);
+        }, $codesPlain);
 
         $two = TwoFactor::updateOrCreate(
             ['user_id' => $user->id, 'method' => 'totp'],
-            ['secret_enc' => $enc, 'enabled_at' => now(), 'backup_codes' => $codes]
+            ['secret_enc' => $enc, 'enabled_at' => now(), 'backup_codes' => $codesHashed, 'backup_shown_at' => now()]
         );
 
         // audit log
@@ -60,8 +66,8 @@ class TwoFactorController extends Controller
             ]);
         } catch (\Throwable $e) {}
 
-        // Show backup codes to the user once after enabling
-        return view('auth.2fa.enabled', ['codes' => $codes]);
+        // Show backup codes to the user once after enabling (plaintext)
+        return view('auth.2fa.enabled', ['codes' => $codesPlain]);
     }
 
     public function disable(Request $request)
