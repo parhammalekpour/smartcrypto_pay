@@ -37,7 +37,9 @@
 
         <div class="mt-4 flex flex-wrap gap-3">
             @php
-                $twoRoute = auth()->user()->isMerchant() ? 'merchant.2fa.show' : '2fa.show';
+                // Choose merchant route when user role is merchant OR current request is under merchant/*
+                $isMerchantContext = auth()->check() && (auth()->user()->isMerchant() || request()->is('merchant*'));
+                $twoRoute = $isMerchantContext ? 'merchant.2fa.show' : '2fa.show';
             @endphp
             <a href="{{ route($twoRoute) }}" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors duration-300">
                 {{ $twoFactor && $twoFactor->enabled_at ? 'مدیریت 2FA' : 'فعال‌سازی 2FA' }}
