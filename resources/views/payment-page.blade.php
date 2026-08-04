@@ -175,20 +175,27 @@
         <form method="POST" action="{{ route('payment.pay', $payment->token) }}">
             @csrf
 
-            @php
-                $two = auth()->check() ? \App\Models\TwoFactor::where('user_id', auth()->id())->first() : null;
-            @endphp
+                    @php
+                        $userKyc = auth()->check() ? auth()->user()->kyc_verified : false;
+                        $merchantKyc = $payment->merchant?->kyc_verified ?? false;
+                        $canPay = $userKyc && $merchantKyc;
+                    @endphp
 
-            @if($two && $two->enabled_at)
-                <div style="margin-bottom:16px;">
-                    <label for="two_factor_token" style="display:block;margin-bottom:6px;font-weight:600;color:#333;">کد احراز هویت دو مرحله‌ای (۲FA)</label>
-                    <input id="two_factor_token" name="two_factor_token" required class="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="مثلاً ۶ رقمی از اپ Authenticator">
-                </div>
-            @endif
+                    @if(!$merchantKyc)
+                        <div class="alert alert-error">
+                            فروشنده این تراکنش هنوز احراز هویت KYC خود را تکمیل نکرده است. پرداخت فعلاً امکان‌پذیر نیست.
+                        </div>
+                    @endif
 
-            <button type="submit" class="btn">
-                Pay Now
-            </button>
+                    @if(auth()->check() && !$userKyc)
+                        <div class="alert alert-error">
+                            قبل از پرداخت، باید احراز هویت KYC خود را تکمیل کنید.
+                        </div>
+                    @endif
+
+                    <button type="submit" class="btn" @if(!$canPay) disabled @endif>
+                        Pay Now
+                    </button>
         </form>
     @else
         <p style="text-align: center; color: #999; margin-top: 20px;">
