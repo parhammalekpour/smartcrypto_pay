@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\LandingController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -7,6 +8,7 @@ use App\Http\Controllers\WalletController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\MerchantController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\KycController;
 
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
@@ -16,16 +18,27 @@ Route::get('/dashboard', function () {
         return redirect()->route('merchant.dashboard');
     } elseif (auth()->user()->isUser()) {
         return redirect()->route('user.dashboard');
+    } elseif (auth()->user()->isAdmin()) {
+        return redirect()->route('admin.dashboard');
     } else {
         return view('dashboard');
     }
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::get('/admin', function () {
-    return view('admin');
-})->middleware(['auth', 'role:admin']);
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin', [AdminController::class, 'index'])->name('admin.dashboard');
+    Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
+    Route::post('/admin/users/{user}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
+    Route::get('/admin/kyc', [AdminController::class, 'kyc'])->name('admin.kyc');
+    Route::post('/admin/kyc/{user}/approve', [AdminController::class, 'approveKyc'])->name('admin.kyc.approve');
+    Route::post('/admin/kyc/{user}/reject', [AdminController::class, 'rejectKyc'])->name('admin.kyc.reject');
+    Route::get('/admin/kyc/selfie/{user}', [KycController::class, 'adminSelfie'])->name('admin.kyc.selfie');
+    Route::get('/admin/kyc/document/{user}/{filename}', [KycController::class, 'adminDocument'])->name('admin.kyc.document');
+    Route::get('/admin/transactions', [AdminController::class, 'transactions'])->name('admin.transactions');
+    Route::post('/admin/transactions/{transaction}/cancel', [AdminController::class, 'cancelTransaction'])->name('admin.transactions.cancel');
+});
 
-Route::middleware(['auth', 'role:user'])->group(function () {
+Route::middleware(['auth', 'role:user', 'verified'])->group(function () {
     // Main Dashboard
     Route::get('/user', [WalletController::class, 'dashboard'])->name('user.dashboard');
     
@@ -50,6 +63,11 @@ Route::middleware(['auth', 'role:user'])->group(function () {
     Route::get('/user/settings', [WalletController::class, 'settings'])->name('user.settings');
     Route::patch('/user/settings', [WalletController::class, 'updateSettings'])->name('settings.update');
     Route::post('/logout-all-devices', [WalletController::class, 'logoutAllDevices'])->name('logout-all-devices');
+
+    // Two-Factor Authentication
+    Route::get('/user/2fa', [\App\Http\Controllers\TwoFactorController::class, 'show'])->name('2fa.show');
+    Route::post('/user/2fa/enable', [\App\Http\Controllers\TwoFactorController::class, 'enable'])->name('2fa.enable');
+    Route::post('/user/2fa/disable', [\App\Http\Controllers\TwoFactorController::class, 'disable'])->name('2fa.disable');
     
     // Demo Deposit
     Route::post('/wallet/demo-deposit/{wallet}', [WalletController::class, 'demoDeposit']);
@@ -80,13 +98,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
 
-// Two-Factor routes available to all authenticated users
-Route::middleware('auth')->group(function () {
-    Route::get('/user/2fa', [\App\Http\Controllers\TwoFactorController::class, 'show'])->name('2fa.show');
-    Route::post('/user/2fa/enable', [\App\Http\Controllers\TwoFactorController::class, 'enable'])->name('2fa.enable');
-    Route::post('/user/2fa/disable', [\App\Http\Controllers\TwoFactorController::class, 'disable'])->name('2fa.disable');
+    // KYC endpoints (upload and access user's own files)
+    Route::post('/kyc/upload', [\App\Http\Controllers\KycController::class, 'store'])->name('kyc.upload');
+    Route::get('/kyc/selfie', [\App\Http\Controllers\KycController::class, 'selfie'])->name('kyc.selfie');
+    Route::get('/kyc/document/{filename}', [\App\Http\Controllers\KycController::class, 'document'])->name('kyc.document');
 });
 
 Route::middleware(['auth', 'role:merchant', 'verified'])->group(function () {
@@ -106,11 +122,6 @@ Route::middleware(['auth', 'role:merchant', 'verified'])->group(function () {
     Route::get('/merchant/send', [MerchantController::class, 'send'])->name('merchant.send');
     Route::post('/merchant/send', [MerchantController::class, 'transfer'])->name('merchant.send.post');
 
-    // Two-Factor Authentication management
-    Route::get('/user/2fa', [\App\Http\Controllers\TwoFactorController::class, 'show'])->name('2fa.show');
-    Route::post('/user/2fa/enable', [\App\Http\Controllers\TwoFactorController::class, 'enable'])->name('2fa.enable');
-    Route::post('/user/2fa/disable', [\App\Http\Controllers\TwoFactorController::class, 'disable'])->name('2fa.disable');
-    
     // Transactions
     Route::get('/merchant/transactions', [MerchantController::class, 'transactions'])->name('merchant.transactions');
     
@@ -132,12 +143,17 @@ Route::middleware(['auth', 'role:merchant', 'verified'])->group(function () {
     Route::get('/merchant/settings', [MerchantController::class, 'settings'])->name('merchant.settings');
     Route::patch('/merchant/settings', [MerchantController::class, 'updateMerchantSettings'])->name('merchant.settings.update');
     Route::put('/merchant/settings', [MerchantController::class, 'updateMerchantSettings']);
+
+    // Two-Factor Authentication for merchants (allow merchants to manage 2FA like regular users)
+    Route::get('/merchant/2fa', [\App\Http\Controllers\TwoFactorController::class, 'show'])->name('merchant.2fa.show');
+    Route::post('/merchant/2fa/enable', [\App\Http\Controllers\TwoFactorController::class, 'enable'])->name('merchant.2fa.enable');
+    Route::post('/merchant/2fa/disable', [\App\Http\Controllers\TwoFactorController::class, 'disable'])->name('merchant.2fa.disable');
     
     // API Keys
     // Route::get('/merchant/apikeys', [MerchantController::class, 'apikeys'])->name('merchant.apikeys');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get(
         '/pay/{token}',
