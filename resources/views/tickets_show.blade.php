@@ -10,9 +10,9 @@
         <p class="text-sm text-gray-400">آخرین فعالیت: {{ $ticket->last_message_at ? $ticket->last_message_at->diffForHumans() : $ticket->created_at->diffForHumans() }}</p>
     </div>
 
-    <div class="space-y-4 mb-6">
+    <div id="messages" class="space-y-4 mb-6">
         @foreach($messages as $m)
-            <div class="p-4 rounded-lg @if($m->sender_type === 'admin') bg-indigo-50 @else bg-gray-100 @endif">
+                <div data-message-id="{{ $m->id }}" class="p-4 rounded-lg @if($m->sender_type === 'admin') bg-indigo-50 @else bg-gray-100 @endif">
                 <p class="text-xs text-gray-600">{{ ucfirst($m->sender_type) }} @if($m->sender_id) — {{ \App\Models\User::find($m->sender_id)->name ?? '' }} @endif</p>
                 <p class="mt-2 text-sm text-gray-800">{{ $m->body }}</p>
                 <p class="text-xs text-gray-400 mt-2">{{ $m->created_at->diffForHumans() }}</p>
@@ -20,16 +20,76 @@
         @endforeach
     </div>
 
-    <form method="POST" action="{{ route('tickets.message', $ticket->id) }}">
+        <form id="messageForm" method="POST" action="{{ route('tickets.message', $ticket->id) }}">
         @csrf
         <div class="mb-4">
-            <textarea name="message" rows="4" class="w-full border p-3 rounded" placeholder="پیام خود را بنویسید"></textarea>
+                <textarea id="messageInput" name="message" rows="4" class="w-full border p-3 rounded" placeholder="پیام خود را بنویسید"></textarea>
             @error('message') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
         <div class="flex justify-between items-center">
             <a href="{{ route('tickets.index') }}" class="text-sm text-gray-500">بازگشت</a>
-            <button class="bg-indigo-600 text-white py-2 px-4 rounded">ارسال پیام</button>
+                <button id="sendButton" class="bg-indigo-600 text-white py-2 px-4 rounded">ارسال پیام</button>
         </div>
     </form>
+
+        <script>
+            (function(){
+                const ticketId = {{ $ticket->id }};
+                const messagesEl = document.getElementById('messages');
+
+                function renderMessages(list) {
+                    messagesEl.innerHTML = '';
+                    list.forEach(m => {
+                        const div = document.createElement('div');
+                        div.setAttribute('data-message-id', m.id);
+                        div.className = 'p-4 rounded-lg ' + (m.sender_type === 'admin' ? 'bg-indigo-50' : 'bg-gray-100');
+                        div.innerHTML = `<p class="text-xs text-gray-600">${m.sender_type}${m.sender_name ? ' — ' + m.sender_name : ''}</p>` +
+                                        `<p class="mt-2 text-sm text-gray-800">${m.body}</p>` +
+                                        `<p class="text-xs text-gray-400 mt-2">${m.created_at}</p>`;
+                        messagesEl.appendChild(div);
+                    });
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                }
+
+                async function fetchMessages(){
+                    try{
+                        const res = await fetch(`/tickets/${ticketId}/messages`);
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        renderMessages(data);
+                    }catch(e){ console.error(e); }
+                }
+
+                // Poll every 3s
+                setInterval(fetchMessages, 3000);
+
+                // Submit via AJAX
+                const form = document.getElementById('messageForm');
+                form.addEventListener('submit', async function(e){
+                    e.preventDefault();
+                    const body = document.getElementById('messageInput').value.trim();
+                    if (!body) return;
+                    try{
+                        const res = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({ message: body })
+                        });
+                        if (res.ok) {
+                            document.getElementById('messageInput').value = '';
+                            fetchMessages();
+                        } else {
+                            console.error('Send failed');
+                        }
+                    }catch(e){ console.error(e); }
+                });
+
+                // Initial fetch
+                fetchMessages();
+            })();
+        </script>
 </div>
 @endsection

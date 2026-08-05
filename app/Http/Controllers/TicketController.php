@@ -69,6 +69,28 @@ class TicketController extends Controller
         return view('tickets_show', compact('ticket', 'messages'));
     }
 
+    // JSON endpoint for ticket messages (user side)
+    public function messages(Request $request, Ticket $ticket)
+    {
+        $user = $request->user();
+        if (!($user->isAdmin() || $ticket->user_id === $user->id || $ticket->merchant_id === $user->id)) {
+            abort(403);
+        }
+
+        $messages = $ticket->messages()->get()->map(function ($m) {
+            return [
+                'id' => $m->id,
+                'sender_type' => $m->sender_type,
+                'sender_id' => $m->sender_id,
+                'sender_name' => $m->sender_id ? optional(\App\Models\User::find($m->sender_id))->name : null,
+                'body' => $m->body,
+                'created_at' => $m->created_at->toDateTimeString(),
+            ];
+        });
+
+        return response()->json($messages);
+    }
+
     public function postMessage(Request $request, Ticket $ticket)
     {
         $request->validate(['message' => 'required|string']);
@@ -90,6 +112,17 @@ class TicketController extends Controller
             $ticket->status = 'open';
         }
         $ticket->save();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'id' => $msg->id,
+                'sender_type' => $msg->sender_type,
+                'sender_id' => $msg->sender_id,
+                'sender_name' => $user->name,
+                'body' => $msg->body,
+                'created_at' => $msg->created_at->toDateTimeString(),
+            ], 201);
+        }
 
         return redirect()->route('tickets.show', $ticket->id)->with('success', 'پیام ذخیره شد');
     }

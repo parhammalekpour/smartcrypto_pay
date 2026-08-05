@@ -40,6 +40,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     // Admin tickets
     Route::get('/admin/tickets', [\App\Http\Controllers\AdminTicketController::class, 'index'])->name('admin.tickets.index');
     Route::get('/admin/tickets/{ticket}', [\App\Http\Controllers\AdminTicketController::class, 'show'])->name('admin.tickets.show');
+    Route::get('/admin/tickets/{ticket}/messages', [\App\Http\Controllers\AdminTicketController::class, 'messages'])->name('admin.tickets.messages');
     Route::post('/admin/tickets/{ticket}/reply', [\App\Http\Controllers\AdminTicketController::class, 'reply'])->name('admin.tickets.reply');
     Route::post('/admin/tickets/{ticket}/close', [\App\Http\Controllers\AdminTicketController::class, 'close'])->name('admin.tickets.close');
 });
@@ -63,6 +64,7 @@ Route::middleware(['auth', 'role:user', 'verified'])->group(function () {
     Route::get('/tickets/create', [\App\Http\Controllers\TicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [\App\Http\Controllers\TicketController::class, 'store'])->name('tickets.store');
     Route::get('/tickets/{ticket}', [\App\Http\Controllers\TicketController::class, 'show'])->name('tickets.show');
+    Route::get('/tickets/{ticket}/messages', [\App\Http\Controllers\TicketController::class, 'messages'])->name('tickets.messages');
     Route::post('/tickets/{ticket}/message', [\App\Http\Controllers\TicketController::class, 'postMessage'])->name('tickets.message');
 
     // Transactions
