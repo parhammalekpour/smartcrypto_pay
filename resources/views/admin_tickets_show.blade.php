@@ -104,7 +104,9 @@
                             if (hasFile) fileInput.value = '';
                             fetchMessages();
                         } else {
-                            console.error('Reply failed');
+                            const txt = await res.text();
+                            console.error('Reply failed', res.status, txt);
+                            alert('ارسال پاسخ با مشکل مواجه شد.');
                         }
                     }catch(e){ console.error(e); }
                 });

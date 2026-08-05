@@ -106,6 +106,14 @@ class TicketController extends Controller
         $request->validate(['message' => 'required_without:attachment|string','attachment' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:5120']);
         $user = $request->user();
 
+        // Debug logging to help diagnose attachment upload issues from user/merchant
+        \Illuminate\Support\Facades\Log::info('TicketController::postMessage', [
+            'ticket_id' => $ticket->id,
+            'user_id' => $user->id ?? null,
+            'has_file' => $request->hasFile('attachment'),
+            'file_keys' => array_keys($request->files->all()),
+        ]);
+
         if (!($user->isAdmin() || $ticket->user_id === $user->id || $ticket->merchant_id === $user->id)) {
             abort(403);
         }

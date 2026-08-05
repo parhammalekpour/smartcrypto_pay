@@ -98,7 +98,9 @@
                             if (hasFile) fileInput.value = '';
                             fetchMessages();
                         } else {
-                            console.error('Send failed');
+                            const txt = await res.text();
+                            console.error('Send failed', res.status, txt);
+                            alert('ارسال پیام ناموفق بود. لطفاً دوباره تلاش کنید.');
                         }
                     }catch(e){ console.error(e); }
                 });
