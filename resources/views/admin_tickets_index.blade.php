@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+@extends('layouts.admin')
 
 @section('title', 'تیکت‌ها (مدیریت)')
 @section('page-title', 'تیکت‌های کاربران')

@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+@extends('layouts.admin')
 
 @section('title', 'تیکت (مدیریت)')
 @section('page-title', $ticket->subject)
