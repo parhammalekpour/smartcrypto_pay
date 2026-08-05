@@ -32,6 +32,10 @@
                 <i class="fas fa-exchange-alt"></i>
                 <span>تراکنش‌ها</span>
             </a>
+            <a href="{{ route('admin.tickets.index') }}" class="flex items-center gap-3 rounded-lg px-4 py-3 {{ Route::currentRouteName() === 'admin.tickets.index' ? 'bg-slate-800' : 'hover:bg-slate-800' }}">
+                <i class="fas fa-headset"></i>
+                <span>تیکت‌ها / پشتیبانی</span>
+            </a>
         </nav>
 
         <div class="mt-auto rounded-xl border border-slate-700 bg-slate-800/70 p-4">
