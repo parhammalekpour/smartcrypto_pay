@@ -87,13 +87,23 @@ class TicketController extends Controller
         }
 
         $messages = $ticket->messages()->get()->map(function ($m) {
+            $attachmentUrl = null;
+            if ($m->attachment) {
+                // Prefer Storage::url, but fall back to asset() if needed
+                try {
+                    $attachmentUrl = Storage::url($m->attachment);
+                } catch (\Throwable $e) {
+                    $attachmentUrl = asset('storage/' . ltrim($m->attachment, '/'));
+                }
+            }
+
             return [
                 'id' => $m->id,
                 'sender_type' => $m->sender_type,
                 'sender_id' => $m->sender_id,
                 'sender_name' => $m->sender_id ? optional(\App\Models\User::find($m->sender_id))->name : null,
                 'body' => $m->body,
-                'attachment' => $m->attachment ? Storage::url($m->attachment) : null,
+                'attachment' => $attachmentUrl,
                 'created_at' => $m->created_at->toDateTimeString(),
             ];
         });
@@ -126,6 +136,13 @@ class TicketController extends Controller
 
         // Handle optional attachment for subsequent messages
         if ($request->hasFile('attachment')) {
+            // Log file info
+            \Illuminate\Support\Facades\Log::info('TicketController::postMessage - uploading attachment', [
+                'original_name' => $request->file('attachment')->getClientOriginalName(),
+                'mime' => $request->file('attachment')->getClientMimeType(),
+                'size' => $request->file('attachment')->getSize(),
+            ]);
+
             $path = $request->file('attachment')->store('ticket_attachments', 'public');
             $msg->attachment = $path;
         }
@@ -139,6 +156,15 @@ class TicketController extends Controller
         $ticket->save();
 
         if ($request->wantsJson() || $request->ajax()) {
+            $attachmentUrl = null;
+            if ($msg->attachment) {
+                try {
+                    $attachmentUrl = Storage::url($msg->attachment);
+                } catch (\Throwable $e) {
+                    $attachmentUrl = asset('storage/' . ltrim($msg->attachment, '/'));
+                }
+            }
+
             return response()->json([
                 'id' => $msg->id,
                 'sender_type' => $msg->sender_type,
@@ -146,8 +172,8 @@ class TicketController extends Controller
                 'sender_name' => $user->name,
                 'body' => $msg->body,
                 'created_at' => $msg->created_at->toDateTimeString(),
-                    'attachment' => $msg->attachment ? Storage::url($msg->attachment) : null,
-                ], 201);
+                'attachment' => $attachmentUrl,
+            ], 201);
         }
 
         return redirect()->route('tickets.show', $ticket->id)->with('success', 'پیام ذخیره شد');

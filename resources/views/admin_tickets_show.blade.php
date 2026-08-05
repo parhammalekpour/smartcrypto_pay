@@ -53,7 +53,7 @@
                         div.className = 'p-4 rounded-lg ' + (m.sender_type === 'admin' ? 'bg-indigo-50' : 'bg-gray-100');
                         div.innerHTML = `<p class="text-xs text-gray-600">${m.sender_type}${m.sender_name ? ' — ' + m.sender_name : ''}</p>` +
                                         `<p class="mt-2 text-sm text-gray-800">${m.body ? m.body : ''}</p>` +
-                                        `${m.attachment ? '<div class="mt-2"><img src="'+m.attachment+'" class="max-w-xs rounded"/></div>' : ''}` +
+                                        `${m.attachment ? '<div class="mt-2"><img src="'+m.attachment+'" class="max-w-md max-h-60 object-contain rounded"/></div>' : ''}` +
                                         `<p class="text-xs text-gray-400 mt-2">${m.created_at}</p>`;
                         messagesEl.appendChild(div);
                     });
