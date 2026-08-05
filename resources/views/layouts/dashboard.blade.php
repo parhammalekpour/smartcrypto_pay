@@ -191,7 +191,7 @@
                         تنظیمات عمومی
                     </a>
 
-                    <a href="{{ route('tickets.index') }}" class="sidebar-item @if(starts_with(Route::currentRouteName(), 'tickets')) active @endif">
+                    <a href="{{ route('tickets.index') }}" class="sidebar-item @if(\Illuminate\Support\Str::startsWith(Route::currentRouteName(), 'tickets')) active @endif">
                         <i class="fas fa-headset"></i>
                         پشتیبانی / تیکت‌ها
                     </a>
@@ -229,7 +229,7 @@
                         تنظیمات حساب
                     </a>
 
-                    <a href="{{ route('tickets.index') }}" class="sidebar-item @if(starts_with(Route::currentRouteName(), 'tickets')) active @endif">
+                    <a href="{{ route('tickets.index') }}" class="sidebar-item @if(\Illuminate\Support\Str::startsWith(Route::currentRouteName(), 'tickets')) active @endif">
                         <i class="fas fa-headset"></i>
                         پشتیبانی / تیکت‌ها
                     </a>
