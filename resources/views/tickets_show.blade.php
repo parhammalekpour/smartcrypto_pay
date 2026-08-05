@@ -73,13 +73,16 @@
                 const form = document.getElementById('messageForm');
                 form.addEventListener('submit', async function(e){
                     e.preventDefault();
-                    const body = document.getElementById('messageInput').value.trim();
-                    if (!body) return;
+                    const bodyEl = document.getElementById('messageInput');
+                    const body = bodyEl.value.trim();
+                    const fileInput = document.getElementById('attachmentInput');
+                    const hasFile = fileInput && fileInput.files.length > 0;
+                    // allow sending when either a message or an attachment is present
+                    if (!body && !hasFile) return;
                     try{
                         const formData = new FormData();
                         formData.append('message', body);
-                        const fileInput = document.getElementById('attachmentInput');
-                        if (fileInput && fileInput.files.length > 0) {
+                        if (hasFile) {
                             formData.append('attachment', fileInput.files[0]);
                         }
 
@@ -91,7 +94,8 @@
                             body: formData
                         });
                         if (res.ok) {
-                            document.getElementById('messageInput').value = '';
+                            bodyEl.value = '';
+                            if (hasFile) fileInput.value = '';
                             fetchMessages();
                         } else {
                             console.error('Send failed');
