@@ -190,6 +190,11 @@
                     <a href="{{ route('merchant.settings') }}" class="sidebar-item">
                         تنظیمات عمومی
                     </a>
+
+                    <a href="{{ route('tickets.index') }}" class="sidebar-item @if(starts_with(Route::currentRouteName(), 'tickets')) active @endif">
+                        <i class="fas fa-headset"></i>
+                        پشتیبانی / تیکت‌ها
+                    </a>
                     
                 @else
                     <!-- User Menu -->
@@ -222,6 +227,11 @@
                     <a href="{{ route('user.settings') }}" class="sidebar-item">
                         <i class="fas fa-cog"></i>
                         تنظیمات حساب
+                    </a>
+
+                    <a href="{{ route('tickets.index') }}" class="sidebar-item @if(starts_with(Route::currentRouteName(), 'tickets')) active @endif">
+                        <i class="fas fa-headset"></i>
+                        پشتیبانی / تیکت‌ها
                     </a>
                 @endif
             </nav>

@@ -150,6 +150,167 @@ class MerchantController extends Controller
         return view('merchant.transactions', compact('transactions', 'paymentRequests', 'walletTransactions', 'totalCount', 'completedCount', 'pendingCount', 'failedCount'));
     }
 
+    /**
+     * Export transactions and payment requests matching current filters as CSV
+     */
+    public function exportTransactions()
+    {
+        $query = Transaction::whereHas('wallet', function ($q) {
+            $q->where('user_id', auth()->id());
+        })->with(['wallet', 'sender', 'recipient', 'paymentRequest']);
+
+        if (request('search')) {
+            $search = request('search');
+            $query->where(function($q) use ($search) {
+                $q->where('reference', 'like', "%$search%")
+                  ->orWhere('description', 'like', "%$search%")
+                  ->orWhere('id', 'like', "%$search%")
+                  ->orWhereHas('sender', function($q) use ($search) {
+                      $q->where('name', 'like', "%$search%");
+                  });
+            });
+        }
+
+        if (request('type') && request('type') !== '') {
+            $query->where('type', request('type'));
+        }
+
+        if (request('status') && request('status') !== '') {
+            $query->where('status', request('status'));
+        }
+
+        $transactions = $query->latest()->get();
+
+        // Also include payment requests (invoices) optionally filtered
+        $paymentRequestsQuery = PaymentRequest::where('merchant_id', auth()->id())->with('recipient');
+        if (request('search')) {
+            $search = request('search');
+            $paymentRequestsQuery->where(function($q) use ($search) {
+                $q->where('invoice_number', 'like', "%$search%")
+                  ->orWhere('reference', 'like', "%$search%")
+                  ->orWhereHas('recipient', function($q) use ($search) {
+                      $q->where('name', 'like', "%$search%");
+                  });
+            });
+        }
+        if (request('status') && request('status') !== '') {
+            $paymentRequestsQuery->where('status', request('status'));
+        }
+        $paymentRequests = $paymentRequestsQuery->latest()->get();
+
+        $filename = 'merchant-transactions-' . now()->format('Ymd_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function() use ($transactions, $paymentRequests) {
+            $out = fopen('php://output', 'w');
+            // Header row
+            fputcsv($out, ['type','id','reference','invoice_number','description','amount','currency','status','sender','recipient','created_at']);
+
+            foreach ($transactions as $t) {
+                fputcsv($out, [
+                    'transaction',
+                    $t->id,
+                    $t->reference ?? '',
+                    $t->paymentRequest?->invoice_number ?? '',
+                    $t->description ?? '',
+                    $t->amount,
+                    $t->currency ?? ($t->wallet?->currency ?? ''),
+                    $t->status,
+                    $t->sender?->name ?? '',
+                    $t->recipient?->name ?? '',
+                    $t->created_at->toDateTimeString(),
+                ]);
+            }
+
+            foreach ($paymentRequests as $p) {
+                fputcsv($out, [
+                    'invoice',
+                    $p->id,
+                    $p->reference ?? '',
+                    $p->invoice_number ?? '',
+                    'Invoice: ' . ($p->description ?? ''),
+                    $p->amount,
+                    $p->currency,
+                    $p->status,
+                    '',
+                    $p->recipient?->name ?? '',
+                    $p->created_at->toDateTimeString(),
+                ]);
+            }
+
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Download a single transaction summary (text/html).
+     */
+    public function downloadTransaction(Transaction $transaction)
+    {
+        // Ensure merchant owns the wallet related to transaction
+        if ($transaction->wallet->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $data = [
+            'id' => $transaction->id,
+            'reference' => $transaction->reference,
+            'type' => $transaction->type,
+            'description' => $transaction->description,
+            'amount' => $transaction->amount,
+            'currency' => $transaction->currency ?? $transaction->wallet->currency ?? '',
+            'status' => $transaction->status,
+            'sender' => $transaction->sender?->name ?? '—',
+            'recipient' => $transaction->recipient?->name ?? '—',
+            'created_at' => $transaction->created_at->toDateTimeString(),
+        ];
+
+        $filename = 'transaction-' . ($transaction->reference ?? $transaction->id) . '.html';
+
+        $content = view('merchant.downloads.transaction', compact('data'))->render();
+
+        return response($content, 200)
+            ->header('Content-Type', 'text/html')
+            ->header('Content-Disposition', "attachment; filename=\"$filename\"");
+    }
+
+    /**
+     * Download invoice (payment request) as simple HTML invoice file
+     */
+    public function downloadInvoice(PaymentRequest $invoice)
+    {
+        if ($invoice->merchant_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $data = [
+            'id' => $invoice->id,
+            'invoice_number' => $invoice->invoice_number,
+            'reference' => $invoice->reference,
+            'description' => $invoice->description,
+            'amount' => $invoice->amount,
+            'currency' => $invoice->currency,
+            'status' => $invoice->status,
+            'recipient' => $invoice->recipient?->name ?? '—',
+            'created_at' => $invoice->created_at->toDateTimeString(),
+            'paid_at' => $invoice->updated_at && $invoice->status === 'paid' ? $invoice->updated_at->toDateTimeString() : null,
+        ];
+
+        $filename = 'invoice-' . ($invoice->invoice_number ?? $invoice->id) . '.html';
+
+        $content = view('merchant.downloads.invoice', compact('data'))->render();
+
+        return response($content, 200)
+            ->header('Content-Type', 'text/html')
+            ->header('Content-Disposition', "attachment; filename=\"$filename\"");
+    }
+
     public function invoices()
     {
         $invoices = PaymentRequest::where('merchant_id', auth()->id())

@@ -41,17 +41,17 @@
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">شماره فاکتور</label>
                 <input type="text" name="invoice_number" required placeholder="INV-001" 
+                    value="{{ old('invoice_number', $nextInvoiceNumber ?? '') }}"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900">
             </div>
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">نام کاربری گیرنده</label>
-                <input type="text" name="recipient_username" list="customer-list" required placeholder="نام کاربری" 
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900">
-                <datalist id="customer-list">
+                <select name="recipient_username" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900">
+                    <option value="">انتخاب مشتری</option>
                     @foreach($customers as $customer)
-                        <option value="{{ $customer->user->name ?? $customer->name }}">{{ $customer->email }} {{ $customer->phone }}</option>
+                        <option value="{{ $customer->user->name ?? $customer->name }}">{{ $customer->user->name ?? $customer->name }} — {{ $customer->email ?? '—' }} {{ $customer->phone ?? '' }}</option>
                     @endforeach
-                </datalist>
+                </select>
                 @if($customers->count())
                     <p class="text-xs text-gray-500 mt-2">نام‌های مشتریان شما از لیست پایین قابل انتخاب هستند.</p>
                 @endif

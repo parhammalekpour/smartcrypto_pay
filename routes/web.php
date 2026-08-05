@@ -36,6 +36,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/kyc/document/{user}/{filename}', [KycController::class, 'adminDocument'])->name('admin.kyc.document');
     Route::get('/admin/transactions', [AdminController::class, 'transactions'])->name('admin.transactions');
     Route::post('/admin/transactions/{transaction}/cancel', [AdminController::class, 'cancelTransaction'])->name('admin.transactions.cancel');
+
+    // Admin tickets
+    Route::get('/admin/tickets', [\App\Http\Controllers\AdminTicketController::class, 'index'])->name('admin.tickets.index');
+    Route::get('/admin/tickets/{ticket}', [\App\Http\Controllers\AdminTicketController::class, 'show'])->name('admin.tickets.show');
+    Route::post('/admin/tickets/{ticket}/reply', [\App\Http\Controllers\AdminTicketController::class, 'reply'])->name('admin.tickets.reply');
+    Route::post('/admin/tickets/{ticket}/close', [\App\Http\Controllers\AdminTicketController::class, 'close'])->name('admin.tickets.close');
 });
 
 Route::middleware(['auth', 'role:user', 'verified'])->group(function () {
@@ -51,7 +57,14 @@ Route::middleware(['auth', 'role:user', 'verified'])->group(function () {
     // Send & Receive
     Route::get('/user/send', [WalletController::class, 'send'])->name('user.send');
     Route::get('/user/receive', [WalletController::class, 'receive'])->name('user.receive');
-    
+
+    // Tickets (user)
+    Route::get('/tickets', [\App\Http\Controllers\TicketController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/create', [\App\Http\Controllers\TicketController::class, 'create'])->name('tickets.create');
+    Route::post('/tickets', [\App\Http\Controllers\TicketController::class, 'store'])->name('tickets.store');
+    Route::get('/tickets/{ticket}', [\App\Http\Controllers\TicketController::class, 'show'])->name('tickets.show');
+    Route::post('/tickets/{ticket}/message', [\App\Http\Controllers\TicketController::class, 'postMessage'])->name('tickets.message');
+
     // Transactions
     Route::get('/user/transactions', [WalletController::class, 'transactions'])->name('user.transactions');
     Route::get('/user/pending-payments', [WalletController::class, 'pendingPayments'])->name('user.pending-payments');
@@ -128,9 +141,15 @@ Route::middleware(['auth', 'role:merchant', 'verified'])->group(function () {
 
     // Transactions
     Route::get('/merchant/transactions', [MerchantController::class, 'transactions'])->name('merchant.transactions');
+    // Export transactions (CSV)
+    Route::get('/merchant/transactions/export', [MerchantController::class, 'exportTransactions'])->name('merchant.transactions.export');
+    // Download single transaction (summary / invoice-like)
+    Route::get('/merchant/transactions/{transaction}/download', [MerchantController::class, 'downloadTransaction'])->name('merchant.transactions.download');
     
     // Invoices
     Route::get('/merchant/invoices', [MerchantController::class, 'invoices'])->name('merchant.invoices');
+    // Download invoice (payment request) as downloadable HTML summary
+    Route::get('/merchant/invoices/{invoice}/download', [MerchantController::class, 'downloadInvoice'])->name('merchant.invoices.download');
     
     // Settlements
     Route::get('/merchant/settlements', [MerchantController::class, 'settlements'])->name('merchant.settlements');

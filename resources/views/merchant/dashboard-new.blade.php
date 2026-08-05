@@ -244,9 +244,9 @@
     <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg shadow p-6 border border-indigo-100">
         <h4 class="font-semibold text-gray-800 mb-2">نیاز به کمک دارید؟</h4>
         <p class="text-sm text-gray-600 mb-4">تیم پشتیبانی ما ۲۴/۷ آماده کمک است</p>
-        <button class="w-full bg-indigo-600 text-white py-2 rounded-lg font-semibold text-sm hover:bg-indigo-700 transition">
+        <a href="{{ route('tickets.create') }}" class="w-full inline-block text-center bg-indigo-600 text-white py-2 rounded-lg font-semibold text-sm hover:bg-indigo-700 transition">
             <i class="fas fa-headset ml-2"></i>تماس با پشتیبانی
-        </button>
+        </a>
     </div>
 </div>
 

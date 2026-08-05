@@ -73,7 +73,12 @@
 <!-- Transactions & Payments Table -->
 <div class="bg-white rounded-lg shadow overflow-hidden">
     <div class="p-6 border-b border-gray-200 flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-800">تراکنش‌ها و فاکتورها</h3>
+        <div class="flex items-center gap-4">
+            <h3 class="text-lg font-semibold text-gray-800">تراکنش‌ها و فاکتورها</h3>
+            <a href="{{ route('merchant.transactions.export') }}?{{ request()->getQueryString() }}" class="text-sm bg-gray-100 px-3 py-1 rounded-lg text-gray-700 hover:bg-gray-200">
+                <i class="fas fa-file-csv ml-2"></i>صادرات CSV
+            </a>
+        </div>
         <span class="text-sm text-gray-600">نمایش {{ ($transactions->count() + $paymentRequests->count()) }} مورد از {{ $transactions->total() + $paymentRequests->count() }}</span>
     </div>
 
@@ -298,7 +303,12 @@
 
     function downloadTransaction() {
         if (!currentDetail) return;
-        alert('قابلیت دانلود برای پس‌تر آماده می‌شود');
+        // If it's a payment (invoice) open invoice download, otherwise transaction download
+        if (currentDetail.type === 'payment') {
+            window.location = '/merchant/invoices/' + encodeURIComponent(currentDetail.id) + '/download';
+        } else {
+            window.location = '/merchant/transactions/' + encodeURIComponent(currentDetail.id) + '/download';
+        }
     }
 </script>
 @endpush

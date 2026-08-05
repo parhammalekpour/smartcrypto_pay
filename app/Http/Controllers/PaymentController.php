@@ -11,6 +11,7 @@ use App\Models\PaymentRequest;
 use App\Models\Wallet;
 use App\Models\Transaction;
 use App\Models\User;
+use Illuminate\Validation\Rule;
 
 class PaymentController extends Controller
 {
@@ -50,8 +51,52 @@ class PaymentController extends Controller
             ->count();
  
         $customers = auth()->user()->customers()->orderBy('name')->get();
- 
-        return view('merchant.payments', compact('payments', 'pendingCount', 'paidCount', 'customers'));
+
+        // Compute next invoice number for convenience (prefill, editable)
+        $nextInvoiceNumber = 'INV-001';
+
+        // Base the sequence on the last PAID (settled) invoice — unpaid/draft invoices do not advance the sequence
+        $lastPaid = PaymentRequest::where('merchant_id', auth()->id())
+            ->where('status', 'paid')
+            ->orderByDesc('updated_at')
+            ->first();
+
+        $baseCandidate = null;
+
+        if ($lastPaid && $lastPaid->invoice_number) {
+            $baseCandidate = $lastPaid->invoice_number;
+        }
+
+        if ($baseCandidate) {
+            // If invoice ends with digits, increment that numeric suffix and preserve padding
+            if (preg_match('/(\d+)$/', $baseCandidate, $matches)) {
+                $lastNum = intval($matches[1]);
+                $pad = max(3, strlen($matches[1]));
+                $nextNum = $lastNum + 1;
+                $padded = str_pad((string)$nextNum, $pad, '0', STR_PAD_LEFT);
+                $candidate = preg_replace('/(\d+)$/', $padded, $baseCandidate);
+            } else {
+                // no trailing digits — append a standard suffix
+                $candidate = $baseCandidate . '-001';
+            }
+
+            // Ensure the generated candidate is unique for this merchant — skip over existing invoice_numbers (including unpaid ones)
+            while (PaymentRequest::where('merchant_id', auth()->id())->where('invoice_number', $candidate)->exists()) {
+                // increment numeric suffix further
+                if (preg_match('/(\d+)$/', $candidate, $m2)) {
+                    $num = intval($m2[1]) + 1;
+                    $pad2 = max(3, strlen($m2[1]));
+                    $candidate = preg_replace('/(\d+)$/', str_pad((string)$num, $pad2, '0', STR_PAD_LEFT), $candidate);
+                } else {
+                    // unlikely, but append -001 then continue loop
+                    $candidate = $candidate . '-001';
+                }
+            }
+
+            $nextInvoiceNumber = $candidate;
+        }
+
+        return view('merchant.payments', compact('payments', 'pendingCount', 'paidCount', 'customers', 'nextInvoiceNumber'));
     }
 
     public function store(Request $request)
@@ -61,10 +106,20 @@ class PaymentController extends Controller
         }
 
         $request->validate([
-            'invoice_number' => 'required|string|max:255',
+            'invoice_number' => [
+                'required',
+                'string',
+                'max:255',
+                // Ensure invoice number is unique for this merchant
+                Rule::unique('payment_requests')->where(function ($query) {
+                    return $query->where('merchant_id', auth()->id());
+                }),
+            ],
             'amount' => 'required|numeric|min:0.00000001',
             'currency' => 'required',
             'recipient_username' => 'required|string|max:255',
+        ], [
+            'invoice_number.unique' => 'شماره فاکتور تکراری است. لطفاً شماره دیگری وارد کنید.'
         ]);
  
         $recipient = User::where('name', $request->recipient_username)->first();

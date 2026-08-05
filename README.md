@@ -54,7 +54,7 @@ In order to ensure that the Laravel community is welcoming to all, please review
 
 If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
-## Local Mail Testing
+## Mail / SMTP Configuration
 
 For local development, Mailpit can capture verification emails sent by the application. Start Mailpit with:
 
@@ -62,13 +62,24 @@ For local development, Mailpit can capture verification emails sent by the appli
 mailpit --smtp 127.0.0.1:2525 --listen 127.0.0.1:8025
 ```
 
-Then make sure your `.env` has:
+For sending real verification emails to actual addresses, configure a real SMTP provider and set the corresponding environment variables in your `.env` file. Example `.env` settings for SMTP:
 
 ```env
 MAIL_MAILER=smtp
-MAIL_HOST=127.0.0.1
-MAIL_PORT=2525
+MAIL_SCHEME=tls
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_USERNAME=your_smtp_username
+MAIL_PASSWORD=your_smtp_password
+MAIL_FROM_ADDRESS=hello@example.com
+MAIL_FROM_NAME="Your App Name"
 ```
+
+Common providers:
+- Gmail: `MAIL_HOST=smtp.gmail.com`, `MAIL_PORT=587` (use App Passwords for authentication)
+- SendGrid: `MAIL_HOST=smtp.sendgrid.net`, `MAIL_PORT=587`, `MAIL_USERNAME=apikey`, `MAIL_PASSWORD=<SENDGRID_API_KEY>`
+
+If you prefer to keep using Mailpit for local dev, use the Mailpit example above and point the `.env` values to `127.0.0.1:2525`.
 
 ## License
 
