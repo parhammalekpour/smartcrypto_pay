@@ -115,6 +115,13 @@ class TicketController extends Controller
         $msg->sender_type = $user->isAdmin() ? 'admin' : ($user->isMerchant() ? 'merchant' : 'user');
         $msg->sender_id = $user->id;
         $msg->body = $request->input('message');
+
+        // Handle optional attachment for subsequent messages
+        if ($request->hasFile('attachment')) {
+            $path = $request->file('attachment')->store('ticket_attachments', 'public');
+            $msg->attachment = $path;
+        }
+
         $msg->save();
 
         $ticket->last_message_at = now();
