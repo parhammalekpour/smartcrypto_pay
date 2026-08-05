@@ -117,7 +117,7 @@
                     <button class="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-semibold hover:bg-indigo-100 transition flex items-center justify-center gap-1 whitespace-nowrap" onclick="copyToClipboard('{{ $wallet->wallet_address }}')">
                         <i class="fas fa-copy"></i>کپی
                     </button>
-                    <a href="{{ route('user.send') }}" class="p-2 bg-green-50 text-green-600 rounded-lg text-xs font-semibold hover:bg-green-100 transition flex items-center justify-center gap-1 whitespace-nowrap">
+                    <a href="{{ route('user.send', ['sender_wallet_id' => $wallet->id]) }}" class="p-2 bg-green-50 text-green-600 rounded-lg text-xs font-semibold hover:bg-green-100 transition flex items-center justify-center gap-1 whitespace-nowrap">
                         <i class="fas fa-paper-plane"></i>ارسال
                     </a>
                     <form action="/wallet/demo-deposit/{{ $wallet->id }}" method="POST" style="display:contents;">

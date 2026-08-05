@@ -123,10 +123,11 @@ class WalletController extends Controller
         return $address;
     }
 
-    public function send()
+    public function send(Request $request)
     {
         $wallets = auth()->user()->wallets ?? collect();
-        return view('user.send', compact('wallets'));
+        $preselected = $request->query('sender_wallet_id');
+        return view('user.send', compact('wallets', 'preselected'));
     }
 
     public function receive()

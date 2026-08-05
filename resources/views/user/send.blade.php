@@ -21,7 +21,7 @@
                     <option value="">انتخاب کیف پول</option>
                     @if($wallets && $wallets->count() > 0)
                         @foreach($wallets as $wallet)
-                            <option value="{{ $wallet->id }}">
+                            <option value="{{ $wallet->id }}" @if(isset($preselected) && $preselected == $wallet->id) selected @endif>
                                 {{ $wallet->currency }} - {{ number_format($wallet->balance, 8) }}
                             </option>
                         @endforeach
