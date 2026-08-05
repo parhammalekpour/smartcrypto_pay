@@ -17,8 +17,8 @@ class Ticket extends Model
         'last_message_at',
     ];
 
-    protected $dates = [
-        'last_message_at',
+    protected $casts = [
+        'last_message_at' => 'datetime',
     ];
 
     public function messages()
