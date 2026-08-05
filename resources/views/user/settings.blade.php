@@ -34,9 +34,6 @@
             <button onclick="switchTab('security')" id="tab-security" class="tab-btn flex-1 px-4 py-4 text-center font-semibold text-gray-600 dark:text-gray-400 border-b-4 border-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition">
                 <i class="fas fa-lock ml-2"></i>امنیت
             </button>
-            <button onclick="switchTab('notifications')" id="tab-notifications" class="tab-btn flex-1 px-4 py-4 text-center font-semibold text-gray-600 dark:text-gray-400 border-b-4 border-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-                <i class="fas fa-bell ml-2"></i>اطلاع رسانی
-            </button>
             <button onclick="switchTab('privacy')" id="tab-privacy" class="tab-btn flex-1 px-4 py-4 text-center font-semibold text-gray-600 dark:text-gray-400 border-b-4 border-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition">
                 <i class="fas fa-shield-alt ml-2"></i>حریم خصوصی
             </button>
@@ -132,66 +129,6 @@
                 </form>
             </div>
 
-            <!-- Notifications Tab -->
-            <div id="notifications" class="tab-content hidden">
-                <form action="{{ route('settings.update') }}" method="POST" class="space-y-6">
-                    @csrf
-                    @method('PATCH')
-
-                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">تنظیمات اطلاع رسانی</h3>
-
-                    <!-- Enable Notifications -->
-                    <label class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition">
-                        <input type="checkbox" name="notifications_enabled" value="1" @if(auth()->user()->notifications_enabled) checked @endif class="w-5 h-5 text-indigo-600 dark:text-indigo-500 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
-                        <div class="mr-3">
-                            <p class="font-semibold text-gray-800 dark:text-gray-100">فعال‌سازی اطلاع‌رسانی</p>
-                            <p class="text-sm text-gray-600 dark:text-gray-400">دریافت اطلاعات از طریق ایمیل</p>
-                        </div>
-                    </label>
-
-                    <!-- Notification Email -->
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">ایمیل برای اطلاع رسانی</label>
-                        <input type="email" name="notifications_email" value="{{ old('notifications_email', auth()->user()->notifications_email) }}" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-colors duration-300" placeholder="اختیاری">
-                    </div>
-
-                    <!-- Notification Types -->
-                    <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                        <h4 class="font-semibold text-gray-800 dark:text-gray-100 mb-4">نوع اطلاع رسانی ها</h4>
-                        <div class="space-y-3">
-                            <label class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition">
-                                <input type="checkbox" name="notify_updates" class="w-5 h-5 text-indigo-600 dark:text-indigo-500 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
-                                <div class="mr-3">
-                                    <p class="font-semibold text-gray-800 dark:text-gray-100">اپدیت ها</p>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">اطلاع از بروزرسانی های سایت</p>
-                                </div>
-                            </label>
-
-                            <label class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition">
-                                <input type="checkbox" name="notify_transactions" class="w-5 h-5 text-indigo-600 dark:text-indigo-500 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
-                                <div class="mr-3">
-                                    <p class="font-semibold text-gray-800 dark:text-gray-100">تراکنش ها</p>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">اطلاع از ارسال و دریافت</p>
-                                </div>
-                            </label>
-
-                            <label class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition">
-                                <input type="checkbox" name="notify_security" class="w-5 h-5 text-indigo-600 dark:text-indigo-500 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
-                                <div class="mr-3">
-                                    <p class="font-semibold text-gray-800 dark:text-gray-100">امنیت</p>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">اطلاع رسانی امنیتی</p>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
-                        <button type="submit" class="px-8 py-3 bg-indigo-600 dark:bg-indigo-700 text-white font-semibold rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors duration-300">
-                            <i class="fas fa-save ml-2"></i>ذخیره تنظیمات
-                        </button>
-                    </div>
-                </form>
-            </div>
 
             <!-- Privacy Tab -->
             <div id="privacy" class="tab-content hidden">

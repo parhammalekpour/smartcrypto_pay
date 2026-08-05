@@ -33,28 +33,14 @@ class CryptoPrice
 
     protected function fetchPrice($symbol)
     {
-        // 1) Primary: TradingView
+        // Only TradingView is used as the market data source.
         $price = $this->getTradingViewPrice($symbol);
         if ($price > 0) {
             Log::info('Price source for ' . $symbol . ': tradingview => ' . $price);
             return $price;
         }
 
-        // 2) Primary fallback: Bitpin
-        $price = $this->getBitpinPrice($symbol);
-        if ($price > 0) {
-            Log::info('Price source for ' . $symbol . ': bitpin => ' . $price);
-            return $price;
-        }
-
-        // 3) Secondary fallback: CoinGecko
-        $price = $this->getCoinGeckoPrice($symbol);
-        if ($price > 0) {
-            Log::info('Price source for ' . $symbol . ': coingecko => ' . $price);
-            return $price;
-        }
-
-        Log::warning('All price sources failed for ' . $symbol . ', returning 0');
+        Log::warning('TradingView price fetch failed for ' . $symbol . ', returning 0');
         return 0;
     }
 
@@ -110,78 +96,6 @@ class CryptoPrice
     }
 
 
-    protected function getBitpinPrice($symbol)
-    {
-        $bitpinSymbol = $this->getBitpinSymbol($symbol);
-        if (! $bitpinSymbol) {
-            return 0;
-        }
-
-        $baseUrl = env('BITPIN_API_BASE_URL', 'https://api.bitpin.ir');
-        $url = rtrim($baseUrl, '/') . '/api/v1/mkt/tickers/';
-        Log::info('Fetching price from Bitpin: ' . $url . ' symbol=' . $bitpinSymbol);
-
-        try {
-            $response = Http::timeout(10)->get($url);
-            Log::info('Bitpin Response Status: ' . $response->status());
-            // Log a snippet of body to avoid very large logs
-            Log::debug('Bitpin Response (snippet): ' . substr($response->body(), 0, 1000));
-
-            if ($response->successful()) {
-                $data = $response->json();
-                $items = $data['value'] ?? $data;
-                if (is_array($items)) {
-                    foreach ($items as $item) {
-                        if (is_array($item) && isset($item['symbol']) && $item['symbol'] === $bitpinSymbol) {
-                            return (float) ($item['price'] ?? 0);
-                        }
-                    }
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Bitpin API Error: ' . $e->getMessage());
-        }
-
-        return 0;
-    }
-
-    /**
-     * Query CoinGecko as a fallback source (no API key required).
-     * Returns USD price for supported symbols (BTC, ETH) or 0 on failure.
-     */
-    protected function getCoinGeckoPrice($symbol)
-    {
-        $map = [
-            'BTC' => 'bitcoin',
-            'ETH' => 'ethereum',
-            'USDT' => 'tether'
-        ];
-
-        $id = $map[$symbol] ?? null;
-        if (! $id) {
-            return 0;
-        }
-
-        $url = 'https://api.coingecko.com/api/v3/simple/price?ids=' . $id . '&vs_currencies=usd';
-        Log::info('Fetching price from CoinGecko: ' . $url);
-
-        try {
-            $response = Http::timeout(10)->get($url);
-            Log::info('CoinGecko Response Status: ' . $response->status());
-            Log::debug('CoinGecko Response Body: ' . substr($response->body(), 0, 1000));
-
-            if ($response->successful()) {
-                $data = $response->json();
-                if (isset($data[$id]['usd'])) {
-                    return (float) $data[$id]['usd'];
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('CoinGecko API Error: ' . $e->getMessage());
-        }
-
-        return 0;
-    }
 
     protected function getTradingViewPrice($symbol)
     {
@@ -221,17 +135,6 @@ class CryptoPrice
         }
 
         return 0;
-    }
-
-    protected function getBitpinSymbol($symbol)
-    {
-        $symbolMap = [
-            'BTC' => 'BTC_USDT',
-            'ETH' => 'ETH_USDT',
-            'USDT' => 'USDT_USDT',
-        ];
-
-        return $symbolMap[$symbol] ?? null;
     }
 
     protected function getSymbol($crypto)

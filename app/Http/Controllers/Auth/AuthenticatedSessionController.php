@@ -27,7 +27,22 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
-
+ 
+        if (! Auth::user()->hasVerifiedEmail()) {
+            $intended = session()->get('url.intended');
+            $path = $intended ? parse_url($intended, PHP_URL_PATH) : null;
+ 
+            if ($path && str_starts_with($path, '/verify-email/')) {
+                return redirect()->intended(route('dashboard', absolute: false));
+            }
+ 
+            Auth::logout();
+            $request->session()->regenerateToken();
+ 
+            return redirect()->route('login')
+                ->with('status', __('ایمیل شما وریفای نشده است.'));
+        }
+ 
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

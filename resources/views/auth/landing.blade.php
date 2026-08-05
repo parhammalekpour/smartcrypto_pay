@@ -70,11 +70,17 @@
         .brand-panel p,
         .brand-panel .feature-text {
             white-space: normal;
+            line-height: 1.8;
         }
         .brand-panel .feature-box {
             min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
         }
-        .brand-panel::before {
+        .brand-panel .feature-box p {
+            margin: 0;
+        }        .brand-panel::before {
             content: '';
             position: absolute;
             inset: 0;
@@ -88,13 +94,14 @@
         }
         .outer-card {
             min-height: 620px;
-            align-items: start;
+            align-items: stretch;
         }
         .form-side {
             min-height: 620px;
         }
         .brand-side {
             min-width: 340px;
+            min-height: 620px;
             display: flex;
             align-items: stretch;
             justify-content: center;

@@ -9,11 +9,19 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE payment_requests MODIFY status ENUM('pending', 'paid', 'expired', 'rejected', 'cancelled') DEFAULT 'pending'");
     }
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE payment_requests MODIFY status ENUM('pending', 'paid', 'expired', 'rejected') DEFAULT 'pending'");
     }
 };

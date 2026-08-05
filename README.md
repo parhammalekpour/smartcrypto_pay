@@ -54,6 +54,22 @@ In order to ensure that the Laravel community is welcoming to all, please review
 
 If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
+## Local Mail Testing
+
+For local development, Mailpit can capture verification emails sent by the application. Start Mailpit with:
+
+```bash
+mailpit --smtp 127.0.0.1:2525 --listen 127.0.0.1:8025
+```
+
+Then make sure your `.env` has:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=127.0.0.1
+MAIL_PORT=2525
+```
+
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

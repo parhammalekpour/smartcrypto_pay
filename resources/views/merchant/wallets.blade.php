@@ -101,9 +101,6 @@
                             <button class="block w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                 <i class="fas fa-edit ml-2"></i>ویرایش
                             </button>
-                            <button class="block w-full text-right px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                                <i class="fas fa-trash ml-2"></i>حذف
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -136,18 +133,31 @@
                 </div>
 
                 <!-- Actions -->
-                <div class="grid grid-cols-3 gap-2">
-                    <button class="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-semibold hover:bg-indigo-100 transition flex items-center justify-center gap-1"
-                        onclick="copyAddress('{{ $wallet->wallet_address }}')">
-                        <i class="fas fa-copy"></i>کپی نشانی
+                <div class="grid grid-cols-4 gap-2">
+                    <button class="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-semibold hover:bg-indigo-100 transition flex items-center justify-center gap-1 whitespace-nowrap" onclick="copyAddress('{{ $wallet->wallet_address }}')">
+                        <i class="fas fa-copy"></i>کپی
                     </button>
-                    <button class="p-2 bg-gray-50 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-100 transition flex items-center justify-center gap-1"
-                        onclick="viewOnExplorer('{{ $wallet->wallet_address }}', '{{ $wallet->currency }}')">
+                    <button class="p-2 bg-gray-50 text-gray-600 rounded-lg text-xs font-semibold hover:bg-gray-100 transition flex items-center justify-center gap-1 whitespace-nowrap" onclick="viewOnExplorer('{{ $wallet->wallet_address }}', '{{ $wallet->currency }}')">
                         <i class="fas fa-external-link"></i>مشاهده
                     </button>
-                    <a href="{{ route('merchant.send', ['sender_wallet_id' => $wallet->id]) }}" class="p-2 bg-green-50 text-green-600 rounded-lg text-sm font-semibold hover:bg-green-100 transition flex items-center justify-center gap-1">
+                    <a href="{{ route('merchant.send', ['sender_wallet_id' => $wallet->id]) }}" class="p-2 bg-green-50 text-green-600 rounded-lg text-xs font-semibold hover:bg-green-100 transition flex items-center justify-center gap-1 whitespace-nowrap">
                         <i class="fas fa-paper-plane"></i>ارسال
                     </a>
+
+                    @if(floatval($wallet->balance) > 0)
+                        <!-- Wallet has balance: instruct merchant to contact admin -->
+                        <button type="button" onclick="alert('برای حذف این کیف پول لطفاً برای تیم پشتیبانی (ادمین) تیکت ثبت کنید.');" class="p-2 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition flex items-center justify-center gap-1 whitespace-nowrap" title="برای حذف این کیف پول لطفاً برای تیم پشتیبانی (ادمین) تیکت ثبت کنید.">
+                            <i class="fas fa-trash"></i>حذف
+                        </button>
+                    @else
+                        <form method="POST" action="{{ route('merchant.wallets.destroy', $wallet) }}" style="display:contents;" onsubmit="return confirm('آیا از حذف این کیف پول مطمئن هستید؟ این عملیات غیرقابل بازگشت است.');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="p-2 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition flex items-center justify-center gap-1 whitespace-nowrap">
+                                <i class="fas fa-trash"></i>حذف
+                            </button>
+                        </form>
+                    @endif
                 </div>
             </div>
         @endforeach
@@ -327,6 +337,7 @@
 
     fetchAndDisplayPrices();
     setInterval(fetchAndDisplayPrices, 5000);
+
 </script>
 @endpush
 

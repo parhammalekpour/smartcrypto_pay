@@ -36,20 +36,29 @@ class RegisteredUserController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:'.User::class],
-            'role' => ['required', 'string', 'in:user,merchant'],
+            'role' => ['sometimes', 'string', 'in:user,merchant'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
- 
+  
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'role' => $request->role,
+            'role' => $request->input('role', 'user'),
             'password' => Hash::make($request->password),
         ]);
  
-        event(new Registered($user));
- 
-        return redirect(route('login', absolute: false))
-            ->with('status', 'ثبت نام با موفقیت انجام شد. اکنون وارد شوید.');
+        try {
+            event(new Registered($user));
+        } catch (\Throwable $exception) {
+            // Do not leave a partially-created account if the verification email fails to send.
+            $user->delete();
+
+            return back()->withInput()->withErrors([
+                'email' => __('Unable to send verification email. Please try again later.'),
+            ]);
+        }
+
+        return redirect()->route('login')
+            ->with('status', 'Registration successful. Please verify your email address before signing in.');
     }
 }

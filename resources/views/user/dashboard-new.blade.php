@@ -14,10 +14,15 @@
                 <div class="bg-white/20 p-3 rounded-lg">
                     <i class="fas fa-wallet text-lg"></i>
                 </div>
-                <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">کل موجودی</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">کل موجودی</span>
+                    <button type="button" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition" data-toggle-total-balance aria-label="نمایش یا پنهان سازی موجودی">
+                        <i class="fas fa-eye text-sm"></i>
+                    </button>
+                </div>
             </div>
             <p class="text-white/80 text-sm mb-1">موجودی کل</p>
-            <p class="text-3xl font-bold" data-total-balance>${{ number_format($totalBalance ?? 0, 2) }}</p>
+            <p class="text-3xl font-bold" data-total-balance data-actual-balance="{{ $totalBalance ?? 0 }}">${{ number_format($totalBalance ?? 0, 2) }}</p>
             <p class="text-xs text-white/70 mt-2">تمام کیف پول‌ها</p>
         </div>
 
@@ -326,6 +331,71 @@ async function fetchPricesAndUpdate() {
     }
 }
 
+const balanceToggleKey = 'dashboard-total-balance-hidden';
+let isTotalBalanceHidden = false;
+
+function getStoredBalanceHidden() {
+    try {
+        return localStorage.getItem(balanceToggleKey) === 'true';
+    } catch (error) {
+        return false;
+    }
+}
+
+function setStoredBalanceHidden(value) {
+    try {
+        localStorage.setItem(balanceToggleKey, value ? 'true' : 'false');
+    } catch (error) {
+        // ignore storage errors
+    }
+}
+
+isTotalBalanceHidden = getStoredBalanceHidden();
+
+function updateBalanceToggleButton() {
+    const toggleButton = document.querySelector('[data-toggle-total-balance] i');
+    if (!toggleButton) {
+        return;
+    }
+
+    toggleButton.classList.toggle('fa-eye', !isTotalBalanceHidden);
+    toggleButton.classList.toggle('fa-eye-slash', isTotalBalanceHidden);
+}
+
+function setTotalBalanceText(amount) {
+    const balanceElement = document.querySelector('[data-total-balance]');
+    if (!balanceElement) {
+        return;
+    }
+
+    balanceElement.dataset.actualBalance = amount;
+    if (isTotalBalanceHidden) {
+        balanceElement.textContent = '••••••';
+    } else {
+        balanceElement.textContent = formatPrice(amount);
+    }
+}
+
+function toggleTotalBalanceVisibility() {
+    isTotalBalanceHidden = !isTotalBalanceHidden;
+    setStoredBalanceHidden(isTotalBalanceHidden);
+    updateBalanceToggleButton();
+
+    const balanceElement = document.querySelector('[data-total-balance]');
+    if (!balanceElement) {
+        return;
+    }
+
+    const currentAmount = parseFloat(balanceElement.dataset.actualBalance) || 0;
+    setTotalBalanceText(currentAmount);
+}
+
+const totalBalanceToggleButton = document.querySelector('[data-toggle-total-balance]');
+if (totalBalanceToggleButton) {
+    totalBalanceToggleButton.addEventListener('click', toggleTotalBalanceVisibility);
+    updateBalanceToggleButton();
+}
+
 function updateTotalBalance() {
     let total = 0;
 
@@ -342,10 +412,14 @@ function updateTotalBalance() {
         total += wallet.balance * price;
     });
 
-    const balanceElement = document.querySelector('[data-total-balance]');
-    if (balanceElement) {
-        balanceElement.textContent = formatPrice(total);
-    }
+    setTotalBalanceText(total);
+}
+
+// Apply visibility state to the initial rendered amount
+const initialBalanceElement = document.querySelector('[data-total-balance]');
+if (initialBalanceElement) {
+    const initialActualBalance = parseFloat(initialBalanceElement.dataset.actualBalance) || 0;
+    setTotalBalanceText(initialActualBalance);
 }
 
 // Fetch prices immediately

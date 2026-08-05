@@ -41,6 +41,9 @@
             <button onclick="switchTab('security')" id="tab-security" class="tab-btn flex-1 px-4 py-4 text-center font-semibold text-gray-600 dark:text-gray-400 border-b-4 border-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition min-w-fit">
                 <i class="fas fa-lock ml-2"></i>امنیت
             </button>
+            <button onclick="switchTab('kyc')" id="tab-kyc" class="tab-btn flex-1 px-4 py-4 text-center font-semibold text-gray-600 dark:text-gray-400 border-b-4 border-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition min-w-fit">
+                <i class="fas fa-id-card ml-2"></i>احراز هویت (KYC)
+            </button>
         </div>
 
         <!-- Tab Content -->
@@ -180,6 +183,10 @@
 
             <!-- Security Tab -->
             <div id="security" class="tab-content hidden">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-6">امنیت حساب</h3>
+
+                @include('partials.security-settings')
+
                 <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-6">تغییر رمز عبور</h3>
                 
                 <!-- Password Change Form -->
@@ -238,6 +245,69 @@
                     </div>
                 </form>
             </div>
+
+            <!-- KYC Tab -->
+                <div id="kyc" class="tab-content hidden mt-6">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">احراز هویت (KYC)</h3>
+
+                    <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 mb-4">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" disabled @if(auth()->user()->kyc_verified) checked @endif class="w-5 h-5 text-indigo-600 rounded">
+                            <span class="font-semibold text-gray-800 dark:text-gray-100">احراز هویت KYC تایید شده</span>
+                        </label>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">در صورتی که KYC انجام نشده است، مدارک خود را آپلود کنید.</p>
+                    </div>
+
+                    <form id="kyc-form" action="{{ route('kyc.upload') }}" method="POST" enctype="multipart/form-data" class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700">
+                        @csrf
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">آپلود مدارک</label>
+                            <input type="file" name="documents[]" multiple accept="image/*,application/pdf" class="w-full">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">گرفتن عکس توسط دوربین (سلفی)</label>
+
+                            <div class="space-y-2">
+                                <button type="button" id="start-camera" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded">روشن کردن دوربین</button>
+                                <video id="video" autoplay class="w-64 h-48 bg-black rounded hidden"></video>
+                                <button type="button" id="capture-btn" class="px-4 py-2 bg-indigo-600 text-white rounded hidden">عکس بگیر</button>
+                                <canvas id="canvas" class="hidden"></canvas>
+                                <img id="selfie-preview" class="w-40 h-40 object-cover rounded hidden" alt="Selfie preview">
+                                <input type="hidden" name="selfie_data" id="selfie_data">
+                                <div class="pt-2">
+                                    <input type="file" name="selfie" accept="image/*" class="w-full">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-2">
+                            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded">ارسال مدارک</button>
+                        </div>
+                    </form>
+
+                    <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 mt-4">
+                        <h4 class="font-semibold text-gray-800 dark:text-gray-100 mb-2">فایل‌های آپلود شده</h4>
+                        @if(!empty(auth()->user()->kyc_selfie))
+                            <div class="mb-2">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">سلفی:</p>
+                                <a href="{{ route('kyc.selfie') }}" target="_blank" class="text-indigo-600">مشاهده سلفی</a>
+                            </div>
+                        @endif
+
+                        @if(!empty(auth()->user()->kyc_documents))
+                            <ul class="list-disc list-inside">
+                                @foreach(auth()->user()->kyc_documents as $doc)
+                                    <li><a href="{{ route('kyc.document', ['filename' => basename($doc)]) }}" target="_blank" class="text-indigo-600">{{ basename($doc) }}</a></li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="text-sm text-gray-600 dark:text-gray-400">هیچ پرونده‌ای آپلود نشده است.</p>
+                        @endif
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -274,6 +344,55 @@
             formActions.classList.remove('hidden');
         }
     }
+
+    // Camera handlers for KYC
+    (function(){
+        function setupKycCamera() {
+            const startBtn = document.getElementById('start-camera');
+            const video = document.getElementById('video');
+            const captureBtn = document.getElementById('capture-btn');
+            const canvas = document.getElementById('canvas');
+            const selfiePreview = document.getElementById('selfie-preview');
+            const selfieData = document.getElementById('selfie_data');
+
+            if (!startBtn) return;
+
+            let stream;
+            startBtn.addEventListener('click', async function() {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = stream;
+                    video.classList.remove('hidden');
+                    captureBtn.classList.remove('hidden');
+                    startBtn.classList.add('hidden');
+                } catch (e) {
+                    alert('دسترسی به دوربین امکان‌پذیر نیست: ' + e.message);
+                }
+            });
+
+            captureBtn.addEventListener('click', function() {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0);
+                const dataUrl = canvas.toDataURL('image/jpeg');
+                if (selfieData) selfieData.value = dataUrl;
+                if (selfiePreview) {
+                    selfiePreview.src = dataUrl;
+                    selfiePreview.classList.remove('hidden');
+                }
+                // stop stream
+                if (stream) {
+                    stream.getTracks().forEach(t => t.stop());
+                }
+                video.classList.add('hidden');
+                captureBtn.classList.add('hidden');
+                startBtn.classList.remove('hidden');
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', setupKycCamera);
+    })();
 </script>
 
 @endsection

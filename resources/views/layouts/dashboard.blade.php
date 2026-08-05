@@ -150,6 +150,13 @@
 
             <!-- Menu - Scrollable -->
             <nav class="flex-1 px-2 py-4 space-y-0 overflow-y-auto">
+                @if(auth()->user()->isAdmin())
+                    <a href="{{ route('admin.dashboard') }}" class="sidebar-item @if(Route::currentRouteName() === 'admin.dashboard') active @endif">
+                        <i class="fas fa-shield-alt"></i>
+                        پنل ادمین
+                    </a>
+                @endif
+
                 @if(auth()->user()->isMerchant())
                     <!-- Merchant Menu -->
                     <a href="{{ route('merchant.dashboard') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.dashboard') active @endif">

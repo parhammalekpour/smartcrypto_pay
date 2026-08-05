@@ -15,6 +15,12 @@
         <h3 class="text-lg font-semibold text-gray-800">درخواست پرداخت جدید</h3>
     </div>
 
+    @if(!auth()->user()->kyc_verified)
+        <div class="mb-4 p-4 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm">
+            برای ایجاد هرگونه درگاه یا درخواست پرداخت، باید ابتدا احراز هویت KYC تکمیل شود. پس از تایید، می‌توانید دوباره تلاش کنید.
+        </div>
+    @endif
+
     @if(session('success'))
         <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
             ✅ {{ session('success') }}
@@ -69,7 +75,7 @@
             </div>
         </div>
 
-        <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">
+        <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition" @if(!auth()->user()->kyc_verified) disabled @endif>
             <i class="fas fa-arrow-right ml-2"></i>ایجاد درخواست پرداخت
         </button>
     </form>

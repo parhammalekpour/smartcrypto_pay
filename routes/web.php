@@ -45,6 +45,8 @@ Route::middleware(['auth', 'role:user', 'verified'])->group(function () {
     // Wallets
     Route::get('/user/wallets', [WalletController::class, 'wallets'])->name('user.wallets');
     Route::post('/user/wallets', [WalletController::class, 'storeWallet'])->name('user.wallets.store');
+    // Delete a user wallet
+    Route::delete('/user/wallets/{wallet}', [WalletController::class, 'destroy'])->name('user.wallets.destroy');
     
     // Send & Receive
     Route::get('/user/send', [WalletController::class, 'send'])->name('user.send');
@@ -117,6 +119,8 @@ Route::middleware(['auth', 'role:merchant', 'verified'])->group(function () {
     // Wallets
     Route::get('/merchant/wallets', [MerchantController::class, 'wallets'])->name('merchant.wallets');
     Route::post('/merchant/wallets', [MerchantController::class, 'storeWallet'])->name('merchant.wallets.store');
+    // Delete a merchant wallet
+    Route::delete('/merchant/wallets/{wallet}', [MerchantController::class, 'destroyWallet'])->name('merchant.wallets.destroy');
 
     // Merchant: Send / Withdraw (allow merchants to send to external wallets)
     Route::get('/merchant/send', [MerchantController::class, 'send'])->name('merchant.send');

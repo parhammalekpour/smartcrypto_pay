@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use App\Models\Wallet;
 use App\Models\Transaction;
@@ -79,6 +80,30 @@ class WalletController extends Controller
         ]);
 
         return back()->with('success', 'کیف پول ' . $request->currency . ' با موفقیت ایجاد شد');
+    }
+
+    /**
+     * Delete a user's wallet. Only owner can delete and only when balance is zero.
+     */
+    public function destroy(Wallet $wallet)
+    {
+        // Ensure the authenticated user owns this wallet
+        if ($wallet->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Prevent deletion when balance is non-zero
+        if (floatval($wallet->balance) > 0) {
+            return back()->withErrors(['wallet' => 'برای حذف کیف پول، موجودی باید صفر باشد.']);
+        }
+
+        try {
+            $wallet->delete();
+        } catch (\Throwable $e) {
+            return back()->withErrors(['wallet' => 'خطا در حذف کیف پول.']);
+        }
+
+        return back()->with('success', 'کیف پول با موفقیت حذف شد');
     }
 
     private function generateWalletAddress($currency)
@@ -323,7 +348,41 @@ class WalletController extends Controller
         ) {
             return back()->withErrors([
                 'wallet_address' => 'Wallet currency mismatch'
-            ]);
+            ])->withInput();
+        }
+
+        $two = \App\Models\TwoFactor::where('user_id', auth()->id())->first();
+        if (!$two || empty($two->secret_enc)) {
+            return back()->withErrors([
+                'two_factor_token' => 'برای ارسال ارز دیجیتال، احراز هویت دو مرحله‌ای باید فعال باشد.'
+            ])->withInput();
+        }
+
+        $twoFactorToken = $request->input('two_factor_token');
+        if (!$twoFactorToken) {
+            return back()->withErrors(['two_factor_token' => 'کد احراز هویت دو مرحله‌ای لازم است'])->withInput();
+        }
+
+        try {
+            $secret = Crypt::decryptString($two->secret_enc);
+        } catch (\Throwable $e) {
+            return back()->withErrors(['two_factor_token' => 'خطای پیکربندی 2FA'])->withInput();
+        }
+
+        if (!\App\Services\TOTP::verifyCode($secret, $twoFactorToken, 1)) {
+            try {
+                DB::table('audit_logs')->insert([
+                    'actor_id' => auth()->id(),
+                    'user_id' => auth()->id(),
+                    'action' => '2fa_failed_transfer',
+                    'resource_type' => 'wallet',
+                    'resource_id' => $senderWallet->id,
+                    'diff' => json_encode(['ip' => $request->ip()]),
+                    'created_at' => now(),
+                ]);
+            } catch (\Throwable $e) {}
+
+            return back()->withErrors(['two_factor_token' => 'کد ۲FA نامعتبر است'])->withInput();
         }
 
         if ($senderWallet->balance < $request->amount) {

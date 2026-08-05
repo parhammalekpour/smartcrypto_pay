@@ -66,8 +66,10 @@ class TwoFactorController extends Controller
             ]);
         } catch (\Throwable $e) {}
 
-        // Show backup codes to the user once after enabling (plaintext)
-        return view('auth.2fa.enabled', ['codes' => $codesPlain]);
+        // Redirect to settings and show backup codes once after enabling.
+        return redirect()->route($this->getSettingsRoute())
+            ->with('success', 'احراز هویت دو مرحله‌ای با موفقیت فعال شد')
+            ->with('backup_codes', $codesPlain);
     }
 
     public function disable(Request $request)
@@ -87,7 +89,12 @@ class TwoFactorController extends Controller
             ]);
         } catch (\Throwable $e) {}
 
-        return redirect()->route('user.settings')->with('success', 'Two-factor authentication disabled');
+        return redirect()->route($this->getSettingsRoute())->with('success', 'Two-factor authentication disabled');
+    }
+
+    protected function getSettingsRoute(): string
+    {
+        return auth()->user()->isMerchant() ? 'merchant.settings' : 'user.settings';
     }
 
     protected function generateBackupCodes()

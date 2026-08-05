@@ -113,20 +113,35 @@
                 </div>
 
                 <!-- Actions -->
-                <div class="grid grid-cols-3 gap-2">
-                    <button class="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-semibold hover:bg-indigo-100 transition flex items-center justify-center gap-1" onclick="copyToClipboard('{{ $wallet->wallet_address }}')">
+                <div class="grid grid-cols-4 gap-2">
+                    <button class="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-semibold hover:bg-indigo-100 transition flex items-center justify-center gap-1 whitespace-nowrap" onclick="copyToClipboard('{{ $wallet->wallet_address }}')">
                         <i class="fas fa-copy"></i>کپی
                     </button>
-                    <a href="{{ route('user.send') }}" class="p-2 bg-green-50 text-green-600 rounded-lg text-sm font-semibold hover:bg-green-100 transition flex items-center justify-center gap-1">
+                    <a href="{{ route('user.send') }}" class="p-2 bg-green-50 text-green-600 rounded-lg text-xs font-semibold hover:bg-green-100 transition flex items-center justify-center gap-1 whitespace-nowrap">
                         <i class="fas fa-paper-plane"></i>ارسال
                     </a>
                     <form action="/wallet/demo-deposit/{{ $wallet->id }}" method="POST" style="display:contents;">
                         @csrf
-                        <button type="submit" class="p-2 bg-yellow-50 text-yellow-600 rounded-lg text-sm font-semibold hover:bg-yellow-100 transition flex items-center justify-center gap-1">
+                        <button type="submit" class="p-2 bg-yellow-50 text-yellow-600 rounded-lg text-xs font-semibold hover:bg-yellow-100 transition flex items-center justify-center gap-1 whitespace-nowrap">
                             <i class="fas fa-gift"></i>
                             <span class="hidden sm:inline">دمو</span>
                         </button>
                     </form>
+
+                    @if(floatval($wallet->balance) > 0)
+                        <!-- Wallet has balance: instruct user to contact admin -->
+                        <button type="button" onclick="alert('برای حذف این کیف پول لطفاً برای تیم پشتیبانی (ادمین) تیکت ثبت کنید.');" class="p-2 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition flex items-center justify-center gap-1 whitespace-nowrap" title="برای حذف این کیف پول لطفاً برای تیم پشتیبانی (ادمین) تیکت ثبت کنید.">
+                            <i class="fas fa-trash"></i>حذف
+                        </button>
+                    @else
+                        <form method="POST" action="{{ route('user.wallets.destroy', $wallet) }}" style="display:contents;" onsubmit="return confirm('آیا از حذف این کیف پول مطمئن هستید؟ این عملیات غیرقابل بازگشت است.');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="p-2 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition flex items-center justify-center gap-1 whitespace-nowrap">
+                                <i class="fas fa-trash"></i>حذف
+                            </button>
+                        </form>
+                    @endif
                 </div>
             </div>
         @endforeach
@@ -281,6 +296,7 @@
 
     // Fetch prices every 5 seconds for a live-updating feel
     setInterval(fetchAndDisplayPrices, 5000);
+
 </script>
 @endpush
 

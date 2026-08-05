@@ -40,6 +40,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'business_address',
         'website_url',
         'business_license',
+        // KYC fields
+        'kyc_verified',
+        'kyc_documents',
+        'kyc_selfie',
     ];
 
     /**
@@ -67,6 +71,10 @@ class User extends Authenticatable implements MustVerifyEmail
             'dark_mode' => 'boolean',
             'notifications_enabled' => 'boolean',
             'notifications_2fa' => 'boolean',
+            // KYC casts
+            'kyc_verified' => 'boolean',
+            'kyc_documents' => 'array',
+            'kyc_selfie' => 'string',
         ];
     }
     public function wallets()
@@ -107,5 +115,10 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isAdmin()
     {
         return $this->role === 'admin';
+    }
+
+    public function isKycVerified(): bool
+    {
+        return (bool) $this->kyc_verified;
     }
 }

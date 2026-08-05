@@ -13,13 +13,13 @@ class EmailVerificationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_email_verification_screen_can_be_rendered(): void
+    public function test_email_verification_screen_redirects_to_login_when_unverified(): void
     {
         $user = User::factory()->unverified()->create();
 
         $response = $this->actingAs($user)->get('/verify-email');
 
-        $response->assertStatus(200);
+        $response->assertRedirect(route('login', absolute: false));
     }
 
     public function test_email_can_be_verified(): void
@@ -44,15 +44,36 @@ class EmailVerificationTest extends TestCase
     public function test_email_is_not_verified_with_invalid_hash(): void
     {
         $user = User::factory()->unverified()->create();
-
+ 
         $verificationUrl = URL::temporarySignedRoute(
             'verification.verify',
             now()->addMinutes(60),
             ['id' => $user->id, 'hash' => sha1('wrong-email')]
         );
-
+ 
         $this->actingAs($user)->get($verificationUrl);
-
+ 
         $this->assertFalse($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_clicking_verification_link_redirects_to_verification_after_login(): void
+    {
+        $user = User::factory()->unverified()->create();
+ 
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->id, 'hash' => sha1($user->email)]
+        );
+ 
+        $this->get($verificationUrl)
+            ->assertRedirect(route('login', absolute: false));
+ 
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+ 
+        $response->assertRedirect($verificationUrl);
     }
 }

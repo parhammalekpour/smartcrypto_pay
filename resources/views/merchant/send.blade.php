@@ -52,6 +52,27 @@
                 @enderror
             </div>
 
+            @php
+                $two = \App\Models\TwoFactor::where('user_id', auth()->id())->first();
+            @endphp
+
+            @if(!$two || !$two->enabled_at)
+                <div class="mb-4 p-4 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm">
+                    برای ارسال رمزارز باید احراز هویت دو مرحله‌ای (2FA) فعال شود. ابتدا به صفحه تنظیمات 2FA بروید و آن را فعال کنید.
+                </div>
+            @endif
+
+            @if($two && $two->enabled_at)
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">کد احراز هویت دو مرحله‌ای</label>
+                    <input type="text" name="two_factor_token" required placeholder="۶ رقمی از اپ Authenticator"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" value="{{ old('two_factor_token') }}">
+                    @error('two_factor_token')
+                        <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+            @endif
+
             <!-- Description (Optional) -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">توضیحات (اختیاری)</label>
@@ -61,7 +82,7 @@
 
             <!-- Submit -->
             <div class="flex gap-3">
-                <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">
+                <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition" @if(!$two || !$two->enabled_at) disabled @endif>
                     <i class="fas fa-paper-plane ml-2"></i>ارسال
                 </button>
                 <a href="{{ route('merchant.wallets') }}" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold hover:bg-gray-300 transition text-center">

@@ -1,72 +1,49 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Merchant Payments</title>
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-    <style>
-        body {
-            background: #f5f5f5;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .card {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-    </style>
-</head>
-<body>
+﻿@extends('layouts.app')
 
-<div class="container">
-    <h1>📤 Create Payment Request</h1>
+@section('content')
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">📤 Create Payment Request</h1>
 
     @if(session('success'))
-        <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <div class="mb-4 px-4 py-3 rounded text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
             ✅ {{ session('success') }}
         </div>
     @endif
 
     @if($errors->any())
-        <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <div class="mb-4 px-4 py-3 rounded text-sm bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
             @foreach($errors->all() as $error)
                 ❌ {{ $error }}<br>
             @endforeach
         </div>
     @endif
 
-    <div class="card">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 mb-8 shadow">
         <form method="POST" action="{{ route('payments.store') }}">
             @csrf
 
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Invoice Number</label>
+            <div class="mb-4">
+                <label class="block mb-2 font-medium text-gray-700 dark:text-gray-300">Invoice Number</label>
                 <input type="text" name="invoice_number" required placeholder="e.g., INV-001" 
-                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    class="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100">
             </div>
 
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Recipient Username</label>
+            <div class="mb-4">
+                <label class="block mb-2 font-medium text-gray-700 dark:text-gray-300">Recipient Username</label>
                 <input type="text" name="recipient_username" required placeholder="Enter customer username" 
-                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    class="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100">
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">Amount</label>
+                    <label class="block mb-2 font-medium text-gray-700 dark:text-gray-300">Amount</label>
                     <input type="number" step="0.00000001" name="amount" required placeholder="0.00" 
-                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                        class="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100">
                 </div>
 
                 <div>
-                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">Currency</label>
-                    <select name="currency" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    <label class="block mb-2 font-medium text-gray-700 dark:text-gray-300">Currency</label>
+                    <select name="currency" required class="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100">
                         <option value="">Select Currency</option>
                         <option value="BTC">Bitcoin (BTC)</option>
                         <option value="ETH">Ethereum (ETH)</option>
@@ -75,53 +52,53 @@
                 </div>
             </div>
 
-            <button type="submit" style="background: #667eea; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white px-4 py-2 rounded font-semibold">
                 Create Link
             </button>
         </form>
     </div>
 
-    <h2>📋 Payment Requests</h2>
+    <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">📋 Payment Requests</h2>
 
     @if($payments->count() > 0)
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-                <tr style="background: #f5f5f5;">
-                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Invoice</th>
-                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Recipient</th>
-                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Amount</th>
-                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Currency</th>
-                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Status</th>
-                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Link</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($payments as $payment)
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 10px;">{{ $payment->invoice_number }}</td>
-                        <td style="padding: 10px;">{{ $payment->recipient->name ?? 'Unknown' }}</td>
-                        <td style="padding: 10px;">{{ number_format($payment->amount, 8) }}</td>
-                        <td style="padding: 10px;">{{ $payment->currency }}</td>
-                        <td style="padding: 10px;">
-                            <span style="padding: 5px 10px; border-radius: 20px; background: {{ $payment->status === 'paid' ? '#d4edda' : '#fff3cd' }}; color: {{ $payment->status === 'paid' ? '#155724' : '#856404' }}; font-size: 0.85em; font-weight: bold;">
-                                {{ ucfirst($payment->status) }}
-                            </span>
-                        </td>
-                        <td style="padding: 10px;">
-                            <a href="{{ url('/pay/' . $payment->token) }}" target="_blank" style="color: #667eea; text-decoration: none; font-weight: bold;">
-                                View →
-                            </a>
-                        </td>
+        <div class="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-gray-50 dark:bg-gray-700">
+                        <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Invoice</th>
+                        <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Recipient</th>
+                        <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Amount</th>
+                        <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Currency</th>
+                        <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Status</th>
+                        <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Link</th>
                     </tr>
-                @endforeach
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach($payments as $payment)
+                        <tr class="border-b border-gray-100 dark:border-gray-700">
+                            <td class="px-4 py-3 text-gray-800 dark:text-gray-100">{{ $payment->invoice_number }}</td>
+                            <td class="px-4 py-3 text-gray-800 dark:text-gray-100">{{ $payment->recipient->name ?? 'Unknown' }}</td>
+                            <td class="px-4 py-3 text-gray-800 dark:text-gray-100">{{ number_format($payment->amount, 8) }}</td>
+                            <td class="px-4 py-3 text-gray-800 dark:text-gray-100">{{ $payment->currency }}</td>
+                            <td class="px-4 py-3">
+                                @if($payment->status === 'paid')
+                                    <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-green-500 dark:bg-green-600 text-white">Paid</span>
+                                @else
+                                    <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-yellow-400 dark:bg-yellow-600 text-white">{{ ucfirst($payment->status) }}</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
+                                <a href="{{ url('/pay/' . $payment->token) }}" target="_blank" class="text-indigo-600 dark:text-indigo-400 font-semibold">View →</a>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
     @else
-        <div style="text-align: center; padding: 40px; color: #999;">
+        <div class="text-center py-10 text-gray-500 dark:text-gray-400">
             <p>No payment requests created yet</p>
         </div>
     @endif
 </div>
-
-</body>
-</html>
+@endsection
