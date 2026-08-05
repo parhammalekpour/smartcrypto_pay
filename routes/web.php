@@ -59,13 +59,6 @@ Route::middleware(['auth', 'role:user', 'verified'])->group(function () {
     Route::get('/user/send', [WalletController::class, 'send'])->name('user.send');
     Route::get('/user/receive', [WalletController::class, 'receive'])->name('user.receive');
 
-    // Tickets (user)
-    Route::get('/tickets', [\App\Http\Controllers\TicketController::class, 'index'])->name('tickets.index');
-    Route::get('/tickets/create', [\App\Http\Controllers\TicketController::class, 'create'])->name('tickets.create');
-    Route::post('/tickets', [\App\Http\Controllers\TicketController::class, 'store'])->name('tickets.store');
-    Route::get('/tickets/{ticket}', [\App\Http\Controllers\TicketController::class, 'show'])->name('tickets.show');
-    Route::get('/tickets/{ticket}/messages', [\App\Http\Controllers\TicketController::class, 'messages'])->name('tickets.messages');
-    Route::post('/tickets/{ticket}/message', [\App\Http\Controllers\TicketController::class, 'postMessage'])->name('tickets.message');
 
     // Transactions
     Route::get('/user/transactions', [WalletController::class, 'transactions'])->name('user.transactions');
@@ -109,6 +102,16 @@ Route::middleware('auth')->group(function () {
     
     // Auto-refresh polling endpoint
     Route::get('/api/refresh-status', [NotificationController::class, 'checkRefreshStatus'])->name('api.refresh-status');
+});
+
+// Tickets - available to any authenticated & verified user (user or merchant)
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/tickets', [\App\Http\Controllers\TicketController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/create', [\App\Http\Controllers\TicketController::class, 'create'])->name('tickets.create');
+    Route::post('/tickets', [\App\Http\Controllers\TicketController::class, 'store'])->name('tickets.store');
+    Route::get('/tickets/{ticket}', [\App\Http\Controllers\TicketController::class, 'show'])->name('tickets.show');
+    Route::get('/tickets/{ticket}/messages', [\App\Http\Controllers\TicketController::class, 'messages'])->name('tickets.messages');
+    Route::post('/tickets/{ticket}/message', [\App\Http\Controllers\TicketController::class, 'postMessage'])->name('tickets.message');
 });
 
 Route::middleware('auth')->group(function () {
