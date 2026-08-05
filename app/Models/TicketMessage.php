@@ -14,6 +14,7 @@ class TicketMessage extends Model
         'sender_type',
         'sender_id',
         'body',
+        'attachment',
     ];
 
     public function ticket()

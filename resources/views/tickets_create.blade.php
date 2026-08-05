@@ -5,7 +5,7 @@
 
 @section('content')
 <div class="bg-white rounded-lg shadow p-6 max-w-2xl mx-auto">
-    <form method="POST" action="{{ route('tickets.store') }}">
+    <form method="POST" action="{{ route('tickets.store') }}" enctype="multipart/form-data">
         @csrf
         <div class="mb-4">
             <label class="block text-sm font-semibold mb-2">موضوع</label>
@@ -17,6 +17,12 @@
             <label class="block text-sm font-semibold mb-2">پیام</label>
             <textarea name="message" class="w-full border p-3 rounded text-gray-800 placeholder-gray-500 bg-white dark:bg-gray-100" rows="6">{{ old('message') }}</textarea>
             @error('message') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-semibold mb-2">ضمیمه (تصویر)</label>
+            <input type="file" name="attachment" accept="image/*" class="w-full" />
+            @error('attachment') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
 
         <div class="flex justify-end">

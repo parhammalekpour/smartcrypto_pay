@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ticket;
 use App\Models\TicketMessage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class TicketController extends Controller
 {
@@ -30,7 +31,8 @@ class TicketController extends Controller
     {
         $request->validate([
             'subject' => 'required|string|max:255',
-            'message' => 'required|string',
+            'message' => 'required_without:attachment|string',
+            'attachment' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:5120',
         ]);
 
         $user = $request->user();
@@ -51,6 +53,13 @@ class TicketController extends Controller
         $msg->sender_type = $user->isAdmin() ? 'admin' : ($user->isMerchant() ? 'merchant' : 'user');
         $msg->sender_id = $user->id;
         $msg->body = $request->input('message');
+
+        // Handle optional attachment on initial ticket creation
+        if ($request->hasFile('attachment')) {
+            $path = $request->file('attachment')->store('ticket_attachments', 'public');
+            $msg->attachment = $path;
+        }
+
         $msg->save();
 
         return redirect()->route('tickets.show', $ticket->id)->with('success', 'تیکت شما ارسال شد. تیم پشتیبانی به زودی پاسخ می‌دهد.');
@@ -84,6 +93,7 @@ class TicketController extends Controller
                 'sender_id' => $m->sender_id,
                 'sender_name' => $m->sender_id ? optional(\App\Models\User::find($m->sender_id))->name : null,
                 'body' => $m->body,
+                'attachment' => $m->attachment ? Storage::url($m->attachment) : null,
                 'created_at' => $m->created_at->toDateTimeString(),
             ];
         });
@@ -93,7 +103,7 @@ class TicketController extends Controller
 
     public function postMessage(Request $request, Ticket $ticket)
     {
-        $request->validate(['message' => 'required|string']);
+        $request->validate(['message' => 'required_without:attachment|string','attachment' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:5120']);
         $user = $request->user();
 
         if (!($user->isAdmin() || $ticket->user_id === $user->id || $ticket->merchant_id === $user->id)) {
@@ -121,7 +131,8 @@ class TicketController extends Controller
                 'sender_name' => $user->name,
                 'body' => $msg->body,
                 'created_at' => $msg->created_at->toDateTimeString(),
-            ], 201);
+                    'attachment' => $msg->attachment ? Storage::url($msg->attachment) : null,
+                ], 201);
         }
 
         return redirect()->route('tickets.show', $ticket->id)->with('success', 'پیام ذخیره شد');

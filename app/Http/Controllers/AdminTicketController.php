@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ticket;
 use App\Models\TicketMessage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AdminTicketController extends Controller
 {
@@ -35,6 +36,7 @@ class AdminTicketController extends Controller
                 'sender_id' => $m->sender_id,
                 'sender_name' => $m->sender_id ? optional(\App\Models\User::find($m->sender_id))->name : null,
                 'body' => $m->body,
+                'attachment' => $m->attachment ? Storage::url($m->attachment) : null,
                 'created_at' => $m->created_at->toDateTimeString(),
             ];
         });
@@ -44,13 +46,19 @@ class AdminTicketController extends Controller
 
     public function reply(Request $request, Ticket $ticket)
     {
-        $request->validate(['message' => 'required|string']);
+        $request->validate(['message' => 'required_without:attachment|string','attachment' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:5120']);
 
         $msg = new TicketMessage();
         $msg->ticket_id = $ticket->id;
         $msg->sender_type = 'admin';
         $msg->sender_id = $request->user()->id;
         $msg->body = $request->input('message');
+
+        if ($request->hasFile('attachment')) {
+            $path = $request->file('attachment')->store('ticket_attachments', 'public');
+            $msg->attachment = $path;
+        }
+
         $msg->save();
 
         $ticket->last_message_at = now();
@@ -64,6 +72,7 @@ class AdminTicketController extends Controller
                 'sender_id' => $msg->sender_id,
                 'sender_name' => $request->user()->name,
                 'body' => $msg->body,
+                'attachment' => $msg->attachment ? Storage::url($msg->attachment) : null,
                 'created_at' => $msg->created_at->toDateTimeString(),
             ], 201);
         }

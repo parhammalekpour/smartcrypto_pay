@@ -20,11 +20,16 @@
         @endforeach
     </div>
 
-        <form id="replyForm" method="POST" action="{{ route('admin.tickets.reply', $ticket->id) }}">
+        <form id="replyForm" method="POST" action="{{ route('admin.tickets.reply', $ticket->id) }}" enctype="multipart/form-data">
         @csrf
         <div class="mb-4">
                 <textarea id="replyMessage" name="message" rows="4" class="w-full border p-3 rounded" placeholder="پاسخ خود را بنویسید"></textarea>
             @error('message') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+        </div>
+        <div class="mb-4">
+            <label class="block text-sm font-semibold mb-2">ضمیمه (تصویر)</label>
+            <input id="replyAttachment" type="file" name="attachment" accept="image/*" class="w-full" />
+            @error('attachment') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
         <div class="flex justify-between items-center">
             <a href="{{ route('admin.tickets.index') }}" class="text-sm text-gray-500">بازگشت</a>
@@ -47,7 +52,8 @@
                         div.setAttribute('data-message-id', m.id);
                         div.className = 'p-4 rounded-lg ' + (m.sender_type === 'admin' ? 'bg-indigo-50' : 'bg-gray-100');
                         div.innerHTML = `<p class="text-xs text-gray-600">${m.sender_type}${m.sender_name ? ' — ' + m.sender_name : ''}</p>` +
-                                        `<p class="mt-2 text-sm text-gray-800">${m.body}</p>` +
+                                        `<p class="mt-2 text-sm text-gray-800">${m.body ? m.body : ''}</p>` +
+                                        `${m.attachment ? '<div class="mt-2"><img src="'+m.attachment+'" class="max-w-xs rounded"/></div>' : ''}` +
                                         `<p class="text-xs text-gray-400 mt-2">${m.created_at}</p>`;
                         messagesEl.appendChild(div);
                     });
@@ -76,13 +82,19 @@
                     const body = document.getElementById('replyMessage').value.trim();
                     if (!body) return;
                     try{
+                        const formData = new FormData();
+                        formData.append('message', body);
+                        const fileInput = document.getElementById('replyAttachment');
+                        if (fileInput && fileInput.files.length > 0) {
+                            formData.append('attachment', fileInput.files[0]);
+                        }
+
                         const res = await fetch(form.action, {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
                             },
-                            body: JSON.stringify({ message: body })
+                            body: formData
                         });
                         if (res.ok) {
                             document.getElementById('replyMessage').value = '';
