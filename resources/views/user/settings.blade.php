@@ -40,6 +40,9 @@
             <button onclick="switchTab('privacy')" id="tab-privacy" class="tab-btn flex-1 px-4 py-4 text-center font-semibold text-gray-600 dark:text-gray-400 border-b-4 border-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition">
                 <i class="fas fa-shield-alt ml-2"></i>حریم خصوصی
             </button>
+            <button onclick="switchTab('kyc')" id="tab-kyc" class="tab-btn flex-1 px-4 py-4 text-center font-semibold text-gray-600 dark:text-gray-400 border-b-4 border-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                <i class="fas fa-id-card ml-2"></i>احراز هویت (KYC)
+            </button>
         </div>
 
         <!-- Tab Content -->
@@ -75,23 +78,7 @@
                     <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
                         <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">تنظیمات نمایش</h3>
                         <div class="space-y-4">
-                            <!-- Show Balance -->
-                            <label class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition">
-                                <input type="checkbox" name="show_balance" value="1" @if(auth()->user()->show_balance) checked @endif class="w-5 h-5 text-indigo-600 dark:text-indigo-500 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
-                                <div class="mr-3">
-                                    <p class="font-semibold text-gray-800 dark:text-gray-100">نمایش موجودی</p>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">موجودی کل را در صفحه اصلی نمایش دهید</p>
-                                </div>
-                            </label>
 
-                            <!-- Show Transactions -->
-                            <label class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition">
-                                <input type="checkbox" name="show_transactions" value="1" @if(auth()->user()->show_transactions) checked @endif class="w-5 h-5 text-indigo-600 dark:text-indigo-500 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
-                                <div class="mr-3">
-                                    <p class="font-semibold text-gray-800 dark:text-gray-100">نمایش تاریخچه</p>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">آخرین تراکنش ها را نمایش دهید</p>
-                                </div>
-                            </label>
 
                             <!-- Dark Mode -->
                             <label class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition" id="darkModeLabel">
@@ -214,52 +201,7 @@
 
                     <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">حریم خصوصی و امنیت</h3>
 
-                    <!-- Two-Factor Authentication -->
-                    <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 transition-colors duration-300">
-                        <div class="flex items-start justify-between mb-2">
-                            <div>
-                                <h4 class="font-semibold text-gray-800 dark:text-gray-100">احراز هویت دو مرحله ای</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">افزایش امنیت حساب با فعال کردن تایید دو مرحله ای</p>
-                            </div>
-                        </div>
-                        @php
-                            $two = \App\Models\TwoFactor::where('user_id', auth()->id())->first();
-                        @endphp
-
-                        <div class="mt-3">
-                            @if($two && $two->enabled_at)
-                                <p class="text-sm text-green-700 dark:text-green-300 mb-2">✅ احراز هویت دو مرحله‌ای فعال است</p>
-                                <a href="{{ route('2fa.show') }}" class="inline-block px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">مدیریت 2FA</a>
-                                <form action="{{ route('2fa.disable') }}" method="POST" class="inline-block ml-3">
-                                    @csrf
-                                    <button type="submit" class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">غیرفعال کردن</button>
-                                </form>
-                            @else
-                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">2FA فعال نیست. برای فعال‌سازی وارد صفحه تنظیمات 2FA شوید.</p>
-                                <a href="{{ route('2fa.show') }}" class="inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">رفتن به تنظیمات 2FA</a>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- Email Verification -->
-                    <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 transition-colors duration-300">
-                        <h4 class="font-semibold text-gray-800 dark:text-gray-100 mb-2">تایید ایمیل</h4>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                            @if(auth()->user()->email_verified_at)
-                                <i class="fas fa-check-circle text-green-600 dark:text-green-400 ml-1"></i>ایمیل شما تایید شده است
-                            @else
-                                <i class="fas fa-exclamation-circle text-yellow-600 dark:text-yellow-400 ml-1"></i>ایمیل شما هنوز تایید نشده است
-                            @endif
-                        </p>
-                        @if(!auth()->user()->email_verified_at)
-                            <form action="{{ route('verification.send') }}" method="POST" class="inline">
-                                @csrf
-                                <button type="submit" class="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white font-semibold rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors duration-300 text-sm">
-                                    ارسال لینک تایید
-                                </button>
-                            </form>
-                        @endif
-                    </div>
+                    @include('partials.security-settings')
 
                     <!-- Session Management -->
                     <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 transition-colors duration-300">
@@ -279,6 +221,70 @@
                         </button>
                     </div>
                 </form>
+            </div>
+
+            <!-- KYC Tab -->
+            <div id="kyc" class="tab-content hidden">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">احراز هویت (KYC)</h3>
+
+                <div class="space-y-4">
+                    <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" disabled @if(auth()->user()->kyc_verified) checked @endif class="w-5 h-5 text-indigo-600 rounded">
+                            <span class="font-semibold text-gray-800 dark:text-gray-100">احراز هویت KYC تایید شده</span>
+                        </label>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">برای ارسال مدارک، از فرم زیر استفاده کنید. پس از ارسال، لطفاً از طریق پنل مدیریت یا phpMyAdmin وضعیت را تایید/رد کنید.</p>
+                    </div>
+
+                    <form id="kyc-form" action="{{ route('kyc.upload') }}" method="POST" enctype="multipart/form-data" class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700">
+                        @csrf
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">آپلود مدارک (پاسپورت، کارت ملی، مدارک دیگر)</label>
+                            <input type="file" name="documents[]" multiple accept="image/*,application/pdf" class="w-full">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">گرفتن عکس توسط دوربین (سلفی)</label>
+
+                            <div class="space-y-2">
+                                <button type="button" id="start-camera" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded">روشن کردن دوربین</button>
+                                <video id="video" autoplay class="w-64 h-48 bg-black rounded hidden"></video>
+                                <button type="button" id="capture-btn" class="px-4 py-2 bg-indigo-600 text-white rounded hidden">عکس بگیر</button>
+                                <canvas id="canvas" class="hidden"></canvas>
+                                <img id="selfie-preview" class="w-40 h-40 object-cover rounded hidden" alt="Selfie preview">
+                                <input type="hidden" name="selfie_data" id="selfie_data">
+                                <div class="pt-2">
+                                    <input type="file" name="selfie" accept="image/*" class="w-full">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-2">
+                            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded">ارسال مدارک</button>
+                        </div>
+                    </form>
+
+                    <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700">
+                        <h4 class="font-semibold text-gray-800 dark:text-gray-100 mb-2">فایل‌های آپلود شده</h4>
+                        @if(!empty(auth()->user()->kyc_selfie))
+                            <div class="mb-2">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">سلفی:</p>
+                                <a href="{{ route('kyc.selfie') }}" target="_blank" class="text-indigo-600">مشاهده سلفی</a>
+                            </div>
+                        @endif
+
+                        @if(!empty(auth()->user()->kyc_documents))
+                            <ul class="list-disc list-inside">
+                                @foreach(auth()->user()->kyc_documents as $doc)
+                                    <li><a href="{{ route('kyc.document', ['filename' => basename($doc)]) }}" target="_blank" class="text-indigo-600">{{ basename($doc) }}</a></li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="text-sm text-gray-600 dark:text-gray-400">هیچ پرونده‌ای آپلود نشده است.</p>
+                        @endif
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -344,5 +350,53 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Camera and KYC helpers
+(function(){
+    function setupKycCamera() {
+        const startBtn = document.getElementById('start-camera');
+        const video = document.getElementById('video');
+        const captureBtn = document.getElementById('capture-btn');
+        const canvas = document.getElementById('canvas');
+        const selfiePreview = document.getElementById('selfie-preview');
+        const selfieData = document.getElementById('selfie_data');
+
+        if (!startBtn) return;
+
+        let stream;
+        startBtn.addEventListener('click', async function() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                captureBtn.classList.remove('hidden');
+                startBtn.classList.add('hidden');
+            } catch (e) {
+                alert('دسترسی به دوربین امکان‌پذیر نیست: ' + e.message);
+            }
+        });
+
+        captureBtn.addEventListener('click', function() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg');
+            selfieData.value = dataUrl;
+            selfiePreview.src = dataUrl;
+            selfiePreview.classList.remove('hidden');
+            // stop stream
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+            }
+            video.classList.add('hidden');
+            captureBtn.classList.add('hidden');
+            startBtn.classList.remove('hidden');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', setupKycCamera);
+})();
 </script>
+
 @endsection
