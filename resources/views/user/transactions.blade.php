@@ -115,7 +115,6 @@
                                 @if($transaction->wallet?->wallet_address)
                                     <p class="text-xs text-gray-500 mt-1">آدرس دریافت‌کننده: <code dir="ltr" class="text-gray-700">{{ $transaction->wallet->wallet_address }}</code></p>
                                 @endif
-                                <p class="text-xs text-gray-500 mt-1">شناسه تراکنش: <code dir="ltr" class="text-gray-700">{{ $transaction->reference }}</code></p>
                             @endif
                         </div>
                     </div>
