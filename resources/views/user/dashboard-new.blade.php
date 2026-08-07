@@ -195,32 +195,19 @@
                                         {{ $transaction->wallet->currency ?? 'UNKNOWN' }} • {{ $transaction->created_at->format('Y/m/d H:i') }}
                                     </p>
                                     @if($transaction->type === 'deposit')
+                                        @if($transaction->sender_wallet_address)
+                                            <p class="text-xs text-gray-500 mt-1">آدرس فرستنده: <code dir="ltr" class="text-gray-700">{{ $transaction->sender_wallet_address }}</code></p>
+                                        @endif
                                         @if($transaction->wallet?->wallet_address)
                                             <p class="text-xs text-gray-500 mt-1">آدرس دریافت‌کننده: <code dir="ltr" class="text-gray-700">{{ $transaction->wallet->wallet_address }}</code></p>
                                         @endif
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="mt-3 p-3 bg-gray-50 rounded flex items-center justify-between">
-                                <p class="text-xs text-gray-600">
-                                    <span class="font-semibold">شناسه:</span>
-                                    <code dir="ltr" class="text-gray-700">
-                                        @if($transaction->paymentRequest)
-                                            {{ 'INV-' . $transaction->paymentRequest->invoice_number }}
-                                        @elseif($transaction->reference)
-                                            {{ $transaction->reference }}
-                                        @else
-                                            TRX-{{ $transaction->id }}
+                                        @if($transaction->deposit)
+                                            <p class="text-xs text-gray-500 mt-1">تأییدیه‌ها: <strong class="text-gray-800">{{ $transaction->deposit->confirmations ?? 0 }}</strong></p>
+                                            <p class="text-xs text-gray-500 mt-1">وضعیت سپرده: <strong class="text-gray-800">{{ $transaction->deposit->status }}</strong></p>
                                         @endif
-                                    </code>
-                                </p>
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold mt-2 @if($transaction->status === 'completed') bg-green-100 text-green-800 @elseif($transaction->status === 'pending') bg-yellow-100 text-yellow-800 @else bg-red-100 text-red-800 @endif">
-                                    @if($transaction->status === 'completed') تکمیل شده
-                                    @elseif($transaction->status === 'pending') در حال انجام
-                                    @else ناموفق
+                                    @else
+                                        <p class="text-xs text-gray-500 mt-1">شناسه: <code dir="ltr" class="text-gray-700">{{ $transaction->reference ?? 'TRX-' . $transaction->id }}</code></p>
                                     @endif
-                                </span>
-                            </div>
                                 </div>
                             </div>
                             <div class="text-right">
