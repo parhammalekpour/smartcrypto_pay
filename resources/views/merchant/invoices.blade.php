@@ -79,6 +79,15 @@
                             <a href="{{ url('/pay/' . $invoice->token) }}" target="_blank" class="text-indigo-600 hover:underline font-semibold text-xs">
                                 <i class="fas fa-external-link-alt ml-1"></i>ارسال پیوند
                             </a>
+
+                            @if($invoice->status === 'pending')
+                                <form action="{{ route('payments.cancel', $invoice->id) }}" method="POST" class="inline-block ml-2" onsubmit="return confirm('آیا از حذف/لغو این فاکتور مطمئن هستید؟');">
+                                    @csrf
+                                    <button type="submit" class="text-red-600 hover:underline font-semibold text-xs">
+                                        <i class="fas fa-trash ml-1"></i>حذف
+                                    </button>
+                                </form>
+                            @endif
                         </td>
                     </tr>
                 @empty

@@ -90,21 +90,35 @@
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="border-b text-right text-slate-500">
+                            <th class="py-2">شرح</th>
                             <th class="py-2">مبلغ</th>
                             <th class="py-2">نوع</th>
                             <th class="py-2">وضعیت</th>
+                            <th class="py-2">تاریخ</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($recentTransactions as $transaction)
                             <tr class="border-b">
-                                <td class="py-3">{{ $transaction->amount }}</td>
-                                <td class="py-3">{{ $transaction->type }}</td>
-                                <td class="py-3">{{ $transaction->status }}</td>
+                                <td class="py-3">
+                                    {{ $transaction->display_title }}
+                                    <div class="text-xs text-slate-400 mt-1">
+                                        {{ $transaction->currency }} • {{ $transaction->created_at->format('Y/m/d H:i') }}
+                                        @if($transaction->reference)
+                                            • {{ $transaction->reference }}
+                                        @elseif($transaction->paymentRequest && $transaction->paymentRequest->invoice_number)
+                                            • INV-{{ $transaction->paymentRequest->invoice_number }}
+                                        @endif
+                                    </div>
+                                </td>
+                                <td class="py-3">{{ number_format($transaction->amount, 8) }} {{ $transaction->currency }}</td>
+                                <td class="py-3">{{ ucfirst($transaction->type) }}</td>
+                                <td class="py-3">{{ ucfirst($transaction->status) }}</td>
+                                <td class="py-3">{{ $transaction->created_at->diffForHumans() }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" class="py-4 text-center text-slate-500">تراکنشی ثبت نشده است.</td>
+                                <td colspan="5" class="py-4 text-center text-slate-500">تراکنشی ثبت نشده است.</td>
                             </tr>
                         @endforelse
                     </tbody>

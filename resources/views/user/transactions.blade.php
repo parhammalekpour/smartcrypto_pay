@@ -109,24 +109,14 @@
                             <i class="fas @if($transaction->type === 'transfer') fa-arrow-left text-orange-600 @else fa-arrow-right text-green-600 @endif text-lg"></i>
                         </div>
                         <div>
-                            <p class="font-semibold text-gray-800">
-                                @if($transaction->type === 'transfer')
-                                    @if($transaction->paymentRequest && $transaction->paymentRequest->merchant)
-                                        پرداخت به {{ $transaction->paymentRequest->merchant->name }}
-                                    @else
-                                        ارسال به {{ $transaction->recipient->name ?? 'نامشخص' }}
-                                    @endif
-                                @elseif($transaction->type === 'deposit')
-                                    @if($transaction->description === 'Demo Deposit')
-                                        دریافت - {{ $transaction->description }}
-                                    @else
-                                        دریافت از {{ $transaction->sender->name ?? 'نامشخص' }}
-                                    @endif
-                                @else
-                                    {{ $transaction->description ?? 'تراکنش' }}
+                            <p class="font-semibold text-gray-800">{{ $transaction->display_title }}</p>
+                            <p class="text-sm text-gray-500">{{ $transaction->created_at->format('Y/m/d H:i') }} • {{ $transaction->wallet->currency ?? 'UNKNOWN' }}</p>
+                            @if($transaction->type === 'deposit')
+                                @if($transaction->wallet?->wallet_address)
+                                    <p class="text-xs text-gray-500 mt-1">آدرس دریافت‌کننده: <code dir="ltr" class="text-gray-700">{{ $transaction->wallet->wallet_address }}</code></p>
                                 @endif
-                            </p>
-                            <p class="text-sm text-gray-500">{{ $transaction->wallet->currency ?? 'UNKNOWN' }} • {{ $transaction->created_at->format('Y/m/d H:i') }}</p>
+                                <p class="text-xs text-gray-500 mt-1">شناسه تراکنش: <code dir="ltr" class="text-gray-700">{{ $transaction->reference }}</code></p>
+                            @endif
                         </div>
                     </div>
                     <div class="text-right">
@@ -152,20 +142,7 @@
                                 TRX-{{ $transaction->id }}
                             @endif
                         </code>
-                        @if($transaction->paymentRequest && $transaction->paymentRequest->merchant)
-                            <br><span class="text-gray-500 text-xs mt-1 block">برای: <strong>{{ $transaction->paymentRequest->merchant->name }}</strong></span>
-                        @endif
                     </p>
-                    <span class="px-2 py-1 rounded text-xs font-semibold
-                        @if($transaction->status === 'completed') bg-green-100 text-green-800
-                        @elseif($transaction->status === 'pending') bg-yellow-100 text-yellow-800
-                        @else bg-red-100 text-red-800
-                        @endif">
-                        @if($transaction->status === 'completed') تکمیل شده
-                        @elseif($transaction->status === 'pending') در حال انجام
-                        @else ناموفق
-                        @endif
-                    </span>
                 </div>
             </div>
             @endforeach

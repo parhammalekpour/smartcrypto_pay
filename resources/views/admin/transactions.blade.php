@@ -39,9 +39,26 @@
                         <td class="py-3">{{ $transaction->amount }}</td>
                         <td class="py-3">{{ $transaction->type }}</td>
                         <td class="py-3">{{ $transaction->status }}</td>
-                        <td class="py-3">{{ $transaction->sender->name ?? '—' }}</td>
+                        <td class="py-3">
+                            {{ $transaction->sender->name ?? $transaction->sender_wallet_address ?? '—' }}
+                        </td>
                         <td class="py-3">{{ $transaction->recipient->name ?? '—' }}</td>
-                        <td class="py-3">{{ $transaction->description }}</td>
+                        <td class="py-3">
+                            {{ $transaction->description }}
+                            @if($transaction->type === 'deposit' && $transaction->deposit)
+                                <div class="mt-2 text-xs text-slate-500 space-y-1">
+                                    @if($transaction->sender_wallet_address)
+                                        <div>فرستنده: <code dir="ltr" class="text-slate-700">{{ $transaction->sender_wallet_address }}</code></div>
+                                    @endif
+                                    @if($transaction->wallet?->wallet_address)
+                                        <div>گیرنده: <code dir="ltr" class="text-slate-700">{{ $transaction->wallet->wallet_address }}</code></div>
+                                    @endif
+                                    <div>شناسه تراکنش: <code dir="ltr" class="text-slate-700">{{ $transaction->reference }}</code></div>
+                                    <div>تأییدیه‌ها: <strong class="text-slate-700">{{ $transaction->deposit->confirmations ?? 0 }}</strong></div>
+                                    <div>وضعیت سپرده: <strong class="text-slate-700">{{ $transaction->deposit->status }}</strong></div>
+                                </div>
+                            @endif
+                        </td>
                         <td class="py-3">
                             @if($transaction->status !== 'cancelled')
                                 <form method="POST" action="{{ route('admin.transactions.cancel', ['transaction' => $transaction->id]) }}">

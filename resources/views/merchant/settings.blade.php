@@ -48,7 +48,7 @@
 
         <!-- Tab Content -->
         <div class="p-8">
-            <form action="{{ route('merchant.settings.update') }}" method="POST" class="space-y-6" id="settings-form">
+            <form action="{{ route('merchant.settings.update') }}" method="POST" class="space-y-6" id="settings-form" enctype="multipart/form-data">
                 @csrf
                 @method('PATCH')
                 
@@ -72,6 +72,25 @@
                         </div>
 
                         <!-- Phone -->
+
+                        <!-- Avatar -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">عکس پروفایل فروشگاه</label>
+                            <div class="flex items-center gap-4">
+                                @if(auth()->user()->avatar)
+                                    <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="merchant-avatar" class="w-20 h-20 rounded-full object-cover border">
+                                @else
+                                    <div class="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center border"> 
+                                        <i class="fas fa-store text-gray-400"></i>
+                                    </div>
+                                @endif
+
+                                <input type="file" name="avatar" accept="image/*" class="mt-1 block">
+                            </div>
+                            @error('avatar')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">شماره تلفن شخصی</label>
                             <input type="tel" name="phone" value="{{ old('phone', auth()->user()->phone) }}" placeholder="اختیاری"
@@ -263,8 +282,11 @@
 
                         <div class="mb-4">
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">آپلود مدارک</label>
-                            <input type="file" name="documents[]" multiple accept="image/*,application/pdf" class="w-full">
-                        </div>
+                                                    <div class="flex gap-4 items-start">
+                                                        <input id="kycDocumentsInput" type="file" name="documents[]" multiple accept="image/*,application/pdf" class="w-full" />
+                                                        <div id="kycDocumentsPreview" class="grid grid-cols-3 gap-2"></div>
+                                                    </div>
+                                                </div>
 
                         <div class="mb-4">
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">گرفتن عکس توسط دوربین (سلفی)</label>
@@ -277,7 +299,7 @@
                                 <img id="selfie-preview" class="w-40 h-40 object-cover rounded hidden" alt="Selfie preview">
                                 <input type="hidden" name="selfie_data" id="selfie_data">
                                 <div class="pt-2">
-                                    <input type="file" name="selfie" accept="image/*" class="w-full">
+                                                                    <input id="kycSelfieInput" type="file" name="selfie" accept="image/*" class="w-full" />
                                 </div>
                             </div>
                         </div>
@@ -336,9 +358,9 @@
             button.classList.add('border-indigo-600', 'dark:border-indigo-500', 'text-gray-700', 'dark:text-gray-300');
         }
         
-        // Show/hide form actions based on tab
+        // Show/hide form actions based on tab (hide for security and kyc tabs)
         const formActions = document.getElementById('form-actions');
-        if (tabName === 'security') {
+        if (tabName === 'security' || tabName === 'kyc') {
             formActions.classList.add('hidden');
         } else {
             formActions.classList.remove('hidden');
@@ -389,9 +411,83 @@
                 captureBtn.classList.add('hidden');
                 startBtn.classList.remove('hidden');
             });
+
+        // Preview when selecting selfie file from disk
+        const selfieInput = document.getElementById('kycSelfieInput');
+        if (selfieInput) {
+            selfieInput.addEventListener('change', function(){
+                const file = this.files && this.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const url = URL.createObjectURL(file);
+                    if (selfiePreview) {
+                        selfiePreview.src = url;
+                        selfiePreview.classList.remove('hidden');
+                    }
+                    // set selfie_data to empty so server uses file upload instead
+                    if (selfieData) selfieData.value = '';
+                    // revoke object URL after image loads
+                    if (selfiePreview) selfiePreview.onload = () => URL.revokeObjectURL(url);
+                } else {
+                    if (selfiePreview) {
+                        selfiePreview.src = '';
+                        selfiePreview.classList.add('hidden');
+                    }
+                }
+            });
         }
 
-        document.addEventListener('DOMContentLoaded', setupKycCamera);
+        // Preview selected documents (multiple)
+        const docsInput = document.getElementById('kycDocumentsInput');
+        const docsPreview = document.getElementById('kycDocumentsPreview');
+        let docObjectUrls = [];
+        if (docsInput && docsPreview) {
+            docsInput.addEventListener('change', function(){
+                // clear existing previews and revoke URLs
+                docsPreview.innerHTML = '';
+                docObjectUrls.forEach(u => URL.revokeObjectURL(u));
+                docObjectUrls = [];
+
+                const files = Array.from(this.files || []);
+                files.forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        const img = document.createElement('img');
+                        img.className = 'w-full h-24 object-cover rounded';
+                        const url = URL.createObjectURL(file);
+                        docObjectUrls.push(url);
+                        img.src = url;
+                        const wrapper = document.createElement('div');
+                        wrapper.appendChild(img);
+                        docsPreview.appendChild(wrapper);
+                        img.onload = () => URL.revokeObjectURL(url);
+                    } else if (file.type === 'application/pdf') {
+                        const link = document.createElement('a');
+                        link.textContent = file.name;
+                        link.href = '#';
+                        link.className = 'text-sm text-indigo-600';
+                        const wrapper = document.createElement('div');
+                        wrapper.appendChild(link);
+                        docsPreview.appendChild(wrapper);
+                    } else {
+                        const p = document.createElement('p');
+                        p.textContent = file.name;
+                        const wrapper = document.createElement('div');
+                        wrapper.appendChild(p);
+                        docsPreview.appendChild(wrapper);
+                    }
+                });
+            });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        setupKycCamera();
+
+        // If a hash is present in the URL (e.g. #security), open that tab
+        const hash = window.location.hash.replace('#', '');
+        if (hash && document.getElementById(hash)) {
+            switchTab(hash);
+        }
+    });
     })();
 </script>
 

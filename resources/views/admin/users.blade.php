@@ -31,10 +31,13 @@
                         <td class="py-3">{{ $user->created_at }}</td>
                         <td class="py-3">
                             @if(!$user->isAdmin() && $user->id !== auth()->id())
-                                <form method="POST" action="{{ route('admin.users.delete', ['user' => $user->id]) }}" onsubmit="return confirm('آیا از حذف این کاربر مطمئن هستید؟')">
-                                    @csrf
-                                    <button type="submit" class="rounded-lg bg-red-600 px-3 py-2 text-sm text-white">حذف کاربر</button>
-                                </form>
+                                <div class="flex gap-2">
+                                    <a href="{{ route('admin.users.wallets', ['user' => $user->id]) }}" class="rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white">مشاهده کیف‌پول‌ها</a>
+                                    <form method="POST" action="{{ route('admin.users.delete', ['user' => $user->id]) }}" onsubmit="return confirm('آیا از حذف این کاربر مطمئن هستید؟')">
+                                        @csrf
+                                        <button type="submit" class="rounded-lg bg-red-600 px-3 py-2 text-sm text-white">حذف کاربر</button>
+                                    </form>
+                                </div>
                             @endif
                         </td>
                     </tr>

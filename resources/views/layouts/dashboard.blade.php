@@ -131,10 +131,13 @@
     </style>
     @stack('styles')
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-persian transition-colors duration-300">
-    <div class="flex h-screen bg-gray-100 dark:bg-gray-800">
-        <!-- Sidebar -->
-        <aside class="w-72 bg-gradient-to-b from-indigo-600 to-indigo-800 dark:from-indigo-900 dark:to-indigo-950 text-white shadow-lg flex flex-col overflow-y-auto transition-colors duration-300">
+<body x-data="{ sidebarOpen: false, notificationOpen: false, notificationCount: 0, notifications: [] }" x-init="setInterval(() => { fetch('{{ route('notifications.unread-count') }}').then(r => r.json()).then(data => notificationCount = data.count); }, 5000)" class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-persian transition-colors duration-300">
+    <div class="relative min-h-screen bg-gray-100 dark:bg-gray-800">
+        <div x-show="sidebarOpen" x-cloak class="fixed inset-0 z-30 bg-black/50 lg:hidden" @click="sidebarOpen = false"></div>
+
+        <div class="flex min-h-screen">
+            <!-- Sidebar -->
+            <aside :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'" class="fixed inset-y-0 right-0 z-40 w-72 transform overflow-y-auto bg-gradient-to-b from-indigo-600 to-indigo-800 dark:from-indigo-900 dark:to-indigo-950 text-white shadow-lg transition-transform duration-300 lg:static lg:translate-x-0 lg:flex lg:flex-col">
             <!-- Logo Section - Fixed -->
             <div style="padding: 24px; border-bottom: 1px solid rgba(255,255,255,.15); flex-shrink: 0;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 12px; flex-direction: row-reverse;">
@@ -149,7 +152,7 @@
             </div>
 
             <!-- Menu - Scrollable -->
-            <nav class="flex-1 px-2 py-4 space-y-0 overflow-y-auto">
+            <nav @click="sidebarOpen = false" class="flex-1 px-2 py-4 space-y-0 overflow-y-auto">
                 @if(auth()->user()->isAdmin())
                     <a href="{{ route('admin.dashboard') }}" class="sidebar-item @if(Route::currentRouteName() === 'admin.dashboard') active @endif">
                         <i class="fas fa-shield-alt"></i>
@@ -239,9 +242,13 @@
             <!-- User Profile - Fixed at Bottom -->
             <div class="border-t border-indigo-500 dark:border-indigo-700 p-4 flex-shrink-0">
                 <div class="flex items-center gap-3 p-3 bg-indigo-700 rounded-lg">
-                    <div class="w-10 h-10 bg-indigo-300 rounded-full flex items-center justify-center text-indigo-800 font-bold text-sm flex-shrink-0">
-                        {{ substr(auth()->user()->name, 0, 1) }}
-                    </div>
+                    @if(auth()->user()->avatar)
+                        <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="avatar" class="w-10 h-10 rounded-full object-cover flex-shrink-0">
+                    @else
+                        <div class="w-10 h-10 bg-indigo-300 rounded-full flex items-center justify-center text-indigo-800 font-bold text-sm flex-shrink-0">
+                            {{ substr(auth()->user()->name, 0, 1) }}
+                        </div>
+                    @endif
                     <div class="min-w-0">
                         <p class="text-sm font-semibold truncate">{{ auth()->user()->name }}</p>
                         <p class="text-xs text-indigo-300 truncate">{{ auth()->user()->email }}</p>
@@ -253,18 +260,16 @@
         <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Top Bar -->
-            <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300" x-data="{ notificationOpen: false, notificationCount: 0, notifications: [] }" @load="
-                setInterval(() => {
-                    fetch('{{ route('notifications.unread-count') }}')
-                        .then(r => r.json())
-                        .then(data => $data.notificationCount = data.count);
-                }, 5000);
-            ">
-                <div class="flex items-center justify-between px-6 py-4">
-                    <!-- Page Title -->
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100">@yield('page-title')</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">@yield('page-subtitle')</p>
+            <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
+                <div class="flex flex-col gap-4 px-4 py-4 lg:px-6 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="flex items-center justify-between gap-4">
+                        <button @click="sidebarOpen = true" aria-label="Open sidebar navigation" class="lg:hidden inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white/90 px-3 py-2 text-gray-600 dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100">@yield('page-title')</h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">@yield('page-subtitle')</p>
+                        </div>
                     </div>
 
                     <!-- Top Right Actions -->
@@ -278,7 +283,7 @@
                                         .then(r => r.json())
                                         .then(data => $data.notifications = data);
                                 }
-                            " class="relative p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                            " class="relative p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition flex items-center">
                                 <i class="fas fa-bell text-lg"></i>
                                 <span x-show="notificationCount > 0" x-text="notificationCount" class="absolute top-0 right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center font-bold"></span>
                             </button>
@@ -334,15 +339,19 @@
                         <!-- Profile Dropdown -->
                         <div class="relative">
                             <button class="profile-button flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
-                                <div class="w-8 h-8 bg-indigo-600 dark:bg-indigo-700 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                    {{ substr(auth()->user()->name, 0, 1) }}
-                                </div>
+                                @if(auth()->user()->avatar)
+                                    <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="avatar" class="w-8 h-8 rounded-full object-cover">
+                                @else
+                                    <div class="w-8 h-8 bg-indigo-600 dark:bg-indigo-700 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                        {{ substr(auth()->user()->name, 0, 1) }}
+                                    </div>
+                                @endif
                                 <i class="fas fa-chevron-down text-xs text-gray-500 dark:text-gray-400"></i>
                             </button>
 
                             <!-- Dropdown Menu -->
                             <div class="profile-dropdown bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 w-40 z-50">
-                                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
+                                <a href="{{ auth()->user()->isMerchant() ? route('merchant.settings') : (auth()->user()->isUser() ? route('user.settings') : route('profile.edit')) }}" class="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
                                     <i class="fas fa-user text-sm"></i>پروفایل
                                 </a>
                                 <a href="@if(auth()->user()->isMerchant()) {{ route('merchant.settings') }}#security @else {{ route('user.settings') }}#security @endif" class="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">

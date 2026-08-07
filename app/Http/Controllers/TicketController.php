@@ -78,6 +78,20 @@ class TicketController extends Controller
         return view('tickets_show', compact('ticket', 'messages'));
     }
 
+    public function close(Request $request, Ticket $ticket)
+    {
+        $user = $request->user();
+
+        if (!($user->isAdmin() || $ticket->user_id === $user->id || $ticket->merchant_id === $user->id)) {
+            abort(403);
+        }
+
+        $ticket->status = 'closed';
+        $ticket->save();
+
+        return redirect()->route('tickets.show', $ticket->id)->with('success', 'تیکت بسته شد');
+    }
+
     // JSON endpoint for ticket messages (user side)
     public function messages(Request $request, Ticket $ticket)
     {
@@ -126,6 +140,14 @@ class TicketController extends Controller
 
         if (!($user->isAdmin() || $ticket->user_id === $user->id || $ticket->merchant_id === $user->id)) {
             abort(403);
+        }
+
+        if ($ticket->status === 'closed' && !$user->isAdmin()) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['error' => 'تیکت بسته شده است.'], 400);
+            }
+
+            return back()->withErrors(['message' => 'تیکت بسته شده است.'])->withInput();
         }
 
         $msg = new TicketMessage();

@@ -10,6 +10,12 @@
         <p class="text-xs text-gray-400">وضعیت: {{ $ticket->status }}</p>
     </div>
 
+    @if($ticket->status === 'closed')
+        <div class="p-4 mb-6 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800">
+            این تیکت بسته شده است. ارسال پاسخ جدید توسط ادمین می‌تواند آن را دوباره باز کند.
+        </div>
+    @endif
+
     <div id="messages" class="space-y-4 mb-6">
         @foreach($messages as $m)
                 <div data-message-id="{{ $m->id }}" class="p-4 rounded-lg @if($m->sender_type === 'admin') bg-indigo-50 @else bg-gray-100 @endif">
@@ -28,7 +34,12 @@
         </div>
         <div class="mb-4">
             <label class="block text-sm font-semibold mb-2">ضمیمه (تصویر)</label>
-            <input id="replyAttachment" type="file" name="attachment" accept="image/*" class="w-full" />
+            <div class="flex items-start gap-4">
+                <input id="replyAttachment" type="file" name="attachment" accept="image/*" class="w-full max-w-xs" />
+                <div id="replyAttachmentPreviewContainer" class="hidden">
+                    <img id="replyAttachmentPreview" src="" class="max-w-xs max-h-40 object-contain rounded"/>
+                </div>
+            </div>
             @error('attachment') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
         <div class="flex justify-between items-center">
@@ -77,6 +88,24 @@
 
                 // Submit via AJAX
                 const form = document.getElementById('replyForm');
+
+                // Preview selected attachment for admin reply
+                const replyAttachmentInput = document.getElementById('replyAttachment');
+                const replyAttachmentPreview = document.getElementById('replyAttachmentPreview');
+                const replyAttachmentPreviewContainer = document.getElementById('replyAttachmentPreviewContainer');
+                if (replyAttachmentInput) {
+                    replyAttachmentInput.addEventListener('change', function(){
+                        const file = this.files && this.files[0];
+                        if (file && file.type.startsWith('image/')) {
+                            replyAttachmentPreview.src = URL.createObjectURL(file);
+                            replyAttachmentPreviewContainer.classList.remove('hidden');
+                        } else {
+                            replyAttachmentPreview.src = '';
+                            replyAttachmentPreviewContainer.classList.add('hidden');
+                        }
+                    });
+                }
+
                 form.addEventListener('submit', async function(e){
                     e.preventDefault();
                     const bodyEl = document.getElementById('replyMessage');
@@ -101,7 +130,13 @@
                         });
                         if (res.ok) {
                             bodyEl.value = '';
-                            if (hasFile) fileInput.value = '';
+                            if (hasFile) {
+                                fileInput.value = '';
+                                if (replyAttachmentPreview) {
+                                    replyAttachmentPreview.src = '';
+                                    replyAttachmentPreviewContainer.classList.add('hidden');
+                                }
+                            }
                             fetchMessages();
                         } else {
                             const txt = await res.text();
@@ -116,9 +151,11 @@
             })();
         </script>
 
-    <form method="POST" action="{{ route('admin.tickets.close', $ticket->id) }}" class="mt-4">
-        @csrf
-        <button class="text-sm text-red-600">بستن تیکت</button>
-    </form>
+    @if($ticket->status !== 'closed')
+        <form method="POST" action="{{ route('admin.tickets.close', $ticket->id) }}" class="mt-4">
+            @csrf
+            <button class="text-sm text-red-600">بستن تیکت</button>
+        </form>
+    @endif
 </div>
 @endsection

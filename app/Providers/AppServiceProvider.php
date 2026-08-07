@@ -22,5 +22,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         User::observe(UserObserver::class);
+
+        // Observe deposits to automatically sync balances when confirmed
+        \App\Models\Deposit::observe(\App\Observers\DepositObserver::class);
     }
 }

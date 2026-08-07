@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -22,7 +23,7 @@ class AdminController extends Controller
 
         $recentUsers = User::latest()->take(8)->get();
         $pendingKycUsers = $this->pendingKycQuery()->latest()->take(8)->get();
-        $recentTransactions = Transaction::with(['sender', 'recipient', 'wallet'])->latest()->take(8)->get();
+        $recentTransactions = Transaction::with(['sender', 'recipient', 'wallet', 'deposit'])->latest()->take(8)->get();
         $activity = DB::table('audit_logs')
             ->select('audit_logs.*', 'actors.name as actor_name', 'targets.name as user_name')
             ->leftJoin('users as actors', 'actors.id', '=', 'audit_logs.actor_id')
@@ -60,6 +61,31 @@ class AdminController extends Controller
         return back()->with('success', 'کاربر با موفقیت حذف شد.');
     }
 
+    /**
+     * Show wallets belonging to a user (admin monitoring)
+     */
+    public function userWallets(User $user)
+    {
+        $wallets = $user->wallets()->latest()->paginate(20);
+
+        return view('admin.wallets_user', compact('user', 'wallets'));
+    }
+
+    /**
+     * Destroy a wallet (admin action). This will cascade-delete related transactions via DB constraints.
+     */
+    public function destroyWallet(\App\Models\Wallet $wallet)
+    {
+        $userId = $wallet->user_id;
+        $balance = $wallet->balance;
+
+        $wallet->delete();
+
+        $this->logAction('wallet_deleted', $userId, 'wallet', $wallet->id, ['balance' => (string)$balance]);
+
+        return back()->with('success', 'کیف پول با موفقیت حذف شد.');
+    }
+
     public function kyc(Request $request)
     {
         $query = $this->kycQuery();
@@ -91,7 +117,7 @@ class AdminController extends Controller
 
     public function transactions(Request $request)
     {
-        $query = Transaction::with(['sender', 'recipient', 'wallet'])->latest();
+        $query = Transaction::with(['sender', 'recipient', 'wallet', 'deposit'])->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);

@@ -16,7 +16,7 @@
             </div>
             <span class="inline-flex items-center gap-2 rounded-full bg-indigo-500/15 text-indigo-200 px-3 py-1 text-xs uppercase tracking-[0.14em]">
                 <i class="fas fa-chart-line text-xs"></i>
-                TradingView
+                Binance
             </span>
         </div>
 
@@ -145,10 +145,9 @@
                     </a>
 
                     @if(floatval($wallet->balance) > 0)
-                        <!-- Wallet has balance: instruct merchant to contact admin -->
-                        <button type="button" onclick="alert('برای حذف این کیف پول لطفاً برای تیم پشتیبانی (ادمین) تیکت ثبت کنید.');" class="p-2 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition flex items-center justify-center gap-1 whitespace-nowrap" title="برای حذف این کیف پول لطفاً برای تیم پشتیبانی (ادمین) تیکت ثبت کنید.">
+                        <a href="{{ route('tickets.create', ['subject' => 'درخواست حذف کیف پول ' . $wallet->currency, 'message' => 'لطفاً برای حذف کیف پول ' . $wallet->wallet_address . ' با موجودی ' . $wallet->balance . ' ' . $wallet->currency . ' تیکت ثبت کنید.']) }}" onclick="alert('این کیف پول دارای موجودی است و قابل حذف مستقیم نیست. برای حذف آن لطفاً برای تیم پشتیبانی تیکت ثبت کنید.');" class="p-2 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition flex items-center justify-center gap-1 whitespace-nowrap" title="برای حذف این کیف پول لطفاً تیکت بزنید.">
                             <i class="fas fa-trash"></i>حذف
-                        </button>
+                        </a>
                     @else
                         <form method="POST" action="{{ route('merchant.wallets.destroy', $wallet) }}" style="display:contents;" onsubmit="return confirm('آیا از حذف این کیف پول مطمئن هستید؟ این عملیات غیرقابل بازگشت است.');">
                             @csrf

@@ -46,7 +46,7 @@
         <div class="p-8">
             <!-- General Tab -->
             <div id="general" class="tab-content">
-                <form action="{{ route('settings.update') }}" method="POST" class="space-y-6">
+                <form action="{{ route('settings.update') }}" method="POST" class="space-y-6" enctype="multipart/form-data">
                     @csrf
                     @method('PATCH')
                     
@@ -68,25 +68,20 @@
                                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">شماره تلفن</label>
                                 <input type="tel" name="phone" value="{{ old('phone', auth()->user()->phone) }}" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-colors duration-300" placeholder="اختیاری">
                             </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">عکس پروفایل</label>
+                                @if(auth()->user()->avatar)
+                                    <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="avatar" class="w-20 h-20 rounded-full object-cover border mb-2">
+                                @endif
+                                <input type="file" name="avatar" accept="image/*" class="w-full">
+                                @error('avatar')
+                                    <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
+                                @enderror
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Display Settings -->
-                    <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">تنظیمات نمایش</h3>
-                        <div class="space-y-4">
-
-
-                            <!-- Dark Mode -->
-                            <label class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition" id="darkModeLabel">
-                                <input type="checkbox" name="dark_mode" value="1" @if(auth()->user()->dark_mode) checked @endif id="darkModeToggle" class="w-5 h-5 text-indigo-600 dark:text-indigo-500 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
-                                <div class="mr-3">
-                                    <p class="font-semibold text-gray-800 dark:text-gray-100">حالت تاریک</p>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">رابط تاریک را فعال کنید</p>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
 
                     <div class="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
                         <button type="submit" class="px-8 py-3 bg-indigo-600 dark:bg-indigo-700 text-white font-semibold rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors duration-300">
@@ -247,47 +242,6 @@ function switchTab(tab) {
     btn.classList.add('border-indigo-600', 'text-gray-800', 'dark:text-gray-100');
 }
 
-// Initialize dark mode functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const darkModeToggle = document.getElementById('darkModeToggle');
-    const settingsForm = document.querySelector('form[action*="settings.update"]');
-    
-    if (darkModeToggle) {
-        // Handle real-time toggle (immediate visual change)
-        darkModeToggle.addEventListener('change', function() {
-            if (this.checked) {
-                document.documentElement.classList.add('dark');
-                localStorage.setItem('darkMode', 'true');
-            } else {
-                document.documentElement.classList.remove('dark');
-                localStorage.setItem('darkMode', 'false');
-            }
-        });
-        
-        // Set initial state
-        const htmlElement = document.documentElement;
-        darkModeToggle.checked = htmlElement.classList.contains('dark');
-    }
-    
-    // Handle form submission
-    if (settingsForm) {
-        settingsForm.addEventListener('submit', function(e) {
-            // Save dark mode state to localStorage before form submits
-            const darkModeInput = document.getElementById('darkModeToggle');
-            if (darkModeInput) {
-                if (darkModeInput.checked) {
-                    localStorage.setItem('darkMode', 'true');
-                } else {
-                    localStorage.setItem('darkMode', 'false');
-                }
-            }
-            
-            // Let the form submit normally
-            // The next page load will use localStorage value
-        });
-    }
-});
-
 // Camera and KYC helpers
 (function(){
     function setupKycCamera() {
@@ -332,7 +286,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    document.addEventListener('DOMContentLoaded', setupKycCamera);
+    document.addEventListener('DOMContentLoaded', function() {
+        setupKycCamera();
+
+        // If a hash is present in the URL (e.g. #security), open that tab
+        const hash = window.location.hash.replace('#', '');
+        if (hash && document.getElementById(hash)) {
+            switchTab(hash);
+        }
+    });
 })();
 </script>
 

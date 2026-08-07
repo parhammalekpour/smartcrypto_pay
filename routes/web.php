@@ -29,6 +29,11 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin', [AdminController::class, 'index'])->name('admin.dashboard');
     Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
     Route::post('/admin/users/{user}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
+
+    // Admin: user wallets monitoring & management
+    Route::get('/admin/users/{user}/wallets', [AdminController::class, 'userWallets'])->name('admin.users.wallets');
+    Route::delete('/admin/wallets/{wallet}', [AdminController::class, 'destroyWallet'])->name('admin.wallets.destroy');
+
     Route::get('/admin/kyc', [AdminController::class, 'kyc'])->name('admin.kyc');
     Route::post('/admin/kyc/{user}/approve', [AdminController::class, 'approveKyc'])->name('admin.kyc.approve');
     Route::post('/admin/kyc/{user}/reject', [AdminController::class, 'rejectKyc'])->name('admin.kyc.reject');
@@ -89,6 +94,9 @@ Route::middleware(['auth', 'role:user', 'verified'])->group(function () {
 // Public crypto prices endpoint (also aliased as /api/crypto-prices)
 Route::get('/api/crypto-prices', [WalletController::class, 'getPrices'])->name('api.crypto-prices');
 
+// Wallet balance API (cached 10s)
+Route::get('/api/wallet/{id}/balance', [\App\Http\Controllers\WalletApiController::class, 'balance'])->name('api.wallet.balance');
+
 // Public crypto prices endpoint (no auth) - useful for client-side fetches that may not send cookies
 Route::get('/public/crypto-prices', [WalletController::class, 'getPrices'])->name('public.api.crypto-prices');
 
@@ -112,6 +120,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tickets/{ticket}', [\App\Http\Controllers\TicketController::class, 'show'])->name('tickets.show');
     Route::get('/tickets/{ticket}/messages', [\App\Http\Controllers\TicketController::class, 'messages'])->name('tickets.messages');
     Route::post('/tickets/{ticket}/message', [\App\Http\Controllers\TicketController::class, 'postMessage'])->name('tickets.message');
+    Route::post('/tickets/{ticket}/close', [\App\Http\Controllers\TicketController::class, 'close'])->name('tickets.close');
 });
 
 Route::middleware('auth')->group(function () {

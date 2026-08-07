@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Wallet;
 use App\Models\Transaction;
 use App\Models\PaymentRequest;
@@ -30,7 +31,7 @@ class WalletController extends Controller
         $transactions = Transaction::whereIn(
             'wallet_id',
             $wallets->pluck('id')
-        )->latest()->take(10)->get() ?? collect();
+        )->with(['wallet', 'deposit'])->latest()->take(10)->get() ?? collect();
 
         $receivedCount = Transaction::whereIn('wallet_id', $wallets->pluck('id'))
             ->where('type', 'deposit')
@@ -60,6 +61,22 @@ class WalletController extends Controller
     public function wallets()
     {
         $wallets = auth()->user()->wallets ?? collect();
+
+        // Quick sync balances for the current user's wallets to ensure UI shows up-to-date values
+        try {
+            $balanceService = new \App\Services\BalanceSyncService();
+            foreach ($wallets as $wallet) {
+                try {
+                    $balanceService->syncWallet($wallet);
+                } catch (\Throwable $e) {
+                    Log::error('Quick sync failed for wallet ' . ($wallet->id ?? '?') . ': ' . $e->getMessage());
+                }
+            }
+        } catch (\Throwable $e) {
+            // Guard - do not block page rendering on sync errors
+            Log::warning('Balance quick-sync initialization failed: ' . $e->getMessage());
+        }
+
         return view('user.wallets', compact('wallets'));
     }
 
@@ -94,7 +111,7 @@ class WalletController extends Controller
 
         // Prevent deletion when balance is non-zero
         if (floatval($wallet->balance) > 0) {
-            return back()->withErrors(['wallet' => 'برای حذف کیف پول، موجودی باید صفر باشد.']);
+            return back()->withErrors(['wallet' => 'برای حذف کیف پول، موجودی باید صفر باشد. برای حذف کیف پول‌های دارای موجودی لطفاً برای تیم پشتیبانی تیکت ثبت کنید.']);
         }
 
         try {
@@ -179,7 +196,7 @@ class WalletController extends Controller
             });
         }
 
-        $transactions = $query->with(['paymentRequest.merchant', 'sender', 'recipient', 'wallet'])->latest()->paginate(20);
+        $transactions = $query->with(['paymentRequest.merchant', 'sender', 'recipient', 'wallet', 'deposit'])->latest()->paginate(20);
         
         return view('user.transactions', compact('transactions', 'wallets'));
     }
@@ -204,6 +221,7 @@ class WalletController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . auth()->id(),
             'phone' => 'nullable|string|max:20',
+            'avatar' => 'nullable|image|max:2048',
             'show_balance' => 'nullable|boolean',
             'show_transactions' => 'nullable|boolean',
             'dark_mode' => 'nullable|boolean',
@@ -220,6 +238,12 @@ class WalletController extends Controller
 
         // Merge with validated data
         $updateData = array_merge($validated, $updateData);
+
+        // Handle avatar upload if present
+        if ($request->hasFile('avatar')) {
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $updateData['avatar'] = $path;
+        }
 
         auth()->user()->update($updateData);
 
@@ -477,12 +501,21 @@ class WalletController extends Controller
         $path = storage_path('app/crypto_prices.json');
         if (file_exists($path)) {
             $content = json_decode(file_get_contents($path), true);
-            if (is_array($content) && isset($content['btc']) && isset($content['eth'])) {
+            if (
+                is_array($content)
+                && isset($content['btc'], $content['eth'])
+                && is_numeric($content['btc'])
+                && is_numeric($content['eth'])
+                && (float) $content['btc'] > 0
+                && (float) $content['eth'] > 0
+            ) {
                 return response()->json($content)
                     ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
                     ->header('Pragma', 'no-cache')
                     ->header('Expires', '0');
             }
+
+            Log::warning('Ignored invalid or stale crypto_prices.json cache; falling back to live Binance quote.');
         }
 
         // Fallback: query live service (with caching inside service)

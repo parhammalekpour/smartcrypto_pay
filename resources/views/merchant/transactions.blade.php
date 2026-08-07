@@ -125,7 +125,24 @@
                                 <span class="text-gray-600">-</span>
                             @endif
                         </td>
-                        <td class="px-6 py-4 text-gray-600 text-sm">{{ $transaction->description ?? '-' }}</td>
+                        <td class="px-6 py-4 text-gray-600 text-sm">
+                            {{ $transaction->description ?? '-' }}
+                            @if($transaction->type === 'deposit')
+                                <div class="mt-2 text-xs text-gray-500 space-y-1">
+                                    @if($transaction->sender_wallet_address)
+                                        <div>فرستنده: <code dir="ltr" class="text-gray-700">{{ $transaction->sender_wallet_address }}</code></div>
+                                    @endif
+                                    @if($transaction->wallet?->wallet_address)
+                                        <div>گیرنده: <code dir="ltr" class="text-gray-700">{{ $transaction->wallet->wallet_address }}</code></div>
+                                    @endif
+                                    <div>شناسه تراکنش: <code dir="ltr" class="text-gray-700">{{ $transaction->reference }}</code></div>
+                                    @if($transaction->deposit)
+                                        <div>تأییدیه‌ها: <strong class="text-gray-700">{{ $transaction->deposit->confirmations ?? 0 }}</strong></div>
+                                        <div>وضعیت سپرده: <strong class="text-gray-700">{{ $transaction->deposit->status }}</strong></div>
+                                    @endif
+                                </div>
+                            @endif
+                        </td>
                         <td class="px-6 py-4 font-semibold {{ $transaction->type === 'deposit' ? 'text-green-600' : 'text-red-600' }}">
                             {{ $transaction->type === 'deposit' ? '+' : '-' }}{{ number_format($transaction->amount, 8) }} {{ $transaction->currency }}
                         </td>

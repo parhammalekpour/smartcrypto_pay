@@ -181,37 +181,50 @@
         @if($transactions && $transactions->count() > 0)
             <div class="space-y-3">
                 @foreach($transactions->take(6) as $transaction)
-                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 @if($transaction->type === 'transfer') bg-orange-100 @else bg-green-100 @endif rounded-full flex items-center justify-center">
-                                <i class="fas @if($transaction->type === 'transfer') fa-arrow-left text-orange-600 @else fa-arrow-right text-green-600 @endif text-lg"></i>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-gray-800">
-                                    @if($transaction->type === 'transfer')
-                                        ارسال به {{ $transaction->recipient->name ?? 'نامشخص' }}
-                                    @elseif($transaction->type === 'deposit')
-                                        @if($transaction->description === 'Demo Deposit')
-                                            دریافت - {{ $transaction->description }}
-                                        @else
-                                            دریافت از {{ $transaction->sender->name ?? 'نامشخص' }}
+                    <div class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 @if($transaction->type === 'transfer') bg-orange-100 @else bg-green-100 @endif rounded-full flex items-center justify-center">
+                                    <i class="fas @if($transaction->type === 'transfer') fa-arrow-left text-orange-600 @else fa-arrow-right text-green-600 @endif text-lg"></i>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-800">
+                                        {{ $transaction->display_title }}
+                                    </p>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        {{ $transaction->wallet->currency ?? 'UNKNOWN' }} • {{ $transaction->created_at->format('Y/m/d H:i') }}
+                                    </p>
+                                    @if($transaction->type === 'deposit')
+                                        @if($transaction->sender_wallet_address)
+                                            <p class="text-xs text-gray-500 mt-1">آدرس فرستنده: <code dir="ltr" class="text-gray-700">{{ $transaction->sender_wallet_address }}</code></p>
+                                        @endif
+                                        @if($transaction->wallet?->wallet_address)
+                                            <p class="text-xs text-gray-500 mt-1">آدرس دریافت‌کننده: <code dir="ltr" class="text-gray-700">{{ $transaction->wallet->wallet_address }}</code></p>
+                                        @endif
+                                        @if($transaction->deposit)
+                                            <p class="text-xs text-gray-500 mt-1">تأییدیه‌ها: <strong class="text-gray-800">{{ $transaction->deposit->confirmations ?? 0 }}</strong></p>
+                                            <p class="text-xs text-gray-500 mt-1">وضعیت سپرده: <strong class="text-gray-800">{{ $transaction->deposit->status }}</strong></p>
                                         @endif
                                     @else
-                                        {{ $transaction->description ?? 'تراکنش' }}
+                                        <p class="text-xs text-gray-500 mt-1">شناسه: <code dir="ltr" class="text-gray-700">{{ $transaction->reference ?? 'TRX-' . $transaction->id }}</code></p>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-semibold @if($transaction->type === 'transfer') text-orange-600 @else text-green-600 @endif">
+                                    @if($transaction->type === 'transfer')
+                                        -{{ number_format($transaction->amount, 8) }}
+                                    @else
+                                        +{{ number_format($transaction->amount, 8) }}
                                     @endif
                                 </p>
-                                <p class="text-xs text-gray-500 mt-1">{{ $transaction->wallet->currency ?? 'UNKNOWN' }}</p>
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold mt-2 @if($transaction->status === 'completed') bg-green-100 text-green-800 @elseif($transaction->status === 'pending') bg-yellow-100 text-yellow-800 @else bg-red-100 text-red-800 @endif">
+                                    @if($transaction->status === 'completed') تکمیل شده
+                                    @elseif($transaction->status === 'pending') در حال انجام
+                                    @else ناموفق
+                                    @endif
+                                </span>
                             </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-semibold @if($transaction->type === 'transfer') text-orange-600 @else text-green-600 @endif">
-                                @if($transaction->type === 'transfer')
-                                    -{{ number_format($transaction->amount, 8) }}
-                                @else
-                                    +{{ number_format($transaction->amount, 8) }}
-                                @endif
-                            </p>
-                            <p class="text-xs text-gray-500 mt-1">{{ $transaction->created_at->diffForHumans() }}</p>
                         </div>
                     </div>
                 @endforeach

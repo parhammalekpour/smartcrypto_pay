@@ -33,14 +33,14 @@ class CryptoPrice
 
     protected function fetchPrice($symbol)
     {
-        // Only TradingView is used as the market data source.
-        $price = $this->getTradingViewPrice($symbol);
+        // Binance is used as the market data source.
+        $price = $this->getBinancePrice($symbol);
         if ($price > 0) {
-            Log::info('Price source for ' . $symbol . ': tradingview => ' . $price);
+            Log::info('Price source for ' . $symbol . ': binance => ' . $price);
             return $price;
         }
 
-        Log::warning('TradingView price fetch failed for ' . $symbol . ', returning 0');
+        Log::warning('Binance price fetch failed for ' . $symbol . ', returning 0');
         return 0;
     }
 
@@ -97,41 +97,40 @@ class CryptoPrice
 
 
 
-    protected function getTradingViewPrice($symbol)
+    protected function getBinancePrice($symbol)
     {
+        if ($symbol === 'USDT') {
+            return 1.0;
+        }
+
         $symbolMap = [
-            'BTC' => 'BINANCE:BTCUSDT',
-            'ETH' => 'BINANCE:ETHUSDT',
-            'USDT' => 'BINANCE:USDTUSDT',
+            'BTC' => 'BTCUSDT',
+            'ETH' => 'ETHUSDT',
         ];
 
-        $tradingViewSymbol = $symbolMap[$symbol] ?? null;
-        if (! $tradingViewSymbol) {
+        $binanceSymbol = $symbolMap[$symbol] ?? null;
+        if (! $binanceSymbol) {
             return 0;
         }
 
-        $url = env('TRADINGVIEW_API_BASE_URL', 'https://scanner.tradingview.com/crypto/scan');
-        Log::info('Fetching price from TradingView: ' . $url . ' symbol=' . $tradingViewSymbol);
+        $baseUrl = env('BINANCE_API_BASE_URL', 'https://api.binance.com');
+        $url = rtrim($baseUrl, '/') . '/api/v3/ticker/price?symbol=' . $binanceSymbol;
+        Log::info('Fetching price from Binance: ' . $url);
 
         try {
-            $response = Http::timeout(10)->post($url, [
-                'symbols' => [
-                    'tickers' => [$tradingViewSymbol],
-                ],
-                'columns' => ['close'],
-            ]);
+            $response = Http::timeout(10)->get($url);
 
-            Log::info('TradingView Response Status: ' . $response->status());
-            Log::debug('TradingView Response Body: ' . substr($response->body(), 0, 1000));
+            Log::info('Binance Response Status: ' . $response->status());
+            Log::debug('Binance Response Body: ' . substr($response->body(), 0, 1000));
 
             if ($response->successful()) {
                 $data = $response->json();
-                if (! empty($data['data'][0]['d'][0])) {
-                    return (float) $data['data'][0]['d'][0];
+                if (! empty($data['price'])) {
+                    return (float) $data['price'];
                 }
             }
         } catch (\Exception $e) {
-            Log::error('TradingView API Error: ' . $e->getMessage());
+            Log::error('Binance API Error: ' . $e->getMessage());
         }
 
         return 0;

@@ -78,7 +78,7 @@ class MerchantController extends Controller
     {
         $query = Transaction::whereHas('wallet', function ($query) {
             $query->where('user_id', auth()->id());
-        })->with(['wallet', 'sender', 'recipient', 'paymentRequest']);
+        })->with(['wallet', 'sender', 'recipient', 'paymentRequest', 'deposit']);
 
         // Search by transaction ID or description
         if (request('search')) {
@@ -455,9 +455,19 @@ class MerchantController extends Controller
             'business_address' => 'nullable|string|max:500',
             'website_url' => 'nullable|url|max:255',
             'business_license' => 'nullable|string|max:255',
+            // avatar
+            'avatar' => 'nullable|image|max:2048',
         ]);
 
-        auth()->user()->update($validated);
+        $user = auth()->user();
+        $user->update($validated);
+
+        // Handle avatar upload
+        if ($request->hasFile('avatar')) {
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->avatar = $path;
+            $user->save();
+        }
 
         return redirect()->route('merchant.settings')->with('success', 'تنظیمات فروشنده بروزرسانی شد');
     }
@@ -496,7 +506,7 @@ class MerchantController extends Controller
         }
 
         if (floatval($wallet->balance) > 0) {
-            return redirect()->route('merchant.wallets')->withErrors(['wallet' => 'برای حذف کیف پول، موجودی باید صفر باشد.']);
+            return redirect()->route('merchant.wallets')->withErrors(['wallet' => 'برای حذف کیف پول، موجودی باید صفر باشد. برای حذف کیف پول‌های دارای موجودی لطفاً برای تیم پشتیبانی تیکت ثبت کنید.']);
         }
 
         try {

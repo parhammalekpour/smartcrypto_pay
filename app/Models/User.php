@@ -29,7 +29,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'phone',
         'show_balance',
         'show_transactions',
-        'dark_mode',
         'notifications_enabled',
         'notifications_email',
         'notifications_2fa',
@@ -40,6 +39,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'business_address',
         'website_url',
         'business_license',
+        // Avatar (profile photo)
+        'avatar',
         // KYC fields
         'kyc_verified',
         'kyc_documents',
@@ -68,7 +69,6 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'show_balance' => 'boolean',
             'show_transactions' => 'boolean',
-            'dark_mode' => 'boolean',
             'notifications_enabled' => 'boolean',
             'notifications_2fa' => 'boolean',
             // KYC casts
