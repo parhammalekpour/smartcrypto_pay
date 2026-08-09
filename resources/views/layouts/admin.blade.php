@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="fa">
+<html dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}" lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'پنل مدیریت') - CryptoPay</title>
+    <title>@yield('title', __('nav.admin_panel')) - CryptoPay</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    @vite(['resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-800">
     <div class="md:hidden flex items-center justify-between bg-slate-900 px-4 py-3 text-white">
@@ -35,23 +36,23 @@
         <nav class="space-y-2" onclick="toggleAdminSidebar(false)">
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 rounded-lg px-4 py-3 {{ Route::currentRouteName() === 'admin.dashboard' ? 'bg-slate-800' : 'hover:bg-slate-800' }}">
                 <i class="fas fa-home"></i>
-                <span>داشبورد</span>
+            <span>{{ __('nav.admin_dashboard') }}</span>
             </a>
             <a href="{{ route('admin.users') }}" class="flex items-center gap-3 rounded-lg px-4 py-3 {{ Route::currentRouteName() === 'admin.users' ? 'bg-slate-800' : 'hover:bg-slate-800' }}">
                 <i class="fas fa-users"></i>
-                <span>کاربران</span>
+            <span>{{ __('nav.admin_users') }}</span>
             </a>
             <a href="{{ route('admin.kyc') }}" class="flex items-center gap-3 rounded-lg px-4 py-3 {{ Route::currentRouteName() === 'admin.kyc' ? 'bg-slate-800' : 'hover:bg-slate-800' }}">
                 <i class="fas fa-id-card"></i>
-                <span>مدارک KYC</span>
+            <span>{{ __('nav.admin_kyc') }}</span>
             </a>
             <a href="{{ route('admin.transactions') }}" class="flex items-center gap-3 rounded-lg px-4 py-3 {{ Route::currentRouteName() === 'admin.transactions' ? 'bg-slate-800' : 'hover:bg-slate-800' }}">
                 <i class="fas fa-exchange-alt"></i>
-                <span>تراکنش‌ها</span>
+            <span>{{ __('nav.admin_transactions') }}</span>
             </a>
             <a href="{{ route('admin.tickets.index') }}" class="flex items-center gap-3 rounded-lg px-4 py-3 {{ Route::currentRouteName() === 'admin.tickets.index' ? 'bg-slate-800' : 'hover:bg-slate-800' }}">
                 <i class="fas fa-headset"></i>
-                <span>تیکت‌ها / پشتیبانی</span>
+            <span>{{ __('nav.admin_tickets') }}</span>
             </a>
         </nav>
 
@@ -61,13 +62,27 @@
             <form method="POST" action="{{ route('logout') }}" class="mt-4">
                 @csrf
                 <button type="submit" class="w-full rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-500">
-                    خروج
+                                    {{ __('Log Out') }}
                 </button>
             </form>
         </div>
     </aside>
 
     <main class="flex-1 p-6">
+        <!-- Language toggle (admin top) -->
+        <div class="flex justify-end mb-4">
+            <form method="POST" action="{{ route('set-locale') }}" class="inline-block">
+                @csrf
+                <input type="hidden" name="locale" value="{{ app()->getLocale() === 'fa' ? 'en' : 'fa' }}">
+                <button type="submit" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition">
+                    @if(app()->getLocale() === 'fa')
+                        🇺🇸 English
+                    @else
+                        🇮🇷 فارسی
+                    @endif
+                </button>
+            </form>
+        </div>
         @if (session('success'))
             <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-700">
                 {{ session('success') }}

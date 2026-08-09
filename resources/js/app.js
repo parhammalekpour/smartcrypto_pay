@@ -1,5 +1,6 @@
 import './bootstrap';
 import './auto-refresh';
+import './locale-translation';
 import WalletBalance from './wallet-balance';
 
 import Alpine from 'alpinejs';

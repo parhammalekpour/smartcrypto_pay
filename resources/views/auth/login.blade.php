@@ -1,8 +1,8 @@
 <x-guest-layout>
     <div class="mb-8 text-center">
         <p class="text-sm font-semibold uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">CryptoPay</p>
-        <h1 class="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">ورود به حساب کاربری</h1>
-        <p class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400 max-w-md mx-auto">برای دسترسی به کیف پول، گزارش تراکنش و مدیریت پرداخت‌های رمزنگاری شده وارد شوید.</p>
+        <h1 class="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">{{ __('Login to your account') }}</h1>
+        <p class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400 max-w-md mx-auto">{{ __('Login description') }}</p>
     </div>
 
     <!-- Session Status -->

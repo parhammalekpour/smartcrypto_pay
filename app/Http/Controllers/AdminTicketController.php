@@ -101,7 +101,7 @@ class AdminTicketController extends Controller
             ], 201);
         }
 
-        return redirect()->route('admin.tickets.show', $ticket->id)->with('success', 'پاسخ ذخیره شد');
+        return redirect()->route('admin.tickets.show', $ticket->id)->with('success', __('tickets.reply_success'));
     }
 
     public function close(Ticket $ticket)
@@ -109,6 +109,6 @@ class AdminTicketController extends Controller
         $ticket->status = 'closed';
         $ticket->save();
 
-        return redirect()->route('admin.tickets.show', $ticket->id)->with('success', 'تیکت بسته شد');
+        return redirect()->route('admin.tickets.show', $ticket->id)->with('success', __('tickets.close.success'));
     }
 }

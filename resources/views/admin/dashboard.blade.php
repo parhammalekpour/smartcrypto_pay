@@ -1,24 +1,24 @@
 @extends('layouts.admin')
 
-@section('title', 'داشبورد')
+@section('title', __('admin.dashboard_page_title'))
 
 @section('content')
 <div class="space-y-6">
     <div class="grid gap-4 md:grid-cols-4">
         <div class="rounded-2xl bg-white p-5 shadow-sm">
-            <p class="text-sm text-slate-500">تعداد کاربران</p>
+            <p class="text-sm text-slate-500">{{ __('admin.total_users') }}</p>
             <p class="mt-2 text-3xl font-bold">{{ $stats['users'] }}</p>
         </div>
         <div class="rounded-2xl bg-white p-5 shadow-sm">
-            <p class="text-sm text-slate-500">KYC تایید شده</p>
+            <p class="text-sm text-slate-500">{{ __('admin.verified_kyc') }}</p>
             <p class="mt-2 text-3xl font-bold">{{ $stats['verified_kyc'] }}</p>
         </div>
         <div class="rounded-2xl bg-white p-5 shadow-sm">
-            <p class="text-sm text-slate-500">KYC در انتظار</p>
+            <p class="text-sm text-slate-500">{{ __('admin.pending_kyc') }}</p>
             <p class="mt-2 text-3xl font-bold">{{ $stats['pending_kyc'] }}</p>
         </div>
         <div class="rounded-2xl bg-white p-5 shadow-sm">
-            <p class="text-sm text-slate-500">تراکنش‌ها</p>
+            <p class="text-sm text-slate-500">{{ __('nav.transactions') }}</p>
             <p class="mt-2 text-3xl font-bold">{{ $stats['transactions'] }}</p>
         </div>
     </div>
@@ -26,16 +26,16 @@
     <div class="grid gap-6 lg:grid-cols-2">
         <div class="rounded-2xl bg-white p-5 shadow-sm">
             <div class="mb-4 flex items-center justify-between">
-                <h2 class="text-lg font-semibold">کاربران اخیر</h2>
-                <a href="{{ route('admin.users') }}" class="text-sm text-indigo-600">مشاهده همه</a>
+                <h2 class="text-lg font-semibold">{{ __('admin.recent_users') }}</h2>
+                                <a href="{{ route('admin.users') }}" class="text-sm text-indigo-600">{{ __('common.view_all') }}</a>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="border-b text-right text-slate-500">
-                            <th class="py-2">نام</th>
-                            <th class="py-2">ایمیل</th>
-                            <th class="py-2">نقش</th>
+                            <th class="py-2">{{ __('Name') }}</th>
+                            <th class="py-2">{{ __('Email') }}</th>
+                            <th class="py-2">{{ __('Account type') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -47,7 +47,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" class="py-4 text-center text-slate-500">کاربری وجود ندارد.</td>
+                                <td colspan="3" class="py-4 text-center text-slate-500">{{ __('admin.no_users') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -57,8 +57,8 @@
 
         <div class="rounded-2xl bg-white p-5 shadow-sm">
             <div class="mb-4 flex items-center justify-between">
-                <h2 class="text-lg font-semibold">KYC در انتظار</h2>
-                <a href="{{ route('admin.kyc') }}" class="text-sm text-indigo-600">مشاهده همه</a>
+                <h2 class="text-lg font-semibold">{{ __('admin.pending_kyc') }}</h2>
+                                <a href="{{ route('admin.kyc') }}" class="text-sm text-indigo-600">{{ __('common.view_all') }}</a>
             </div>
             <div class="space-y-3">
                 @forelse($pendingKycUsers as $user)
@@ -69,7 +69,7 @@
                                 <p class="text-sm text-slate-500">{{ $user->email }}</p>
                             </div>
                             <div class="flex gap-2">
-                                <a href="{{ route('admin.kyc') }}" class="rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white">بررسی</a>
+                                <a href="{{ route('admin.kyc') }}" class="rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white">{{ __('admin.review') }}</a>
                             </div>
                         </div>
                     </div>
@@ -83,18 +83,18 @@
     <div class="grid gap-6 lg:grid-cols-2">
         <div class="rounded-2xl bg-white p-5 shadow-sm">
             <div class="mb-4 flex items-center justify-between">
-                <h2 class="text-lg font-semibold">تراکنش‌های اخیر</h2>
-                <a href="{{ route('admin.transactions') }}" class="text-sm text-indigo-600">مشاهده همه</a>
+                <h2 class="text-lg font-semibold">{{ __('admin.recent_transactions') }}</h2>
+                                <a href="{{ route('admin.transactions') }}" class="text-sm text-indigo-600">{{ __('common.view_all') }}</a>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="border-b text-right text-slate-500">
-                            <th class="py-2">شرح</th>
-                            <th class="py-2">مبلغ</th>
-                            <th class="py-2">نوع</th>
-                            <th class="py-2">وضعیت</th>
-                            <th class="py-2">تاریخ</th>
+                            <th class="py-2">{{ __('Description') }}</th>
+                            <th class="py-2">{{ __('common.amount') }}</th>
+                            <th class="py-2">{{ __('Type') }}</th>
+                            <th class="py-2">{{ __('Status') }}</th>
+                            <th class="py-2">{{ __('common.date') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -118,7 +118,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="py-4 text-center text-slate-500">تراکنشی ثبت نشده است.</td>
+                                <td colspan="5" class="py-4 text-center text-slate-500">{{ __('common.no_transactions') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -128,7 +128,7 @@
 
         <div class="rounded-2xl bg-white p-5 shadow-sm">
             <div class="mb-4">
-                <h2 class="text-lg font-semibold">فعالیت اخیر</h2>
+                <h2 class="text-lg font-semibold">{{ __('admin.activity_recent') }}</h2>
             </div>
             <div class="space-y-3">
                 @forelse($activity as $item)
@@ -138,7 +138,7 @@
                         <p class="mt-1 text-xs text-slate-400">{{ $item->created_at }}</p>
                     </div>
                 @empty
-                    <p class="text-sm text-slate-500">هنوز فعالیتی ثبت نشده است.</p>
+                    <p class="text-sm text-slate-500">{{ __('admin.no_activity') }}</p>
                 @endforelse
             </div>
         </div>

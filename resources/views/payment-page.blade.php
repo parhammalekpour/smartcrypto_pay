@@ -141,7 +141,7 @@
 <body>
 
 <div class="payment-card">
-    <h1>💳 Crypto Payment</h1>
+    <h1>💳 {{ __('payment.title') }}</h1>
 
     @if(session('success'))
         <div class="alert alert-success">
@@ -158,8 +158,8 @@
     @endif
 
     <div class="invoice-info">
-        <p><span class="label">Invoice Number</span><br><strong>{{ $payment->invoice_number }}</strong></p>
-        <p style="margin-top: 15px;"><span class="label">From Merchant</span><br><strong>{{ $payment->merchant->name }}</strong></p>
+        <p><span class="label">{{ __('payment.invoice_number_label') }}</span><br><strong>{{ $payment->invoice_number }}</strong></p>
+        <p style="margin-top: 15px;"><span class="label">{{ __('payment.from_merchant_label') }}</span><br><strong>{{ $payment->merchant->name }}</strong></p>
     </div>
 
     <div class="amount-box">
@@ -168,7 +168,7 @@
     </div>
 
     <div class="status-box status-{{ $payment->status }}">
-        Status: {{ ucfirst($payment->status) }}
+        {{ __('payment.status_with_value', ['status' => ucfirst($payment->status)]) }}
     </div>
 
     @if($payment->status === 'pending')
@@ -183,23 +183,23 @@
 
                     @if(!$merchantKyc)
                         <div class="alert alert-error">
-                            فروشنده این تراکنش هنوز احراز هویت KYC خود را تکمیل نکرده است. پرداخت فعلاً امکان‌پذیر نیست.
+                            {{ __('payment.merchant_kyc_not_completed') }}
                         </div>
                     @endif
 
                     @if(auth()->check() && !$userKyc)
                         <div class="alert alert-error">
-                            قبل از پرداخت، باید احراز هویت KYC خود را تکمیل کنید.
+                            {{ __('payment.user_kyc_required') }}
                         </div>
                     @endif
 
                     <button type="submit" class="btn" @if(!$canPay) disabled @endif>
-                        Pay Now
+                        {{ __('payment.pay_now') }}
                     </button>
         </form>
     @else
         <p style="text-align: center; color: #999; margin-top: 20px;">
-            ✅ This invoice has already been paid
+            {{ __('payment.invoice_already_paid') }}
         </p>
     @endif
 </div>

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Wallet;
 use App\Models\Deposit;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -125,9 +126,23 @@ class BlockchainDepositService
                                                             $existingDeposit->confirmations = $newConfirmations;
                                                             $existingDeposit->status = $newStatus;
                                                             $existingDeposit->save();
+ 
+                                                            if ($newStatus === 'confirmed') {
+                                                                \App\Models\Transaction::where('reference', $existingDeposit->tx_hash)
+                                                                    ->where('type', 'deposit')
+                                                                    ->where('status', 'pending')
+                                                                    ->update(['status' => 'completed']);
+                                                            }
                                                         });
                                                     }
-
+ 
+                                                    if ($existingDeposit->status === 'confirmed') {
+                                                        \App\Models\Transaction::where('reference', $existingDeposit->tx_hash)
+                                                            ->where('type', 'deposit')
+                                                            ->where('status', 'pending')
+                                                            ->update(['status' => 'completed']);
+                                                    }
+ 
                                                     // If it's now confirmed and unprocessed, process it
                                                     if ($existingDeposit->status === 'confirmed' && $existingDeposit->processed_at === null) {
                                                         $this->processDeposit($existingDeposit);
@@ -292,9 +307,23 @@ class BlockchainDepositService
                                         $existingDeposit->confirmations = $newConfirmations;
                                         $existingDeposit->status = $newStatus;
                                         $existingDeposit->save();
+ 
+                                        if ($newStatus === 'confirmed') {
+                                            \App\Models\Transaction::where('reference', $existingDeposit->tx_hash)
+                                                ->where('type', 'deposit')
+                                                ->where('status', 'pending')
+                                                ->update(['status' => 'completed']);
+                                        }
                                     });
                                 }
-
+ 
+                                if ($existingDeposit->status === 'confirmed') {
+                                    \App\Models\Transaction::where('reference', $existingDeposit->tx_hash)
+                                        ->where('type', 'deposit')
+                                        ->where('status', 'pending')
+                                        ->update(['status' => 'completed']);
+                                }
+ 
                                 if ($existingDeposit->status === 'confirmed' && $existingDeposit->processed_at === null) {
                                     $this->processDeposit($existingDeposit);
                                 }
@@ -445,13 +474,36 @@ class BlockchainDepositService
             $results = $this->balanceService->calculateWalletBalance($wallet);
             $wallet->balance = $results['balance'];
             $wallet->save();
-
+ 
+            // Ensure related transaction is marked completed when deposit is processed
+            \App\Models\Transaction::where('reference', $deposit->tx_hash)
+                ->where('type', 'deposit')
+                ->where('status', 'pending')
+                ->update(['status' => 'completed']);
+ 
             // Invalidate cache and broadcast if needed
             $this->balanceService->invalidateCache($wallet->id);
             broadcast(new \App\Services\WalletBalanceUpdated($wallet, $results));
             Log::info('Processed deposit ' . $deposit->id . ' and updated wallet ' . $wallet->id . ' balance to ' . $wallet->balance);
+ 
+                        // Create a user notification about the deposit so it appears in the bell dropdown
+                        try {
+                            $ownerId = $deposit->user_id ?? $deposit->merchant_id ?? $wallet->user_id ?? null;
+                            if ($ownerId) {
+                                $title = 'واریز دریافت شد';
+                                $formattedAmount = rtrim(rtrim((string)$deposit->amount, '0'), '.');
+                                if ($formattedAmount === '') {
+                                    $formattedAmount = '0';
+                                }
+                                $senderAddress = $deposit->sender_wallet_address ? $deposit->sender_wallet_address : 'ناشناخته';
+                                $message = 'واریز ' . $formattedAmount . ' ' . $deposit->currency . ' از ' . $senderAddress;
+                                Notification::createNotification($ownerId, $title, $message, 'success', 'fa-money-bill-wave');
+                            }
+                        } catch (\Throwable $e) {
+                            Log::error('Failed to create notification for deposit ' . ($deposit->id ?? '?') . ': ' . $e->getMessage());
+                        }
 
-            return true;
+                        return true;
         });
     }
 }

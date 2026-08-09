@@ -9,7 +9,14 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\MerchantController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\KycController;
+use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
+use Illuminate\Http\Request;
 
+
+Route::group([
+    'prefix' => LaravelLocalization::setLocale(),
+    'middleware' => ['web', 'localeSessionRedirect', 'localizationRedirect', 'localeViewPath']
+], function () {
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
@@ -203,4 +210,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     )->name('payment.pay');
 });
     
+});
+
+// Locale toggle endpoint — stores chosen locale in session and redirects to localized URL
+Route::post('/set-locale', function (Request $request) {
+    $locale = $request->input('locale');
+    $supported = array_keys(config('laravellocalization.supportedLocales', ['fa' => [], 'en' => []]));
+    if (!in_array($locale, $supported, true)) {
+        abort(400);
+    }
+
+    // Persist locale in session (package configured to use session)
+    session(['locale' => $locale]);
+    // Also set application locale immediately for this request
+    app()->setLocale($locale);
+
+    // Redirect back to the same page but with localized prefix (/fa or /en)
+    $target = LaravelLocalization::getLocalizedURL($locale, url()->previous(), [], true);
+    if (! $target) {
+        $target = LaravelLocalization::getLocalizedURL($locale, url('/'));
+    }
+
+    return redirect($target);
+})->name('set-locale');
+
 require __DIR__.'/auth.php';

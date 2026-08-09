@@ -96,7 +96,7 @@ class WalletController extends Controller
             'balance' => 0
         ]);
 
-        return back()->with('success', 'کیف پول ' . $request->currency . ' با موفقیت ایجاد شد');
+        return back()->with('success', __('wallets.create_wallet_success', ['currency' => $request->currency]));
     }
 
     /**
@@ -111,16 +111,16 @@ class WalletController extends Controller
 
         // Prevent deletion when balance is non-zero
         if (floatval($wallet->balance) > 0) {
-            return back()->withErrors(['wallet' => 'برای حذف کیف پول، موجودی باید صفر باشد. برای حذف کیف پول‌های دارای موجودی لطفاً برای تیم پشتیبانی تیکت ثبت کنید.']);
+            return back()->withErrors(['wallet' => __('wallets.delete_wallet_balance_alert')]);
         }
 
         try {
             $wallet->delete();
         } catch (\Throwable $e) {
-            return back()->withErrors(['wallet' => 'خطا در حذف کیف پول.']);
+            return back()->withErrors(['wallet' => __('wallets.delete_wallet_error')]);
         }
 
-        return back()->with('success', 'کیف پول با موفقیت حذف شد');
+        return back()->with('success', __('wallets.delete_wallet_success'));
     }
 
     private function generateWalletAddress($currency)
@@ -247,7 +247,7 @@ class WalletController extends Controller
 
         auth()->user()->update($updateData);
 
-        return redirect()->route('user.settings')->with('success', 'تنظیمات بروزرسانی شد');
+        return redirect()->route('user.settings')->with('success', __('wallets.settings_updated_success'));
     }
 
     public function logoutAllDevices(Request $request)
@@ -261,7 +261,7 @@ class WalletController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/')->with('success', 'از تمام دستگاه ها خارج شدید');
+        return redirect('/')->with('success', __('wallets.logged_out_all_devices_success'));
     }
 
     public function index(Request $request)
@@ -576,6 +576,6 @@ class WalletController extends Controller
             'fa-times-circle'
         );
 
-        return back()->with('success', 'درخواست پرداخت با موفقیت رد شد');
+        return back()->with('success', __('wallets.payment_request_rejected_success'));
     }
 }

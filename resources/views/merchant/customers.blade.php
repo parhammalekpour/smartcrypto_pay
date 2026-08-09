@@ -1,8 +1,8 @@
 @extends('layouts.dashboard')
 
-@section('title', 'مشتریان - CryptoPay')
-@section('page-title', 'مدیریت مشتریان')
-@section('page-subtitle', 'ثبت مشتریان جدید و مشاهده کاردکس هر مشتری')
+@section('title', __('merchant.customers.page_title') . ' - CryptoPay')
+@section('page-title', __('merchant.customers.manage_customers'))
+@section('page-subtitle', __('merchant.customers.page_subtitle'))
 
 @section('content')
 <div class="bg-white rounded-lg shadow p-6 mb-6">
@@ -10,7 +10,7 @@
         <div class="bg-indigo-100 p-2 rounded-lg">
             <i class="fas fa-user-friends text-indigo-600"></i>
         </div>
-        <h3 class="text-lg font-semibold text-gray-800">افزودن مشتری جدید</h3>
+        <h3 class="text-lg font-semibold text-gray-800">{{ __('merchant.customers.add_new_customer') }}</h3>
     </div>
 
     @if(session('success'))
@@ -30,24 +30,24 @@
     <form method="POST" action="{{ route('merchant.customers.store') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         @csrf
         <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">نام کاربری مشتری</label>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">{{ __('merchant.customers.customer_username') }}</label>
             <input type="text" name="username" required placeholder="username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900">
         </div>
         <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">ایمیل مشتری</label>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">{{ __('merchant.customers.customer_email') }}</label>
             <input type="email" name="email" required placeholder="example@domain.com" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900">
         </div>
         <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">شماره تلفن</label>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">{{ __('merchant.customers.phone') }}</label>
             <input type="text" name="phone" placeholder="0912xxxxxxx" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900">
         </div>
         <div class="md:col-span-3">
             <button type="submit" class="w-full md:w-auto bg-indigo-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition">
-                <i class="fas fa-plus ml-2"></i>افزودن مشتری
+                <i class="fas fa-plus ml-2"></i>{{ __('merchant.customers.add_customer') }}
             </button>
         </div>
         <div class="md:col-span-3 text-sm text-gray-500">
-            نام کاربری و ایمیل باید متعلق به یک کاربر موجود در سیستم باشد. مشتری تکراری قابل ثبت نیست.
+            {{ __('merchant.customers.username_email_hint') }}
         </div>
     </form>
 </div>
@@ -55,8 +55,8 @@
 <div class="bg-white rounded-lg shadow p-6">
     <div class="flex items-center justify-between mb-6">
         <div>
-            <h3 class="text-lg font-semibold text-gray-800">لیست مشتریان</h3>
-            <p class="text-sm text-gray-500">مشاهده مشتریان ثبت شده و کارتکس فاکتورهای هر مشتری.</p>
+            <h3 class="text-lg font-semibold text-gray-800">{{ __('merchant.customers.customer_list') }}</h3>
+            <p class="text-sm text-gray-500">{{ __('merchant.customers.customer_list_subtitle') }}</p>
         </div>
     </div>
 
@@ -65,11 +65,11 @@
             <table class="w-full text-sm">
                 <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
-                        <th class="px-4 py-3 text-right font-semibold text-gray-700">نام</th>
-                        <th class="px-4 py-3 text-right font-semibold text-gray-700">ایمیل</th>
-                        <th class="px-4 py-3 text-right font-semibold text-gray-700">تلفن</th>
-                        <th class="px-4 py-3 text-right font-semibold text-gray-700">فاکتور‌ها</th>
-                        <th class="px-4 py-3 text-right font-semibold text-gray-700">عملیات</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-700">{{ __('merchant.customers.name') }}</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-700">{{ __('merchant.customers.email') }}</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-700">{{ __('merchant.customers.phone') }}</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-700">{{ __('merchant.customers.invoices') }}</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-700">{{ __('merchant.customers.actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
@@ -82,16 +82,16 @@
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-2">
                                     <a href="{{ route('merchant.customers.show', $customer) }}" class="text-indigo-600 hover:underline text-xs font-semibold">
-                                        مشاهده کارتکس
+                                        {{ __('merchant.customers.view_cardex') }}
                                     </a>
                                     <a href="{{ route('merchant.customers.edit', $customer) }}" class="text-yellow-600 hover:underline text-xs font-semibold">
-                                        ویرایش
+                                        {{ __('merchant.customers.edit') }}
                                     </a>
-                                    <form method="POST" action="{{ route('merchant.customers.destroy', $customer) }}" class="inline" onsubmit="return confirm('آیا مطمئن هستید که می‌خواهید این مشتری را حذف کنید؟');">
+                                    <form method="POST" action="{{ route('merchant.customers.destroy', $customer) }}" class="inline" onsubmit="return confirm('{{ __('merchant.customers.confirm_delete') }}');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-red-600 hover:underline text-xs font-semibold">
-                                            حذف
+                                            {{ __('merchant.customers.delete') }}
                                         </button>
                                     </form>
                                 </div>
@@ -108,7 +108,7 @@
     @else
         <div class="text-center py-12 text-gray-500">
             <i class="fas fa-user-friends text-4xl mb-4"></i>
-            <p>هیچ مشتری ای ثبت نشده است. با فرم بالا اولین مشتری را اضافه کنید.</p>
+            <p>{{ __('merchant.customers.no_customers') }}</p>
         </div>
     @endif
 </div>

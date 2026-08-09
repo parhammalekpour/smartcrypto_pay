@@ -318,7 +318,7 @@ use Morilog\Jalali\Jalalian;
                             @foreach($wallets as $wallet)
                                 <tr>
                                     <td><strong>{{ $wallet->currency }}</strong></td>
-                                    <td>{{ number_format($wallet->balance, 8) }}</td>
+                                    <td>{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }}</td>
                                     <td style="font-size: 0.85em; color: #666;">{{ substr($wallet->wallet_address, 0, 20) }}...</td>
                                 </tr>
                             @endforeach
@@ -356,7 +356,7 @@ use Morilog\Jalali\Jalalian;
                             <tr>
                                 <td><strong>{{ $payment->invoice_number }}</strong></td>
                                 <td>{{ $payment->recipient->name ?? 'Unknown' }}</td>
-                                <td>{{ number_format($payment->amount, 8) }}</td>
+                                <td>{{ \App\Support\NumberHelper::formatCryptoAmount($payment->amount) }}</td>
                                 <td>{{ $payment->currency }}</td>
                                 <td>
                                     <span class="status-badge status-{{ $payment->status }}">

@@ -1,8 +1,8 @@
 <x-guest-layout>
     <div class="mb-8 text-center">
         <p class="text-sm font-semibold uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">CryptoPay</p>
-        <h1 class="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">ثبت نام در CryptoPay</h1>
-        <p class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400 max-w-md mx-auto">یک حساب کاربری امن بسازید و به دنیای پرداخت‌های سریع و هوشمند رمزارز دسترسی پیدا کنید.</p>
+        <h1 class="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">{{ __('Register on CryptoPay') }}</h1>
+        <p class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400 max-w-md mx-auto">{{ __('Register description') }}</p>
     </div>
 
     <form method="POST" action="{{ route('register') }}">
@@ -23,10 +23,10 @@
         </div>
  
         <div class="mt-4">
-            <x-input-label for="role" value="نوع حساب" />
+            <x-input-label for="role" :value="__('Account type')" />
             <select id="role" name="role" class="block mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-gray-700 dark:text-gray-900 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 rounded-md shadow-sm transition-colors duration-300 px-4 py-2 text-sm">
-                <option value="user" {{ old('role') === 'user' ? 'selected' : '' }}>Personal</option>
-                <option value="merchant" {{ old('role') === 'merchant' ? 'selected' : '' }}>Business</option>
+                <option value="user" {{ old('role') === 'user' ? 'selected' : '' }}>{{ __('Personal') }}</option>
+                <option value="merchant" {{ old('role') === 'merchant' ? 'selected' : '' }}>{{ __('Business') }}</option>
             </select>
             <x-input-error :messages="$errors->get('role')" class="mt-2" />
         </div>

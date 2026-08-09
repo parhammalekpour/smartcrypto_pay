@@ -45,11 +45,11 @@ class AdminController extends Controller
     public function deleteUser(User $user)
     {
         if ($user->id === auth()->id()) {
-            return back()->withErrors(['user' => 'شما نمی‌توانید حساب خودتان را حذف کنید.']);
+            return back()->withErrors(['user' => __('admin.users.delete_self_error')]);
         }
 
         if ($user->isAdmin()) {
-            return back()->withErrors(['user' => 'امکان حذف ادمین وجود ندارد.']);
+            return back()->withErrors(['user' => __('admin.users.delete_admin_error')]);
         }
 
         $user->wallets()->delete();
@@ -58,7 +58,7 @@ class AdminController extends Controller
 
         $this->logAction('user_deleted', $user->id, 'user', $user->id, ['deleted' => true]);
 
-        return back()->with('success', 'کاربر با موفقیت حذف شد.');
+        return back()->with('success', __('admin.users.delete_success'));
     }
 
     /**
@@ -104,7 +104,7 @@ class AdminController extends Controller
         $user->update(['kyc_verified' => true]);
         $this->logAction('kyc_approved', $user->id, 'user', $user->id, ['verified' => true]);
 
-        return back()->with('success', 'KYC برای کاربر تایید شد.');
+        return back()->with('success', __('kyc.approve.success'));
     }
 
     public function rejectKyc(User $user)
@@ -112,7 +112,7 @@ class AdminController extends Controller
         $user->update(['kyc_verified' => false]);
         $this->logAction('kyc_rejected', $user->id, 'user', $user->id, ['verified' => false]);
 
-        return back()->with('success', 'KYC برای کاربر رد شد.');
+        return back()->with('success', __('kyc.reject.success'));
     }
 
     public function transactions(Request $request)

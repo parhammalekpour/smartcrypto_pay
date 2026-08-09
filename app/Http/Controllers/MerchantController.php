@@ -11,14 +11,19 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Notification;
+use App\Services\CryptoPrice;
 
 class MerchantController extends Controller
 {
     public function dashboard()
     {
         $wallets = auth()->user()->wallets ?? collect();
-        // فقط موجودی USDT را محاسبه کنید
-        $totalRevenue = $wallets->where('currency', 'USDT')->sum('balance') ?? 0;
+
+        $cryptoPrice = new CryptoPrice();
+        $totalRevenue = $wallets->reduce(function ($sum, $wallet) use ($cryptoPrice) {
+            return $sum + $cryptoPrice->convertToUSD($wallet->balance, $wallet->currency);
+        }, 0);
+
         $pendingPayments = PaymentRequest::where('merchant_id', auth()->id())
             ->where('status', 'pending')
             ->count();
@@ -47,18 +52,19 @@ class MerchantController extends Controller
         $dailyRevenue = [];
         $dailyLabels = [];
         for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i);
-            $dayName = ['یکش', 'دوش', 'سهش', 'چهارش', 'پنجش', 'جمعه', 'شنبه'][
-                $date->dayOfWeek == 0 ? 6 : $date->dayOfWeek - 1
-            ];
-            $dailyLabels[] = $dayName;
+            $date = now()->subDays($i)->locale(app()->getLocale());
+            $dailyLabels[] = $date->translatedFormat('l');
             
-            $revenue = PaymentRequest::where('merchant_id', auth()->id())
+            $dailyPayments = PaymentRequest::where('merchant_id', auth()->id())
                 ->where('status', 'paid')
                 ->whereDate('updated_at', $date)
-                ->sum('amount');
+                ->get();
+
+            $dayRevenue = $dailyPayments->reduce(function ($sum, $payment) use ($cryptoPrice) {
+                return $sum + $cryptoPrice->convertToUSD($payment->amount, $payment->currency);
+            }, 0);
             
-            $dailyRevenue[] = (float)($revenue ?? 0);
+            $dailyRevenue[] = (float)$dayRevenue;
         }
 
         return view('merchant.dashboard-new', compact(
@@ -469,7 +475,7 @@ class MerchantController extends Controller
             $user->save();
         }
 
-        return redirect()->route('merchant.settings')->with('success', 'تنظیمات فروشنده بروزرسانی شد');
+        return redirect()->route('merchant.settings')->with('success', __('merchant_settings.update_success'));
     }
 
     public function apikeys()
@@ -493,7 +499,7 @@ class MerchantController extends Controller
             'balance' => 0,
         ]);
 
-        return redirect()->route('merchant.wallets')->with('success', 'کیف پول با موفقیت اضافه شد');
+        return redirect()->route('merchant.wallets')->with('success', __('wallets.create_wallet_success', ['currency' => $request->currency]));
     }
 
     /**
@@ -506,16 +512,16 @@ class MerchantController extends Controller
         }
 
         if (floatval($wallet->balance) > 0) {
-            return redirect()->route('merchant.wallets')->withErrors(['wallet' => 'برای حذف کیف پول، موجودی باید صفر باشد. برای حذف کیف پول‌های دارای موجودی لطفاً برای تیم پشتیبانی تیکت ثبت کنید.']);
+            return redirect()->route('merchant.wallets')->withErrors(['wallet' => __('wallets.delete_wallet_balance_alert')]);
         }
 
         try {
             $wallet->delete();
         } catch (\Throwable $e) {
-            return redirect()->route('merchant.wallets')->withErrors(['wallet' => 'خطا در حذف کیف پول.']);
+            return redirect()->route('merchant.wallets')->withErrors(['wallet' => __('wallets.delete_wallet_error')]);
         }
 
-        return redirect()->route('merchant.wallets')->with('success', 'کیف پول با موفقیت حذف شد');
+        return redirect()->route('merchant.wallets')->with('success', __('wallets.delete_wallet_success'));
     }
 
     private function generateWalletAddress($currency)

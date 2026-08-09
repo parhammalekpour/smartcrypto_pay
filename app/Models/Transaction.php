@@ -59,7 +59,7 @@ class Transaction extends Model
         if ($this->sender) {
             return $this->sender->name;
         }
-        return 'نامشخص';
+        return __('transactions.unknown');
     }
 
     public function getRecipientNameAttribute()
@@ -67,7 +67,7 @@ class Transaction extends Model
         if ($this->recipient) {
             return $this->recipient->name;
         }
-        return 'نامشخص';
+        return __('transactions.unknown');
     }
 
     public function getCurrencyAttribute()
@@ -87,36 +87,36 @@ class Transaction extends Model
     {
         if ($this->type === 'transfer') {
             if ($this->merchant_name) {
-                return 'پرداخت به ' . $this->merchant_name;
+                return __('transactions.payment_to_merchant', ['merchant' => $this->merchant_name]);
             }
 
             if ($this->recipient) {
-                return 'ارسال به ' . $this->recipient->name;
+                return __('transactions.transfer_to_recipient', ['name' => $this->recipient->name]);
             }
 
-            return 'ارسال به گیرنده نامشخص';
+            return __('transactions.transfer_to_unknown');
         }
 
         if ($this->type === 'deposit') {
             if ($this->description === 'Demo Deposit') {
-                return 'دریافت - ' . $this->description;
+                return __('transactions.deposit_demo', ['description' => $this->description]);
             }
 
             if (!empty($this->sender_wallet_address)) {
-                return 'دریافت از ' . $this->sender_wallet_address;
+                return __('transactions.deposit_from_wallet', ['address' => $this->sender_wallet_address]);
             }
 
             if ($this->sender) {
-                return 'دریافت از ' . $this->sender->name;
+                return __('transactions.deposit_from_sender', ['sender' => $this->sender->name]);
             }
 
             if (!empty($this->reference)) {
-                return 'دریافت از تراکنش ' . substr($this->reference, 0, 10) . '...';
+                return __('transactions.deposit_from_transaction', ['reference' => substr($this->reference, 0, 10) . '...']);
             }
 
-            return 'دریافت از منبع خارجی';
+            return __('transactions.deposit_from_external');
         }
 
-        return $this->description ?? 'تراکنش';
+        return $this->description ?? __('transactions.default');
     }
 }

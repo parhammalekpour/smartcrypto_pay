@@ -29,7 +29,7 @@ use Morilog\Jalali\Jalalian;
                             <tr class="border-b border-gray-100 dark:border-gray-700">
                                 <td class="px-4 py-3 text-gray-800 dark:text-gray-100"><strong>{{ $payment->invoice_number }}</strong></td>
                                 <td class="px-4 py-3 text-gray-800 dark:text-gray-100">{{ $payment->merchant->name }}</td>
-                                <td class="px-4 py-3 text-gray-800 dark:text-gray-100">{{ number_format($payment->amount, 8) }}</td>
+                                <td class="px-4 py-3 text-gray-800 dark:text-gray-100">{{ \App\Support\NumberHelper::formatCryptoAmount($payment->amount) }}</td>
                                 <td class="px-4 py-3 text-gray-800 dark:text-gray-100">{{ $payment->currency }}</td>
                                 <td class="px-4 py-3">
                                     @if($payment->status === 'paid')

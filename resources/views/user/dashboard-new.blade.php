@@ -1,8 +1,8 @@
 @extends('layouts.dashboard')
 
-@section('title', 'خانه - CryptoPay')
-@section('page-title', 'کیف پول دیجیتال شما')
-@section('page-subtitle', 'سلام ' . auth()->user()->name . '، خوش آمدید')
+@section('title', __('dashboard.home_title') . ' - CryptoPay')
+@section('page-title', __('dashboard.home_title'))
+@section('page-subtitle', __('dashboard.home_subtitle', ['name' => auth()->user()->name]))
 
 @section('content')
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -15,15 +15,15 @@
                     <i class="fas fa-wallet text-lg"></i>
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">کل موجودی</span>
-                    <button type="button" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition" data-toggle-total-balance aria-label="نمایش یا پنهان سازی موجودی">
+                    <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">{{ __('dashboard.total_balance') }}</span>
+                    <button type="button" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition" data-toggle-total-balance aria-label="{{ __('dashboard.toggle_balance_visibility') }}">
                         <i class="fas fa-eye text-sm"></i>
                     </button>
                 </div>
             </div>
-            <p class="text-white/80 text-sm mb-1">موجودی کل</p>
+            <p class="text-white/80 text-sm mb-1">{{ __('dashboard.total_balance') }}</p>
             <p class="text-3xl font-bold" data-total-balance data-actual-balance="{{ $totalBalance ?? 0 }}">${{ number_format($totalBalance ?? 0, 2) }}</p>
-            <p class="text-xs text-white/70 mt-2">تمام کیف پول‌ها</p>
+            <p class="text-xs text-white/70 mt-2">{{ __('dashboard.all_wallets') }}</p>
         </div>
 
 
@@ -33,11 +33,11 @@
                 <div class="bg-green-100 p-3 rounded-lg">
                     <i class="fas fa-arrow-right text-green-600 text-lg"></i>
                 </div>
-                <span class="text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded">این ماه</span>
+                <span class="text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded">{{ __('dashboard.this_month') }}</span>
             </div>
-            <p class="text-gray-500 text-sm mb-1">تراکنش‌های دریافت شده</p>
+            <p class="text-gray-500 text-sm mb-1">{{ __('dashboard.received_transactions') }}</p>
             <p class="text-2xl font-bold text-gray-800">{{ $receivedCount ?? 0 }}</p>
-            <p class="text-xs text-gray-400 mt-2">تراکنش</p>
+            <p class="text-xs text-gray-400 mt-2">{{ __('dashboard.transaction_label') }}</p>
         </div>
 
         <!-- Sent Transactions -->
@@ -46,11 +46,11 @@
                 <div class="bg-orange-100 p-3 rounded-lg">
                     <i class="fas fa-arrow-left text-orange-600 text-lg"></i>
                 </div>
-                <span class="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded">ارسالی</span>
+                <span class="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded">{{ __('dashboard.sent_badge') }}</span>
             </div>
-            <p class="text-gray-500 text-sm mb-1">تراکنش‌های ارسالی</p>
+            <p class="text-gray-500 text-sm mb-1">{{ __('dashboard.sent_transactions') }}</p>
             <p class="text-2xl font-bold text-gray-800">{{ $sentCount ?? 0 }}</p>
-            <p class="text-xs text-gray-400 mt-2">تراکنش</p>
+            <p class="text-xs text-gray-400 mt-2">{{ __('dashboard.transaction_label') }}</p>
         </div>
 
         <!-- Active Wallets -->
@@ -59,11 +59,11 @@
                 <div class="bg-purple-100 p-3 rounded-lg">
                     <i class="fas fa-coins text-purple-600 text-lg"></i>
                 </div>
-                <span class="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-1 rounded">فعال</span>
+                <span class="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-1 rounded">{{ __('dashboard.active_badge') }}</span>
             </div>
-            <p class="text-gray-500 text-sm mb-1">کیف پول‌های فعال</p>
+            <p class="text-gray-500 text-sm mb-1">{{ __('dashboard.active_wallets') }}</p>
             <p class="text-2xl font-bold text-gray-800">{{ $wallets->count() ?? 0 }}</p>
-            <p class="text-xs text-gray-400 mt-2">کیف پول</p>
+            <p class="text-xs text-gray-400 mt-2">{{ __('dashboard.wallets_label') }}</p>
         </div>
     </div>
 
@@ -71,37 +71,37 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Quick Actions -->
         <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-6 pb-4 border-b border-gray-200">عملیات سریع</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-6 pb-4 border-b border-gray-200">{{ __('dashboard.quick_actions') }}</h3>
             
             <div class="space-y-3">
                 <a href="{{ route('user.send') }}" class="flex items-center justify-between p-4 bg-green-50 hover:bg-green-100 rounded-lg transition border border-green-200">
                     <div>
-                        <p class="font-semibold text-gray-800">ارسال کریپتو</p>
-                        <p class="text-xs text-gray-500">به کیف پول دیگری</p>
+                        <p class="font-semibold text-gray-800">{{ __('dashboard.send_crypto') }}</p>
+                        <p class="text-xs text-gray-500">{{ __('dashboard.send_crypto_desc') }}</p>
                     </div>
                     <i class="fas fa-paper-plane text-green-600 text-lg"></i>
                 </a>
 
                 <a href="{{ route('user.receive') }}" class="flex items-center justify-between p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition border border-indigo-200">
                     <div>
-                        <p class="font-semibold text-gray-800">دریافت کریپتو</p>
-                        <p class="text-xs text-gray-500">نشانی کیف پول</p>
+                        <p class="font-semibold text-gray-800">{{ __('dashboard.receive_crypto') }}</p>
+                        <p class="text-xs text-gray-500">{{ __('dashboard.receive_crypto_desc') }}</p>
                     </div>
                     <i class="fas fa-inbox text-indigo-600 text-lg"></i>
                 </a>
 
                 <a href="{{ route('user.wallets') }}" class="flex items-center justify-between p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition border border-purple-200">
                     <div>
-                        <p class="font-semibold text-gray-800">مدیریت کیف پول‌ها</p>
-                        <p class="text-xs text-gray-500">اضافه یا حذف</p>
+                        <p class="font-semibold text-gray-800">{{ __('dashboard.manage_wallets') }}</p>
+                        <p class="text-xs text-gray-500">{{ __('dashboard.manage_wallets_desc') }}</p>
                     </div>
                     <i class="fas fa-wallet text-purple-600 text-lg"></i>
                 </a>
 
                 <a href="{{ route('user.transactions') }}" class="flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition border border-blue-200">
                     <div>
-                        <p class="font-semibold text-gray-800">تاریخچه تراکنش</p>
-                        <p class="text-xs text-gray-500">همه تراکنش‌ها</p>
+                        <p class="font-semibold text-gray-800">{{ __('dashboard.transaction_history') }}</p>
+                        <p class="text-xs text-gray-500">{{ __('common.view_all') }}</p>
                     </div>
                     <i class="fas fa-history text-blue-600 text-lg"></i>
                 </a>
@@ -115,9 +115,9 @@
                     <div class="bg-purple-100 p-2 rounded-lg">
                         <i class="fas fa-coins text-purple-600"></i>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-800">کیف پول‌های من</h3>
+                    <h3 class="text-lg font-semibold text-gray-800">{{ __('dashboard.my_wallets') }}</h3>
                 </div>
-                <a href="{{ route('user.wallets') }}" class="text-indigo-600 text-sm font-semibold hover:underline">مشاهده همه →</a>
+                <a href="{{ route('user.wallets') }}" class="text-indigo-600 text-sm font-semibold hover:underline">{{ __('common.view_all') }} →</a>
             </div>
 
             @if($wallets && $wallets->count() > 0)
@@ -137,19 +137,19 @@
                                     </div>
                                     <div>
                                         <p class="font-semibold text-gray-800">{{ $wallet->currency }}</p>
-                                        <p class="text-xs text-gray-500">کیف پول</p>
+                                        <p class="text-xs text-gray-500">{{ __('dashboard.wallet') }}</p>
                                     </div>
                                 </div>
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                                    ✓ فعال
+                                    ✓ {{ __('dashboard.active_badge') }}
                                 </span>
                             </div>
                             <div class="p-3 bg-gray-50 rounded text-xs text-gray-600 mb-3 font-mono truncate">
                                 {{ substr($wallet->wallet_address, 0, 32) }}...
                             </div>
                             <div class="flex items-center justify-between">
-                                <span class="text-sm font-bold text-gray-800">{{ number_format($wallet->balance, 8) }}</span>
-                                <a href="{{ route('user.wallets') }}" class="text-indigo-600 text-xs font-semibold hover:underline">جزئیات →</a>
+                                <span class="text-sm font-bold text-gray-800">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }}</span>
+                                <a href="{{ route('user.wallets') }}" class="text-indigo-600 text-xs font-semibold hover:underline">{{ __('dashboard.details') }} →</a>
                             </div>
                         </div>
                     @endforeach
@@ -157,9 +157,9 @@
             @else
                 <div class="text-center py-12">
                     <i class="fas fa-wallet text-5xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500 mb-4">هنوز کیف پولی ایجاد نشده است</p>
+                    <p class="text-gray-500 mb-4">{{ __('common.no_wallets') }}</p>
                     <a href="{{ route('user.wallets') }}" class="inline-block bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">
-                        ایجاد کیف پول اول
+                        {{ __('common.create_first_wallet') }}
                     </a>
                 </div>
             @endif
@@ -173,9 +173,9 @@
                 <div class="bg-blue-100 p-2 rounded-lg">
                     <i class="fas fa-history text-blue-600"></i>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-800">آخرین تراکنش‌ها</h3>
+                <h3 class="text-lg font-semibold text-gray-800">{{ __('dashboard.recent_transactions') }}</h3>
             </div>
-            <a href="{{ route('user.transactions') }}" class="text-indigo-600 text-sm font-semibold hover:underline">مشاهده همه →</a>
+            <a href="{{ route('user.transactions') }}" class="text-indigo-600 text-sm font-semibold hover:underline">{{ __('common.view_all') }} →</a>
         </div>
 
         @if($transactions && $transactions->count() > 0)
@@ -191,37 +191,27 @@
                                     <p class="font-semibold text-gray-800">
                                         {{ $transaction->display_title }}
                                     </p>
-                                    <p class="text-xs text-gray-500 mt-1">
-                                        {{ $transaction->wallet->currency ?? 'UNKNOWN' }} • {{ $transaction->created_at->format('Y/m/d H:i') }}
-                                    </p>
-                                    @if($transaction->type === 'deposit')
-                                        @if($transaction->sender_wallet_address)
-                                            <p class="text-xs text-gray-500 mt-1">آدرس فرستنده: <code dir="ltr" class="text-gray-700">{{ $transaction->sender_wallet_address }}</code></p>
-                                        @endif
-                                        @if($transaction->wallet?->wallet_address)
-                                            <p class="text-xs text-gray-500 mt-1">آدرس دریافت‌کننده: <code dir="ltr" class="text-gray-700">{{ $transaction->wallet->wallet_address }}</code></p>
-                                        @endif
-                                        @if($transaction->deposit)
-                                            <p class="text-xs text-gray-500 mt-1">تأییدیه‌ها: <strong class="text-gray-800">{{ $transaction->deposit->confirmations ?? 0 }}</strong></p>
-                                            <p class="text-xs text-gray-500 mt-1">وضعیت سپرده: <strong class="text-gray-800">{{ $transaction->deposit->status }}</strong></p>
-                                        @endif
-                                    @else
-                                        <p class="text-xs text-gray-500 mt-1">شناسه: <code dir="ltr" class="text-gray-700">{{ $transaction->reference ?? 'TRX-' . $transaction->id }}</code></p>
-                                    @endif
+                                    <p class="text-xs text-gray-500 mt-1">{{ $transaction->created_at->format('Y/m/d H:i') }} • {{ $transaction->wallet->currency ?? 'UNKNOWN' }}</p>
                                 </div>
                             </div>
                             <div class="text-right">
                                 <p class="font-semibold @if($transaction->type === 'transfer') text-orange-600 @else text-green-600 @endif">
                                     @if($transaction->type === 'transfer')
-                                        -{{ number_format($transaction->amount, 8) }}
+                                        -{{ \App\Support\NumberHelper::formatCryptoAmount($transaction->amount) }}
                                     @else
-                                        +{{ number_format($transaction->amount, 8) }}
+                                        +{{ \App\Support\NumberHelper::formatCryptoAmount($transaction->amount) }}
                                     @endif
                                 </p>
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold mt-2 @if($transaction->status === 'completed') bg-green-100 text-green-800 @elseif($transaction->status === 'pending') bg-yellow-100 text-yellow-800 @else bg-red-100 text-red-800 @endif">
-                                    @if($transaction->status === 'completed') تکمیل شده
-                                    @elseif($transaction->status === 'pending') در حال انجام
-                                    @else ناموفق
+                                @php
+                                    $transactionStatus = $transaction->status;
+                                    if ($transaction->type === 'deposit' && $transaction->deposit?->status === 'confirmed') {
+                                        $transactionStatus = 'completed';
+                                    }
+                                @endphp
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold mt-2 @if($transactionStatus === 'completed') bg-green-100 text-green-800 @elseif($transactionStatus === 'pending') bg-yellow-100 text-yellow-800 @else bg-red-100 text-red-800 @endif">
+                                    @if($transactionStatus === 'completed') {{ __('common.completed') }}
+                                    @elseif($transactionStatus === 'pending') {{ __('common.pending') }}
+                                    @else {{ __('common.failed') }}
                                     @endif
                                 </span>
                             </div>
@@ -232,8 +222,8 @@
         @else
             <div class="text-center py-12">
                 <i class="fas fa-inbox text-5xl text-gray-300 mb-4"></i>
-                <p class="text-gray-500">هنوز تراکنشی انجام نشده است</p>
-                <p class="text-sm text-gray-400 mt-2">با استفاده از گزینه‌های بالا اولین تراکنش خود را انجام دهید</p>
+                <p class="text-gray-500">{{ __('common.no_transactions') }}</p>
+                <p class="text-sm text-gray-400 mt-2">{{ __('dashboard.no_transactions_description') }}</p>
             </div>
         @endif
     </div>
@@ -248,8 +238,8 @@
                         <i class="fas fa-hourglass-half text-yellow-700 text-lg"></i>
                     </div>
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-800">پرداخت‌های در انتظار</h3>
-                        <p class="text-xs text-gray-600">{{ $pendingPayments->count() }} درخواست منتظر پرداخت</p>
+                        <h3 class="text-lg font-semibold text-gray-800">{{ __('dashboard.pending_payments_section') }}</h3>
+                        <p class="text-xs text-gray-600">{{ $pendingPayments->count() }} {{ __('dashboard.pending_payments_desc') }}</p>
                     </div>
                 </div>
             </div>
@@ -260,12 +250,12 @@
                 <div class="p-4 border border-yellow-200 rounded-lg bg-yellow-50 hover:shadow-md transition">
                     <div class="flex items-center justify-between flex-wrap gap-4">
                         <div class="flex-1">
-                            <p class="font-semibold text-gray-800">{{ $payment->invoice_number ?? 'پرداخت بدون فاکتور' }}</p>
-                            <p class="text-sm text-gray-600 mt-1">{{ number_format($payment->amount, 8) }} {{ $payment->currency }}</p>
-                            <p class="text-xs text-gray-500 mt-1">وضعیت: در انتظار پرداخت</p>
+                            <p class="font-semibold text-gray-800">{{ $payment->invoice_number ?? __('dashboard.pending_payment_without_invoice') }}</p>
+                            <p class="text-sm text-gray-600 mt-1">{{ \App\Support\NumberHelper::formatCryptoAmount($payment->amount) }} {{ $payment->currency }}</p>
+                            <p class="text-xs text-gray-500 mt-1">{{ __('dashboard.pending_payment_status') }}</p>
                         </div>
                         <a href="{{ url('/pay/' . $payment->token) }}" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold text-sm hover:bg-indigo-700 transition whitespace-nowrap">
-                            پرداخت کنید
+                            {{ __('dashboard.pay_now') }}
                         </a>
                     </div>
                 </div>
@@ -322,7 +312,7 @@ function updateCryptoPriceCards() {
         ethChangeEl.classList.toggle('text-rose-400', cryptoPrices.eth < (previousPrices.eth || 0));
     }
     if (updatedEl) {
-        updatedEl.textContent = 'آخرین بروزرسانی: ' + new Date().toLocaleTimeString('fa-IR');
+        updatedEl.textContent = '{{ __('dashboard.last_updated') }} ' + new Date().toLocaleTimeString('en-US');
     }
 }
 

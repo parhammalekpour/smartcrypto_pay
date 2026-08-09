@@ -25,7 +25,7 @@
         </div>
         <div class="bg-green-50 rounded-lg p-4 border border-green-200">
             <p class="text-sm text-green-600 font-semibold">مبلغ کل</p>
-            <p class="text-3xl font-bold text-green-800 mt-2">{{ number_format($invoices->sum('amount'), 8) }}</p>
+            <p class="text-3xl font-bold text-green-800 mt-2">{{ \App\Support\NumberHelper::formatCryptoAmount($invoices->sum('amount')) }}</p>
         </div>
         <div class="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
             <p class="text-sm text-yellow-600 font-semibold">فاکتورهای پرداخت نشده</p>
@@ -64,7 +64,7 @@
                                 </span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-gray-800">{{ number_format($invoice->amount, 8) }}</td>
+                        <td class="px-4 py-3 text-gray-800">{{ \App\Support\NumberHelper::formatCryptoAmount($invoice->amount) }}</td>
                         <td class="px-4 py-3 text-gray-700">{{ $invoice->currency }}</td>
                         <td class="px-4 py-3 text-gray-600">{{ $invoice->created_at->format('Y/m/d') }}</td>
                         <td class="px-4 py-3">

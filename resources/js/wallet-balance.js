@@ -104,10 +104,11 @@ const WalletBalance = (function() {
     }
 
     function formatBalanceRaw(value) {
-        // Expect value to be string or number. Preserve up to 8 decimals (matching server output/Blade)
         const num = parseFloat(value ?? 0);
-        if (!isFinite(num)) return '0.00000000';
-        return num.toFixed(8);
+        if (!isFinite(num)) return '0';
+
+        const fixed = num.toFixed(8).replace(/\.0+$/, '').replace(/(\.\d*?[1-9])0+$/, '$1');
+        return fixed === '' ? '0' : fixed;
     }
 
     function setSkeleton(el) {
@@ -135,11 +136,11 @@ const WalletBalance = (function() {
         function step(now) {
             const t = Math.min(1, (now - start) / COUNT_UP_DURATION);
             const cur = fromNum + (toNum - fromNum) * t;
-            el.textContent = Number(cur).toFixed(8);
+            el.textContent = formatBalanceRaw(cur);
             if (t < 1) {
                 requestAnimationFrame(step);
             } else {
-                el.textContent = Number(toNum).toFixed(8);
+                el.textContent = formatBalanceRaw(toNum);
                 el.style.opacity = '1';
             }
         }
@@ -183,7 +184,7 @@ const WalletBalance = (function() {
         } catch (err) {
             // On error, restore previous value and annotate
             const prev = meta.lastValue ?? (balanceEl.dataset?.initialValue ?? balanceEl.textContent.trim());
-            balanceEl.textContent = prev || '0.00000000';
+            balanceEl.textContent = prev || '0';
             balanceEl.setAttribute('title', 'Unable to refresh balance');
             console.error('Failed to fetch wallet balance for', walletId, err?.message || err);
         } finally {
@@ -247,7 +248,7 @@ const WalletBalance = (function() {
 
                 // Store initial value
                 if (!balanceEl.dataset.initialValue) {
-                    balanceEl.dataset.initialValue = (balanceEl.textContent || '').trim() || '0.00000000';
+                    balanceEl.dataset.initialValue = (balanceEl.textContent || '').trim() || '0';
                 }
 
                 wallets.set(walletId, { cardEl: card, balanceEl, usdEl, lastValue: balanceEl.dataset.initialValue, lastEchoAt: null });

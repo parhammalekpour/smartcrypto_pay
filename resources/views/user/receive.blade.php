@@ -1,101 +1,166 @@
 @extends('layouts.dashboard')
 
-@section('title', 'دریافت کریپتو - CryptoPay')
-@section('page-title', 'دریافت کریپتو')
-@section('page-subtitle', 'دریافت رمزارز از دیگران')
+@section('title', __('user.receive.page_title') . ' - CryptoPay')
+@section('page-title', __('user.receive.page_title'))
+@section('page-subtitle', __('user.receive.page_subtitle'))
 
 @section('content')
+@php $isRtl = app()->getLocale() === 'fa'; @endphp
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Wallets Display -->
-    <div class="lg:col-span-2 space-y-6">
-        @if($wallets && $wallets->count() > 0)
-            @foreach($wallets as $wallet)
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center gap-4 mb-6 pb-4 border-b border-gray-200">
-                        <div class="w-12 h-12 
-                            @if($wallet->currency === 'BTC') bg-orange-100
-                            @elseif($wallet->currency === 'ETH') bg-gray-100
-                            @else bg-teal-100 @endif rounded-lg flex items-center justify-center">
-                            @if($wallet->currency === 'BTC')
-                                <i class="fas fa-bitcoin text-orange-600 text-lg"></i>
-                            @elseif($wallet->currency === 'ETH')
-                                <i class="fab fa-ethereum text-gray-600 text-lg"></i>
-                            @else
-                                <i class="fas fa-coins text-teal-600 text-lg"></i>
-                            @endif
+@push('styles')
+<style>
+    .receive-shell {
+        padding: 0.2rem 0 0.25rem;
+    }
+    .receive-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 24px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    }
+    .receive-card:hover {
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.09);
+    }
+    .receive-address-pill {
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        padding: 0.6rem 0.7rem;
+    }
+    .receive-address-pill input {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.01em;
+    }
+    .receive-qr-shell {
+        width: 168px;
+        height: 168px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.85rem;
+    }
+    .receive-help-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 24px;
+        background: #ffffff;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    }
+</style>
+@endpush
+
+<div class="receive-shell max-w-7xl" dir="{{ $isRtl ? 'rtl' : 'ltr' }}">
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_320px] gap-4 lg:gap-6">
+        <div class="space-y-4">
+            @if($wallets && $wallets->count() > 0)
+                @foreach($wallets as $wallet)
+                    <div class="receive-card p-5 md:p-6">
+                        <div class="flex {{ $isRtl ? 'flex-row-reverse' : '' }} flex-wrap items-start justify-between gap-4 pb-4 border-b border-slate-200">
+                            <div class="flex {{ $isRtl ? 'flex-row-reverse' : '' }} items-center gap-3 min-w-0">
+                                <div class="flex h-12 w-12 items-center justify-center rounded-2xl
+                                    @if($wallet->currency === 'BTC') bg-orange-100
+                                    @elseif($wallet->currency === 'ETH') bg-slate-100
+                                    @else bg-teal-100 @endif">
+                                    @if($wallet->currency === 'BTC')
+                                        <i class="fab fa-bitcoin text-orange-600 text-lg"></i>
+                                    @elseif($wallet->currency === 'ETH')
+                                        <i class="fab fa-ethereum text-slate-700 text-lg"></i>
+                                    @else
+                                        <i class="fas fa-coins text-teal-600 text-lg"></i>
+                                    @endif
+                                </div>
+                                <div class="min-w-0 {{ $isRtl ? 'text-right' : 'text-left' }}">
+                                    <div class="flex {{ $isRtl ? 'flex-row-reverse' : '' }} items-center gap-2">
+                                        <h3 class="text-lg font-semibold text-slate-900">{{ $wallet->currency }}</h3>
+                                        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                            {{ $wallet->currency === 'BTC' ? 'Bitcoin' : ($wallet->currency === 'ETH' ? 'Ethereum' : 'USDT') }}
+                                        </span>
+                                    </div>
+                                    <p class="mt-1 text-sm text-slate-500">{{ __('wallets.balance') }}</p>
+                                    <p class="mt-1 text-xl font-semibold tracking-tight text-slate-900">
+                                        {{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }}
+                                        <span class="ml-1 text-base font-medium text-slate-500">{{ $wallet->currency }}</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600">
+                                {{ __('wallets.address') }}
+                            </div>
                         </div>
-                        <div>
-                            <h3 class="font-bold text-gray-800">{{ $wallet->currency }}</h3>
-                            <p class="text-xs text-gray-500">موجودی: {{ number_format($wallet->balance, 8) }}</p>
+
+                        <div class="mt-5 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-5 lg:gap-6">
+                            <div class="min-w-0">
+                                <div class="flex {{ $isRtl ? 'flex-row-reverse' : '' }} items-center justify-between gap-3">
+                                    <label class="text-sm font-semibold text-slate-700">{{ __('wallets.address') }}</label>
+                                    <span class="text-xs font-medium text-slate-400">{{ __('user.receive.share_hint') }}</span>
+                                </div>
+                                <div class="receive-address-pill mt-3 flex {{ $isRtl ? 'flex-row-reverse' : '' }} items-center gap-2">
+                                    <input type="text" value="{{ substr($wallet->wallet_address, 0, 10) }}...{{ substr($wallet->wallet_address, -6) }}" readonly class="w-full border-0 bg-transparent px-1 py-1 text-sm font-medium text-slate-700 outline-none">
+                                    <button type="button" onclick="copyToClipboard('{{ $wallet->wallet_address }}')" aria-label="{{ __('wallets.copy') }}"
+                                        class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700">
+                                        <i class="fas fa-copy"></i>
+                                        <span class="hidden sm:inline">{{ __('wallets.copy') }}</span>
+                                    </button>
+                                </div>
+
+                                <div class="mt-3 inline-flex {{ $isRtl ? 'flex-row-reverse' : '' }} items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="{{ $isRtl ? 'mr-2' : 'ml-2' }}">{{ __('user.receive.anyone_can_send') }}</span>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col items-center justify-center rounded-[20px] border border-slate-200 bg-slate-50/70 p-4">
+                                <p class="text-sm font-semibold text-slate-700">{{ __('user.receive.scan_qr_code') }}</p>
+                                <div class="receive-qr-shell mt-3" id="qrcode-{{ $wallet->id }}"></div>
+                                <p class="mt-3 text-sm text-slate-500">{{ __('user.receive.scan_and_send') }}</p>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Content Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Address Section -->
-                        <div>
-                            <p class="text-sm font-semibold text-gray-700 mb-3">نشانی کیف پول</p>
-                            <div class="flex items-center gap-2 mb-3">
-                                <input type="text" value="{{ $wallet->wallet_address }}" readonly 
-                                    class="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-mono">
-                                <button type="button" onclick="copyToClipboard('{{ $wallet->wallet_address }}')" 
-                                    class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition text-sm">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                            </div>
-                            
-                            <!-- Info -->
-                            <div class="bg-green-50 border border-green-200 rounded-lg p-3">
-                                <p class="text-sm text-green-800">
-                                    <i class="fas fa-check-circle ml-2"></i>هر کسی می‌تواند به این نشانی ارسال کند
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- QR Code Section -->
-                        <div class="flex flex-col items-center justify-center">
-                            <p class="text-sm font-semibold text-gray-700 mb-3">کد QR</p>
-                            <div id="qrcode-{{ $wallet->id }}" class="bg-white p-4 rounded-lg border-2 border-gray-300"></div>
-                            <p class="text-xs text-gray-500 mt-3">اسکن کنید و ارسال کنید</p>
-                        </div>
-                    </div>
+                @endforeach
+            @else
+                <div class="receive-card p-12 text-center">
+                    <i class="fas fa-wallet text-5xl text-slate-300 mb-4"></i>
+                    <p class="text-slate-600 mb-4">{{ __('wallets.no_wallets') }}</p>
+                    <a href="{{ route('user.wallets') }}" class="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700">
+                        {{ __('user.receive.create_wallet') }}
+                    </a>
                 </div>
-            @endforeach
-        @else
-            <div class="bg-white rounded-lg shadow p-12 text-center">
-                <i class="fas fa-inbox text-5xl text-gray-300 mb-4"></i>
-                <p class="text-gray-500 mb-4">هنوز کیف پولی ایجاد نشده است</p>
-                <a href="{{ route('user.wallets') }}" class="text-indigo-600 font-semibold hover:underline">
-                    ایجاد کیف پول
-                </a>
-            </div>
-        @endif
-    </div>
+            @endif
+        </div>
 
-    <!-- Help Card -->
-    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-6 h-fit sticky top-6">
-        <h4 class="font-semibold text-gray-800 mb-4">راهنما</h4>
-        
-        <div class="space-y-4 text-sm text-gray-700">
-            <div>
-                <p class="font-semibold text-gray-800 mb-1">💡 چگونه دریافت کنم؟</p>
-                <p>نشانی خود را کپی کنید یا کد QR را به اشتراک بگذارید</p>
+        <div class="receive-help-card p-5 md:p-6 h-fit xl:sticky xl:top-6">
+            <div class="flex {{ $isRtl ? 'flex-row-reverse' : '' }} items-center justify-between gap-3">
+                <div>
+                    <h4 class="text-lg font-semibold text-slate-900">{{ __('user.receive.help_title') }}</h4>
+                    <p class="mt-1 text-sm text-slate-500">{{ __('user.receive.help_subtitle') }}</p>
+                </div>
+                <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                    <i class="fas fa-question-circle"></i>
+                </div>
             </div>
 
-            <div class="border-t border-indigo-200 pt-4">
-                <p class="font-semibold text-gray-800 mb-1">⏱️ چه مدت طول می‌کشد؟</p>
-                <p>معمولاً چند ثانیه تا چند دقیقه</p>
+            <div class="mt-5 space-y-3">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-sm font-semibold text-slate-900">💡 {{ __('user.receive.how_to_receive') }}</p>
+                    <p class="mt-1 text-sm leading-6 text-slate-600">{{ __('user.receive.how_to_receive_desc') }}</p>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-sm font-semibold text-slate-900">⏱️ {{ __('user.receive.time_to_arrive') }}</p>
+                    <p class="mt-1 text-sm leading-6 text-slate-600">{{ __('user.receive.time_to_arrive_desc') }}</p>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-sm font-semibold text-slate-900">🔒 {{ __('user.receive.security_title') }}</p>
+                    <p class="mt-1 text-sm leading-6 text-slate-600">{{ __('user.receive.security_desc') }}</p>
+                </div>
             </div>
 
-            <div class="border-t border-indigo-200 pt-4">
-                <p class="font-semibold text-gray-800 mb-1">🔒 آیا خطری دارد؟</p>
-                <p>کاملاً ایمن است! فقط نشانی خود را به اشتراک بگذارید</p>
-            </div>
-
-            <div class="border-t border-indigo-200 pt-4 bg-yellow-50 p-3 rounded-lg">
-                <p class="font-semibold text-yellow-800 mb-1">⚠️ هشدار</p>
-                <p class="text-yellow-700">هیچوقت کلید خصوصی خود را با کسی به اشتراک نگذارید</p>
+            <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p class="text-sm font-semibold text-amber-800">⚠️ {{ __('user.receive.warning_title') }}</p>
+                <p class="mt-1 text-sm leading-6 text-amber-700">{{ __('user.receive.warning_desc') }}</p>
             </div>
         </div>
     </div>
@@ -103,13 +168,12 @@
 
 @push('scripts')
 <script>
-    // Generate QR codes for each wallet
     @if($wallets && $wallets->count() > 0)
         @foreach($wallets as $wallet)
             new QRCode(document.getElementById("qrcode-{{ $wallet->id }}"), {
                 text: "{{ $wallet->wallet_address }}",
-                width: 150,
-                height: 150,
+                width: 168,
+                height: 168,
                 correctLevel: QRCode.CorrectLevel.H
             });
         @endforeach
@@ -117,9 +181,9 @@
 
     function copyToClipboard(text) {
         navigator.clipboard.writeText(text).then(() => {
-            alert('✓ کپی شد!');
+            alert('{{ __('user.receive.copied') }}');
         }).catch(() => {
-            alert('خطا در کپی');
+            alert('{{ __('user.receive.copy_error') }}');
         });
     }
 </script>

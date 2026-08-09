@@ -62,7 +62,7 @@ class TicketController extends Controller
 
         $msg->save();
 
-        return redirect()->route('tickets.show', $ticket->id)->with('success', 'تیکت شما ارسال شد. تیم پشتیبانی به زودی پاسخ می‌دهد.');
+        return redirect()->route('tickets.show', $ticket->id)->with('success', __('tickets.store.success'));
     }
 
     public function show(Request $request, Ticket $ticket)
@@ -89,7 +89,7 @@ class TicketController extends Controller
         $ticket->status = 'closed';
         $ticket->save();
 
-        return redirect()->route('tickets.show', $ticket->id)->with('success', 'تیکت بسته شد');
+        return redirect()->route('tickets.show', $ticket->id)->with('success', __('tickets.close.success'));
     }
 
     // JSON endpoint for ticket messages (user side)
@@ -144,10 +144,10 @@ class TicketController extends Controller
 
         if ($ticket->status === 'closed' && !$user->isAdmin()) {
             if ($request->wantsJson() || $request->ajax()) {
-                return response()->json(['error' => 'تیکت بسته شده است.'], 400);
+                return response()->json(['error' => __('tickets.closed_error')], 400);
             }
 
-            return back()->withErrors(['message' => 'تیکت بسته شده است.'])->withInput();
+            return back()->withErrors(['message' => __('tickets.closed_error')])->withInput();
         }
 
         $msg = new TicketMessage();
@@ -198,6 +198,6 @@ class TicketController extends Controller
             ], 201);
         }
 
-        return redirect()->route('tickets.show', $ticket->id)->with('success', 'پیام ذخیره شد');
+        return redirect()->route('tickets.show', $ticket->id)->with('success', __('tickets.message_saved'));
     }
 }

@@ -1,4 +1,15 @@
-<nav x-data="{ open: false, notificationOpen: false, notificationCount: 0, notifications: [], theme: document.documentElement.classList.contains('dark'), toggleTheme() { this.theme = !this.theme; document.documentElement.classList.toggle('dark', this.theme); localStorage.setItem('darkMode', this.theme ? 'true' : 'false'); } }" class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300" style="font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; direction: rtl;" x-init="setInterval(() => { fetch('{{ route('notifications.unread-count') }}').then(r => r.json()).then(data => notificationCount = data.count); }, 5000);">
+<nav x-data="{ open: false, notificationOpen: false, notificationCount: 0, notifications: [], theme: document.documentElement.classList.contains('dark'), toggleTheme() { this.theme = !this.theme; document.documentElement.classList.toggle('dark', this.theme); localStorage.setItem('darkMode', this.theme ? 'true' : 'false'); } }" class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300" style="font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; direction: {{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }};" x-init="(()=>{ window.NOTIFICATION_ENDPOINTS = {
+        list: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications') }}',
+        unread: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/unread-count') }}',
+        markAll: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/mark-all-read') }}',
+        base: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications') }}'
+    };
+
+    // Fetch unread count immediately and then every 5s
+    const updateUnread = () => fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count).catch(()=>{});
+    updateUnread();
+    setInterval(updateUnread, 5000);
+})();">
 
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -21,6 +32,28 @@
 
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6 gap-4">
+                @php
+                    $langUrlFa = \Mcamara\LaravelLocalization\Facades\LaravelLocalization::getLocalizedURL('fa', null, [], true);
+                    $langUrlEn = \Mcamara\LaravelLocalization\Facades\LaravelLocalization::getLocalizedURL('en', null, [], true);
+                @endphp
+                <!-- Language switcher -->
+                <div class="flex items-center gap-2">
+                    <a href="{{ $langUrlFa }}" class="px-3 py-1 rounded-md border border-gray-200 dark:border-gray-700 text-sm" aria-label="فارسی">🇮🇷 فارسی</a>
+                    <a href="{{ $langUrlEn }}" class="px-3 py-1 rounded-md border border-gray-200 dark:border-gray-700 text-sm" aria-label="English">🇺🇸 English</a>
+
+                    <!-- Toggle language button (submits POST to set-locale) -->
+                    <form method="POST" action="{{ route('set-locale') }}" class="inline-block">
+                        @csrf
+                        <input type="hidden" name="locale" value="{{ app()->getLocale() === 'fa' ? 'en' : 'fa' }}">
+                        <button type="submit" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 transition" aria-label="Toggle language">
+                            @if(app()->getLocale() === 'fa')
+                                🇺🇸 English
+                            @else
+                                🇮🇷 فارسی
+                            @endif
+                        </button>
+                    </form>
+                </div>
                 <!-- Notifications Bell -->
                 @auth
                     @php
@@ -36,12 +69,16 @@
                     <button @click="
                         notificationOpen = !notificationOpen;
                         if (notificationOpen) {
-                            fetch('{{ route('notifications.get') }}')
+                            fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'})
                                 .then(r => r.json())
-                                .then(data => $data.notifications = data);
+                                .then(data => {
+                                    notifications = data;
+                                    // Update badge count based on unread notifications returned
+                                    try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){}
+                                }).catch(()=>{});
                         }
                     " class="relative inline-flex items-center justify-center p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none transition">
-                        <i class="fas fa-bell text-xl"></i>
+                        <i class="fas fa-bell text-2xl"></i>
                         <span x-show="notificationCount > 0" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full" x-text="notificationCount"></span>
                     </button>
                 </div>
@@ -52,22 +89,24 @@
                 </button>
 
                     <!-- Notifications Dropdown -->
-                    <div x-show="notificationOpen" @click.away="notificationOpen = false" class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700">
+                    <div x-show="notificationOpen" @click.away="notificationOpen = false" class="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700">
                         <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                            <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">اعلان ها</h3>
+                            <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">{{ __('Notifications') }}</h3>
                             <button @click="
-                                fetch('{{ route('notifications.mark-all-read') }}', {method: 'POST', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}})
+                                fetch(window.NOTIFICATION_ENDPOINTS.markAll, {method: 'POST', credentials: 'same-origin', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}})
                                     .then(() => {
                                         notificationOpen = false;
-                                        fetch('{{ route('notifications.unread-count') }}').then(r => r.json()).then(data => $data.notificationCount = data.count);
-                                    });
-                            " class="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold">علامت گذاری همه</button>
+                                        // refresh unread count and list
+                                        fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count);
+                                        notifications = [];
+                                    }).catch(()=>{});
+                                                        " class="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold">{{ __('Mark all as read') }}</button>
                         </div>
 
                         <template x-if="notifications.length === 0">
                             <div class="p-8 text-center">
                                 <i class="fas fa-inbox text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
-                                <p class="text-gray-500 dark:text-gray-400">اعلانی وجود ندارد</p>
+                                <p class="text-gray-500 dark:text-gray-400">{{ __('No notifications') }}</p>
                             </div>
                         </template>
 
@@ -84,11 +123,11 @@
                                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-2" x-text="notification.created_at"></p>
                                         </div>
                                         <button @click="
-                                            fetch('/notifications/' + notification.id + '/delete', {method: 'POST', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}})
+                                            fetch(window.NOTIFICATION_ENDPOINTS.base + '/' + notification.id + '/delete', {method: 'POST', credentials: 'same-origin', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}})
                                                 .then(() => {
                                                     notifications = notifications.filter(n => n.id !== notification.id);
-                                                    fetch('{{ route('notifications.unread-count') }}').then(r => r.json()).then(data => $data.notificationCount = data.count);
-                                                });
+                                                    fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count);
+                                                }).catch(()=>{});
                                         " class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition">
                                             <i class="fas fa-times"></i>
                                         </button>
@@ -171,6 +210,20 @@
         </div>
 
         <div class="border-t border-gray-200 dark:border-gray-700 p-4 space-y-3">
+            <!-- Mobile language toggle (visible in drawer) -->
+            <div class="flex items-center gap-2">
+                <form method="POST" action="{{ route('set-locale') }}" class="inline-block w-full">
+                    @csrf
+                    <input type="hidden" name="locale" value="{{ app()->getLocale() === 'fa' ? 'en' : 'fa' }}">
+                    <button type="submit" class="w-full text-center px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 text-sm bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                        @if(app()->getLocale() === 'fa')
+                            🇺🇸 English
+                        @else
+                            🇮🇷 فارسی
+                        @endif
+                    </button>
+                </form>
+            </div>
             @auth
                 <div class="space-y-1">
                     <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ Auth::user()->name }}</p>
@@ -200,7 +253,7 @@
 
             <button @click="toggleTheme()" class="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition">
                 <i :class="theme ? 'fas fa-sun text-yellow-500' : 'fas fa-moon text-indigo-600'"></i>
-                <span x-text="theme ? 'حالت روشن' : 'حالت تاریک'"></span>
+                <span x-text="theme ? '{{ __('Light mode') }}' : '{{ __('Dark mode') }}'"></span>
             </button>
         </div>
     </aside>

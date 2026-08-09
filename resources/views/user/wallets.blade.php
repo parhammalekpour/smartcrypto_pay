@@ -1,177 +1,247 @@
 @extends('layouts.dashboard')
 
-@section('title', 'کیف پول‌های من - CryptoPay')
-@section('page-title', 'کیف پول‌های من')
-@section('page-subtitle', 'مدیریت کیف پول‌های دیجیتال شما')
+@section('title', __('wallets.page_title') . ' - CryptoPay')
+@section('page-title', __('wallets.page_title'))
+@section('page-subtitle', __('wallets.page_subtitle'))
 
 @section('content')
+@push('styles')
+<style>
+    .wallet-shell {
+        padding: 0.25rem 0;
+    }
+    .wallet-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 24px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    }
+    .wallet-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.10);
+    }
+    .wallet-action-btn {
+        min-height: 46px;
+        border-radius: 14px;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 0.75rem 0.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        transition: all 0.2s ease;
+    }
+    .wallet-action-btn:hover {
+        transform: translateY(-1px);
+    }
+    .wallet-address-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        justify-content: space-between;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        padding: 0.7rem 0.8rem;
+    }
+    .wallet-address-pill code {
+        background: transparent;
+        padding: 0;
+        font-size: 0.82rem;
+        color: #334155;
+        font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, monospace;
+    }
+    .wallet-asset-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 999px;
+        padding: 0.35rem 0.6rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+    }
+</style>
+@endpush
 
-<!-- Live Prices + Actions -->
-<div class="mb-6 grid grid-cols-1 lg:grid-cols-[1.8fr_minmax(320px,360px)] gap-4 items-stretch">
-    <div class="rounded-[28px] bg-slate-950 border border-slate-800 p-5 shadow-xl h-full">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-                <p class="text-sm text-slate-400">قیمت‌های لحظه‌ای با جزئیات</p>
-                <h2 class="text-2xl font-semibold text-white">BTC / ETH</h2>
-            </div>
-            <span class="inline-flex items-center gap-2 rounded-full bg-indigo-500/15 text-indigo-200 px-3 py-1 text-xs uppercase tracking-[0.14em]">
-                <i class="fas fa-chart-line text-xs"></i>
-                Binance
-            </span>
-        </div>
-
-        <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="rounded-3xl bg-slate-900/95 border border-slate-800 p-4">
-                <div class="flex items-center justify-between gap-4">
-                    <div>
-                        <p class="text-xs text-slate-500 uppercase">Bitcoin</p>
-                        <p class="mt-3 text-3xl font-semibold text-white" data-live-btc-price>$0.00</p>
-                    </div>
-                    <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-slate-300">BTC</span>
-                </div>
-                <p class="mt-4 text-sm" data-live-btc-change>---</p>
-            </div>
-            <div class="rounded-3xl bg-slate-900/95 border border-slate-800 p-4">
-                <div class="flex items-center justify-between gap-4">
-                    <div>
-                        <p class="text-xs text-slate-500 uppercase">Ethereum</p>
-                        <p class="mt-3 text-3xl font-semibold text-white" data-live-eth-price>$0.00</p>
-                    </div>
-                    <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-slate-300">ETH</span>
-                </div>
-                <p class="mt-4 text-sm" data-live-eth-change>---</p>
-            </div>
-        </div>
-
-        <p class="mt-4 text-xs text-slate-500" data-live-price-updated>آخرین بروزرسانی: -</p>
-    </div>
-
-    <div class="flex flex-col justify-between rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm lg:max-w-[360px] h-full">
-        <div>
-            <div class="flex items-center justify-between gap-4 mb-4">
+<div class="wallet-shell space-y-6">
+    <div class="grid grid-cols-1 xl:grid-cols-[1.6fr_minmax(280px,320px)] gap-6">
+        <div class="rounded-[24px] border border-slate-200 bg-slate-950 p-5 shadow-sm">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <p class="text-sm text-slate-500">کنترل کیف پول‌ها</p>
-                    <h3 class="text-lg font-semibold text-slate-900">افزودن کیف پول</h3>
+                    <p class="text-sm text-slate-400">{{ __('wallets.live_prices_subtitle') }}</p>
+                    <h3 class="mt-1 text-xl font-semibold text-white">BTC / ETH</h3>
                 </div>
-                <i class="fas fa-wallet text-indigo-600 text-xl"></i>
+                <span class="inline-flex items-center gap-2 rounded-full bg-indigo-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-indigo-200">
+                    <i class="fas fa-chart-line text-xs"></i>
+                    Binance
+                </span>
             </div>
-            <p class="text-sm text-slate-600 leading-6">کیف پول جدید اضافه کنید تا موجودی و ارزش دلاری آن در کارت‌ها نمایش داده شود.</p>
+
+            <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="rounded-2xl border border-slate-800 bg-slate-900/90 p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Bitcoin</p>
+                            <p class="mt-2 text-2xl font-semibold text-white" data-live-btc-price>$0.00</p>
+                        </div>
+                        <span class="wallet-asset-tag bg-white/10 text-slate-300">BTC</span>
+                    </div>
+                    <p class="mt-3 text-sm text-slate-400" data-live-btc-change>{{ __('wallets.no_change') }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-800 bg-slate-900/90 p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Ethereum</p>
+                            <p class="mt-2 text-2xl font-semibold text-white" data-live-eth-price>$0.00</p>
+                        </div>
+                        <span class="wallet-asset-tag bg-white/10 text-slate-300">ETH</span>
+                    </div>
+                    <p class="mt-3 text-sm text-slate-400" data-live-eth-change>{{ __('wallets.no_change') }}</p>
+                </div>
+            </div>
+
+            <p class="mt-4 text-xs text-slate-500" data-live-price-updated>{{ __('wallets.last_updated') }} -</p>
         </div>
-        <button onclick="openAddWalletModal()" class="mt-6 w-full bg-indigo-600 text-white px-5 py-3 rounded-2xl font-semibold hover:bg-indigo-700 transition">
-            <i class="fas fa-plus mr-2"></i>
-            اضافه کردن کیف پول
-        </button>
+
+        <div class="flex flex-col justify-between rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="space-y-3">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm text-slate-500">{{ __('wallets.wallet_control') }}</p>
+                        <h3 class="text-lg font-semibold text-slate-900">{{ __('wallets.add_wallet') }}</h3>
+                    </div>
+                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                </div>
+                <p class="text-sm leading-6 text-slate-600">{{ __('wallets.add_wallet_description') }}</p>
+            </div>
+            <button onclick="openAddWalletModal()" class="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700">
+                <i class="fas fa-plus"></i>
+                {{ __('wallets.add_wallet') }}
+            </button>
+        </div>
     </div>
+
+    @if($wallets && $wallets->count() > 0)
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            @foreach($wallets as $wallet)
+                <div class="wallet-card p-6 transition">
+                    <div class="flex items-start justify-between gap-3 pb-4 border-b border-slate-200">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-12 w-12 items-center justify-center rounded-2xl
+                                @if($wallet->currency === 'BTC') bg-orange-100
+                                @elseif($wallet->currency === 'ETH') bg-slate-100
+                                @else bg-teal-100 @endif">
+                                @if($wallet->currency === 'BTC')
+                                    <i class="fab fa-bitcoin text-orange-600 text-lg"></i>
+                                @elseif($wallet->currency === 'ETH')
+                                    <i class="fab fa-ethereum text-slate-700 text-lg"></i>
+                                @else
+                                    <i class="fas fa-coins text-teal-600 text-lg"></i>
+                                @endif
+                            </div>
+                            <div>
+                                <p class="text-lg font-semibold text-slate-900">{{ $wallet->currency }}</p>
+                                <p class="text-sm text-slate-500">{{ $wallet->currency === 'BTC' ? 'Bitcoin' : ($wallet->currency === 'ETH' ? 'Ethereum' : 'Tether') }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5">
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{{ __('wallets.balance') }}</p>
+                        <p class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }} <span class="text-lg font-medium text-slate-500">{{ $wallet->currency }}</span></p>
+                        <p class="mt-2 text-sm text-slate-500">
+                            <span class="font-medium text-slate-400">{{ __('wallets.estimated_value') }}:</span>
+                            <span class="ml-1 font-semibold text-slate-700 usd-price" data-currency="{{ $wallet->currency }}" data-balance="{{ $wallet->balance }}">≈ $0.00</span>
+                        </p>
+                    </div>
+
+                    <div class="mt-5">
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{{ __('wallets.address') }}</p>
+                        <div class="wallet-address-pill mt-2">
+                            <code>{{ substr($wallet->wallet_address, 0, 6) }}...{{ substr($wallet->wallet_address, -6) }}</code>
+                            <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-700" onclick="copyToClipboard('{{ $wallet->wallet_address }}')" aria-label="{{ __('wallets.copy') }}">
+                                <i class="fas fa-copy text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 grid grid-cols-3 gap-2">
+                        <button type="button" class="wallet-action-btn bg-indigo-50 text-indigo-700 hover:bg-indigo-100" onclick="copyToClipboard('{{ $wallet->wallet_address }}')">
+                            <i class="fas fa-copy"></i>
+                            {{ __('wallets.copy') }}
+                        </button>
+                        <a href="{{ route('user.send', ['sender_wallet_id' => $wallet->id]) }}" class="wallet-action-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+                            <i class="fas fa-paper-plane"></i>
+                            {{ __('wallets.send') }}
+                        </a>
+
+                        @if(floatval($wallet->balance) > 0)
+                            <a href="{{ route('tickets.create', ['subject' => __('wallets.delete_ticket_subject', ['currency' => $wallet->currency]), 'message' => __('wallets.delete_ticket_message', ['address' => $wallet->wallet_address, 'balance' => $wallet->balance, 'currency' => $wallet->currency])]) }}" onclick="alert('{{ __('wallets.delete_wallet_balance_alert') }}');" class="wallet-action-btn bg-rose-50 text-rose-700 hover:bg-rose-100" title="{{ __('wallets.delete_wallet_ticket_title') }}">
+                                <i class="fas fa-trash"></i>
+                                {{ __('common.delete') }}
+                            </a>
+                        @else
+                            <form method="POST" action="{{ route('user.wallets.destroy', $wallet) }}" style="display:contents;" onsubmit="return confirm('{{ __('wallets.delete_wallet_confirm') }}');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="wallet-action-btn bg-rose-50 text-rose-700 hover:bg-rose-100">
+                                    <i class="fas fa-trash"></i>
+                                    {{ __('common.delete') }}
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    @else
+        <div class="rounded-[24px] border border-slate-200 bg-white p-12 text-center shadow-sm">
+            <i class="fas fa-wallet text-5xl text-slate-300 mb-4"></i>
+            <p class="text-slate-600 mb-4">{{ __('wallets.no_wallets') }}</p>
+            <button onclick="openAddWalletModal()" class="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700">
+                {{ __('wallets.create_first_wallet') }}
+            </button>
+        </div>
+    @endif
 </div>
 
-<!-- Wallets Grid -->
-@if($wallets && $wallets->count() > 0)
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        @foreach($wallets as $wallet)
-            <div class="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border-t-4 
-                @if($wallet->currency === 'BTC') border-t-orange-500
-                @elseif($wallet->currency === 'ETH') border-t-gray-500
-                @else border-t-teal-500 @endif">
-                
-                <!-- Header -->
-                <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 
-                            @if($wallet->currency === 'BTC') bg-orange-100
-                            @elseif($wallet->currency === 'ETH') bg-gray-100
-                            @else bg-teal-100 @endif rounded-lg flex items-center justify-center">
-                            @if($wallet->currency === 'BTC')
-                                <i class="fas fa-bitcoin text-orange-600 text-lg"></i>
-                            @elseif($wallet->currency === 'ETH')
-                                <i class="fab fa-ethereum text-gray-600 text-lg"></i>
-                            @else
-                                <i class="fas fa-coins text-teal-600 text-lg"></i>
-                            @endif
-                        </div>
-                        <div>
-                            <p class="font-bold text-gray-800">{{ $wallet->currency }}</p>
-                            <p class="text-xs text-gray-500">{{ $wallet->currency === 'BTC' ? 'Bitcoin' : ($wallet->currency === 'ETH' ? 'Ethereum' : 'Tether') }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Balance -->
-                <div class="mb-4">
-                    <p class="text-gray-500 text-xs mb-1">موجودی</p>
-                    <p class="text-3xl font-bold text-gray-800">{{ number_format($wallet->balance, 8) }}</p>
-                    <p class="text-xs text-gray-400 mt-2">
-                        ارزش تقریبی: <span class="font-semibold usd-price" data-currency="{{ $wallet->currency }}" data-balance="{{ $wallet->balance }}">≈ $0.00</span>
-                    </p>
-                </div>
-
-                <!-- Address -->
-                <div class="mb-4">
-                    <p class="text-gray-500 text-xs mb-1">نشانی کیف پول</p>
-                    <div class="p-2 bg-gray-50 rounded border border-gray-200">
-                        <p class="text-xs text-gray-700 font-mono break-all">{{ $wallet->wallet_address }}</p>
-                    </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="grid grid-cols-4 gap-2">
-                    <button class="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-semibold hover:bg-indigo-100 transition flex items-center justify-center gap-1 whitespace-nowrap" onclick="copyToClipboard('{{ $wallet->wallet_address }}')">
-                        <i class="fas fa-copy"></i>کپی
-                    </button>
-                    <a href="{{ route('user.send', ['sender_wallet_id' => $wallet->id]) }}" class="p-2 bg-green-50 text-green-600 rounded-lg text-xs font-semibold hover:bg-green-100 transition flex items-center justify-center gap-1 whitespace-nowrap">
-                        <i class="fas fa-paper-plane"></i>ارسال
-                    </a>
-
-                    @if(floatval($wallet->balance) > 0)
-                        <a href="{{ route('tickets.create', ['subject' => 'درخواست حذف کیف پول ' . $wallet->currency, 'message' => 'لطفاً برای حذف کیف پول ' . $wallet->wallet_address . ' با موجودی ' . $wallet->balance . ' ' . $wallet->currency . ' تیکت ثبت کنید.']) }}" onclick="alert('این کیف پول دارای موجودی است و قابل حذف مستقیم نیست. برای حذف آن لطفاً برای تیم پشتیبانی تیکت ثبت کنید.');" class="p-2 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition flex items-center justify-center gap-1 whitespace-nowrap" title="برای حذف این کیف پول لطفاً تیکت بزنید.">
-                            <i class="fas fa-trash"></i>حذف
-                        </a>
-                    @else
-                        <form method="POST" action="{{ route('user.wallets.destroy', $wallet) }}" style="display:contents;" onsubmit="return confirm('آیا از حذف این کیف پول مطمئن هستید؟ این عملیات غیرقابل بازگشت است.');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="p-2 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition flex items-center justify-center gap-1 whitespace-nowrap">
-                                <i class="fas fa-trash"></i>حذف
-                            </button>
-                        </form>
-                    @endif
-                </div>
-            </div>
-        @endforeach
-    </div>
-@else
-    <div class="bg-white rounded-lg shadow p-12 text-center">
-        <i class="fas fa-wallet text-5xl text-gray-300 mb-4"></i>
-        <p class="text-gray-500 mb-4">هنوز کیف پولی ایجاد نشده است</p>
-        <button onclick="openAddWalletModal()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">
-            ایجاد کیف پول اول
-        </button>
-    </div>
-@endif
-
 <!-- Add Wallet Modal -->
-<div id="addWalletModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">ایجاد کیف پول جدید</h3>
-        
-        <form method="POST" action="{{ route('user.wallets.store') }}" class="space-y-4">
-            @csrf
-            
+<div id="addWalletModal" class="hidden fixed inset-0 bg-black/50 px-4 py-6 flex items-center justify-center z-50">
+    <div class="w-full max-w-md rounded-[24px] border border-slate-200 bg-white p-6 shadow-2xl">
+        <div class="flex items-start justify-between gap-3">
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">انتخاب ارز</label>
-                <select name="currency" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                    <option value="">انتخاب کنید</option>
+                <h3 class="text-lg font-semibold text-slate-900">{{ __('wallets.create_new_wallet') }}</h3>
+                <p class="mt-1 text-sm text-slate-500">{{ __('wallets.add_wallet_description') }}</p>
+            </div>
+            <button type="button" onclick="closeAddWalletModal()" class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="{{ route('user.wallets.store') }}" class="mt-5 space-y-4">
+            @csrf
+
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">{{ __('wallets.select_currency') }}</label>
+                <select name="currency" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                    <option value="">{{ __('wallets.select_option') }}</option>
                     <option value="BTC">Bitcoin (BTC)</option>
                     <option value="ETH">Ethereum (ETH)</option>
                     <option value="USDT">Tether (USDT)</option>
                 </select>
             </div>
 
-            <div class="flex gap-2">
-                <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">
-                    ایجاد
+            <div class="flex gap-2 pt-2">
+                <button type="submit" class="flex-1 rounded-2xl bg-indigo-600 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700">
+                    {{ __('common.create') }}
                 </button>
-                <button type="button" onclick="closeAddWalletModal()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold hover:bg-gray-300 transition">
-                    انصراف
+                <button type="button" onclick="closeAddWalletModal()" class="flex-1 rounded-2xl bg-slate-100 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200">
+                    {{ __('common.cancel') }}
                 </button>
             </div>
         </form>
@@ -191,8 +261,8 @@
     }
 
     function formatChange(current, previous) {
-        if (previous === null) {
-            return '---';
+        if (previous === null || previous === 0) {
+            return '{{ __('wallets.no_change') }}';
         }
 
         const diff = current - previous;
@@ -226,7 +296,7 @@
             ethChangeEl.classList.toggle('text-rose-400', cryptoPrices.eth < (previousPrices.eth || 0));
         }
         if (updatedEl) {
-            updatedEl.textContent = 'آخرین بروزرسانی: ' + new Date().toLocaleTimeString('fa-IR');
+            updatedEl.textContent = '{{ __('wallets.last_updated') }} ' + new Date().toLocaleTimeString('en-US');
         }
     }
 
@@ -277,7 +347,7 @@
     
     function copyToClipboard(text) {
         navigator.clipboard.writeText(text).then(() => {
-            alert('آدرس کپی شد!');
+            alert('{{ __('wallets.address_copied') }}');
         }).catch(err => {
             console.error('Failed to copy:', err);
         });

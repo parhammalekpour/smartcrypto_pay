@@ -63,7 +63,7 @@ class KycController extends Controller
 
         $user->save();
 
-        return back()->with('success', 'مدارک KYC با موفقیت ارسال شد. پس از بررسی، وضعیت احراز هویت تغییر خواهد کرد.');
+        return back()->with('success', __('kyc.store.success'));
     }
 
     /**

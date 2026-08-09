@@ -1,9 +1,9 @@
 ﻿<!DOCTYPE html>
-<html lang="fa" dir="rtl" class="h-full bg-[#071123]">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}" class="h-full bg-[#071123]">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CryptoPay | ورود و ثبت‌نام</title>
+    <title>{{ config('app.name', 'CryptoPay') }} | {{ __('auth.landing.title') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         body {
@@ -139,11 +139,11 @@
                     <div class="space-y-6">
                         <div class="max-w-2xl">
                             <p class="text-xs uppercase tracking-[0.3em] text-slate-500">CryptoPay</p>
-                            <h1 class="mt-4 text-3xl font-bold text-slate-950">ورود و ساخت حساب جدید</h1>
+                            <h1 class="mt-4 text-3xl font-bold text-slate-950">{{ __('auth.landing.heading') }}</h1>
                         </div>
                         <div class="tab-group rounded-full bg-slate-100 p-2 shadow-sm border border-slate-200/80">
-                            <button id="tab-login" type="button" class="tab-button rounded-full font-semibold tab-active w-full">ورود</button>
-                            <button id="tab-register" type="button" class="tab-button rounded-full font-semibold tab-inactive w-full">ثبت‌نام</button>
+                            <button id="tab-login" type="button" class="tab-button rounded-full font-semibold tab-active w-full">{{ __('auth.login.tab') }}</button>
+                            <button id="tab-register" type="button" class="tab-button rounded-full font-semibold tab-inactive w-full">{{ __('auth.register.tab') }}</button>
                         </div>
                     </div>
 
@@ -155,25 +155,25 @@
                             <form method="POST" action="{{ route('login') }}" class="space-y-6">
                                 @csrf
                                 <div>
-                                    <label for="email" class="block text-sm font-semibold text-slate-700">ایمیل</label>
+                                    <label for="email" class="block text-sm font-semibold text-slate-700">{{ __('auth.login.email_label') }}</label>
                                     <input id="email" name="email" type="email" value="{{ old('email') }}" required autofocus placeholder="example@domain.com" class="field-input mt-3 w-full rounded-[1.5rem] px-4 py-4 text-sm outline-none transition" />
                                     @error('email')<p class="mt-2 text-xs text-rose-500">{{ $message }}</p>@enderror
                                 </div>
                                 <div>
-                                    <label for="password" class="block text-sm font-semibold text-slate-700">رمز عبور</label>
-                                    <input id="password" name="password" type="password" required placeholder="رمز خود را وارد کنید" class="field-input mt-3 w-full rounded-[1.5rem] px-4 py-4 text-sm outline-none transition" />
+                                    <label for="password" class="block text-sm font-semibold text-slate-700">{{ __('auth.login.password_label') }}</label>
+                                    <input id="password" name="password" type="password" required placeholder="{{ __('auth.login.password_placeholder') }}" class="field-input mt-3 w-full rounded-[1.5rem] px-4 py-4 text-sm outline-none transition" />
                                     @error('password')<p class="mt-2 text-xs text-rose-500">{{ $message }}</p>@enderror
                                 </div>
                                 <div class="flex items-center justify-between text-sm text-slate-500">
                                     <label class="inline-flex items-center gap-2">
                                         <input type="checkbox" name="remember" class="h-4 w-4 rounded border-slate-300 bg-white text-indigo-600 focus:ring-indigo-500" />
-                                        مرا به خاطر بسپار
+                                        {{ __('auth.login.remember_me') }}
                                     </label>
                                     @if(Route::has('password.request'))
-                                        <a href="{{ route('password.request') }}" class="text-sky-600 hover:text-sky-700 transition">فراموشی رمز عبور؟</a>
+                                        <a href="{{ route('password.request') }}" class="text-sky-600 hover:text-sky-700 transition">{{ __('auth.login.forgot_password') }}</a>
                                     @endif
                                 </div>
-                                <button type="submit" class="w-full rounded-[1.5rem] bg-sky-600 px-5 py-4 text-sm font-semibold uppercase tracking-[0.1em] text-white shadow-lg shadow-sky-500/20 transition hover:opacity-95">ورود به حساب</button>
+                                <button type="submit" class="w-full rounded-[1.5rem] bg-sky-600 px-5 py-4 text-sm font-semibold uppercase tracking-[0.1em] text-white shadow-lg shadow-sky-500/20 transition hover:opacity-95">{{ __('auth.login.submit') }}</button>
                             </form>
                         </div>
 
@@ -181,17 +181,17 @@
                             <form method="POST" action="{{ route('register') }}" class="space-y-6">
                                 @csrf
                                 <div>
-                                    <label for="name" class="block text-sm font-semibold text-slate-700">نام کامل</label>
-                                    <input id="name" name="name" type="text" value="{{ old('name') }}" required placeholder="نام خود را وارد کنید" class="field-input mt-3 w-full rounded-[1.5rem] px-4 py-4 text-sm outline-none transition" />
+                                    <label for="name" class="block text-sm font-semibold text-slate-700">{{ __('auth.register.name_label') }}</label>
+                                    <input id="name" name="name" type="text" value="{{ old('name') }}" required placeholder="{{ __('auth.register.name_placeholder') }}" class="field-input mt-3 w-full rounded-[1.5rem] px-4 py-4 text-sm outline-none transition" />
                                     @error('name')<p class="mt-2 text-xs text-rose-500">{{ $message }}</p>@enderror
                                 </div>
                                 <div>
-                                    <label for="email" class="block text-sm font-semibold text-slate-700">ایمیل</label>
+                                    <label for="email" class="block text-sm font-semibold text-slate-700">{{ __('auth.register.email_label') }}</label>
                                     <input id="register-email" name="email" type="email" value="{{ old('email') }}" required placeholder="example@domain.com" class="field-input mt-3 w-full rounded-[1.5rem] px-4 py-4 text-sm outline-none transition" />
                                     @error('email')<p class="mt-2 text-xs text-rose-500">{{ $message }}</p>@enderror
                                 </div>
                                 <div>
-                                    <label for="role" class="block text-sm font-semibold text-slate-700">نوع حساب</label>
+                                    <label for="role" class="block text-sm font-semibold text-slate-700">{{ __('auth.register.role_label') }}</label>
                                     <select id="role" name="role" required class="field-input mt-3 w-full rounded-[1.5rem] px-4 py-4 text-sm outline-none transition">
                                         <option value="user" {{ old('role', 'user') === 'user' ? 'selected' : '' }}>Personal</option>
                                         <option value="merchant" {{ old('role') === 'merchant' ? 'selected' : '' }}>Business</option>
@@ -199,16 +199,16 @@
                                     @error('role')<p class="mt-2 text-xs text-rose-500">{{ $message }}</p>@enderror
                                 </div>
                                 <div>
-                                    <label for="password" class="block text-sm font-semibold text-slate-700">رمز عبور</label>
-                                    <input id="register-password" name="password" type="password" required placeholder="رمز عبور را وارد کنید" class="field-input mt-3 w-full rounded-[1.5rem] px-4 py-4 text-sm outline-none transition" />
+                                    <label for="password" class="block text-sm font-semibold text-slate-700">{{ __('auth.register.password_label') }}</label>
+                                    <input id="register-password" name="password" type="password" required placeholder="{{ __('auth.register.password_placeholder') }}" class="field-input mt-3 w-full rounded-[1.5rem] px-4 py-4 text-sm outline-none transition" />
                                     @error('password')<p class="mt-2 text-xs text-rose-500">{{ $message }}</p>@enderror
                                 </div>
                                 <div>
-                                    <label for="password_confirmation" class="block text-sm font-semibold text-slate-700">تایید رمز عبور</label>
-                                    <input id="password_confirmation" name="password_confirmation" type="password" required placeholder="رمز را دوباره وارد کنید" class="field-input mt-3 w-full rounded-[1.5rem] px-4 py-4 text-sm outline-none transition" />
+                                    <label for="password_confirmation" class="block text-sm font-semibold text-slate-700">{{ __('auth.register.password_confirmation_label') }}</label>
+                                    <input id="password_confirmation" name="password_confirmation" type="password" required placeholder="{{ __('auth.register.password_confirmation_placeholder') }}" class="field-input mt-3 w-full rounded-[1.5rem] px-4 py-4 text-sm outline-none transition" />
                                     @error('password_confirmation')<p class="mt-2 text-xs text-rose-500">{{ $message }}</p>@enderror
                                 </div>
-                                <button type="submit" class="w-full rounded-[1.5rem] bg-emerald-500 px-5 py-4 text-sm font-semibold uppercase tracking-[0.1em] text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:opacity-95">ثبت‌نام</button>
+                                <button type="submit" class="w-full rounded-[1.5rem] bg-emerald-500 px-5 py-4 text-sm font-semibold uppercase tracking-[0.1em] text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:opacity-95">{{ __('auth.register.submit') }}</button>
                             </form>
                         </div>
                     </div>
@@ -220,34 +220,45 @@
                         <div class="relative z-10 flex h-full flex-col justify-between">
                             <div>
                                 <div class="flex items-center justify-between gap-3 text-slate-300">
+                                    <form method="POST" action="{{ route('set-locale') }}">
+                                        @csrf
+                                        <input type="hidden" name="locale" value="{{ app()->getLocale() === 'fa' ? 'en' : 'fa' }}">
+                                        <button type="submit" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition text-xs">
+                                            @if(app()->getLocale() === 'fa')
+                                                🇺🇸 English
+                                            @else
+                                                🇮🇷 فارسی
+                                            @endif
+                                        </button>
+                                    </form>
                                     <span class="text-xs uppercase tracking-[0.28em]">CryptoPay</span>
                                     <span class="rounded-full border border-slate-700/80 px-3 py-1 text-[10px] uppercase tracking-[0.28em]">EN</span>
                                 </div>
                                 <div class="mt-10">
-                                    <h2 class="text-3xl font-bold text-white">CryptoPay پلتفرم پرداخت رمزارز</h2>
-                                    <p class="mt-4 text-sm leading-6 text-slate-400">پلتفرمی برای پرداخت، کیف پول و مدیریت تراکنش‌های رمزارزی.</p>
+                                    <h2 class="text-3xl font-bold text-white">{{ __('auth.brand.heading') }}</h2>
+                                    <p class="mt-4 text-sm leading-6 text-slate-400">{{ __('auth.brand.description') }}</p>
                                 </div>
                             </div>
                             <div class="mt-10 space-y-4">
                                 <div class="feature-box rounded-3xl border border-white/10 bg-white/5 p-5">
-                                    <p class="text-sm font-semibold text-white">پرداخت رمزارز مستقیم</p>
-                                    <p class="mt-2 text-sm text-slate-400">پرداخت سریع و بدون واسطه با بیت‌کوین و اتریوم.</p>
+                                    <p class="text-sm font-semibold text-white">{{ __('auth.features.crypto_pay.title') }}</p>
+                                    <p class="mt-2 text-sm text-slate-400">{{ __('auth.features.crypto_pay.desc') }}</p>
                                 </div>
                                 <div class="feature-box rounded-3xl border border-white/10 bg-white/5 p-5">
-                                    <p class="text-sm font-semibold text-white">کیف پول امن</p>
-                                    <p class="mt-2 text-sm text-slate-400">نگهداری و مدیریت کوین‌ها با چند لایه امنیتی.</p>
+                                    <p class="text-sm font-semibold text-white">{{ __('auth.features.secure_wallet.title') }}</p>
+                                    <p class="mt-2 text-sm text-slate-400">{{ __('auth.features.secure_wallet.desc') }}</p>
                                 </div>
                                 <div class="feature-box rounded-3xl border border-white/10 bg-white/5 p-5">
-                                    <p class="text-sm font-semibold text-white">گزارش تراکنش</p>
-                                    <p class="mt-2 text-sm text-slate-400">کنترل ساده و شفاف روی تاریخچه پرداخت‌ها.</p>
+                                    <p class="text-sm font-semibold text-white">{{ __('auth.features.transaction_reports.title') }}</p>
+                                    <p class="mt-2 text-sm text-slate-400">{{ __('auth.features.transaction_reports.desc') }}</p>
                                 </div>
                                 <div class="feature-box rounded-3xl border border-white/10 bg-white/5 p-5">
-                                    <p class="text-sm font-semibold text-white">مدیریت کاربر</p>
-                                    <p class="mt-2 text-sm text-slate-400">پروفایل شخصی و تجاری با تنظیمات جداگانه.</p>
+                                    <p class="text-sm font-semibold text-white">{{ __('auth.features.user_management.title') }}</p>
+                                    <p class="mt-2 text-sm text-slate-400">{{ __('auth.features.user_management.desc') }}</p>
                                 </div>
                                 <div class="feature-box rounded-3xl border border-white/10 bg-white/5 p-5">
-                                    <p class="text-sm font-semibold text-white">پشتیبانی کسب‌وکار</p>
-                                    <p class="mt-2 text-sm text-slate-400">امکانات ویژه برای فروشگاه‌ها و پذیرندگان آنلاین.</p>
+                                    <p class="text-sm font-semibold text-white">{{ __('auth.features.business_support.title') }}</p>
+                                    <p class="mt-2 text-sm text-slate-400">{{ __('auth.features.business_support.desc') }}</p>
                                 </div>
                             </div>
                         </div>

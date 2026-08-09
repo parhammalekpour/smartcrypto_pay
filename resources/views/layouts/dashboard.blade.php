@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="fa" id="htmlElement" style="font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;">
+<html dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}" lang="{{ str_replace('_', '-', app()->getLocale()) }}" id="htmlElement" data-input-language="english" style="font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/dark-mode.css') }}">
+    @vite(['resources/js/app.js'])
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
@@ -46,17 +47,22 @@
         .sidebar-item {
             display: flex;
             align-items: center;
-            gap: 14px;
-            padding: 14px 18px;
-            margin-bottom: 8px;
-            color: #c7d2fe;
-            border-radius: 14px;
+            gap: 12px;
+            padding: 12px 14px;
+            margin-bottom: 6px;
+            color: #e0e7ff;
+            border-radius: 12px;
             transition: all .25s ease;
             text-decoration: none;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 500;
             white-space: nowrap;
             flex-direction: row-reverse;
+            letter-spacing: 0.01em;
+        }
+
+        [dir="ltr"] .sidebar-item {
+            flex-direction: row;
         }
 
         .sidebar-item i {
@@ -129,9 +135,24 @@
             background-color: #f3f4f6 !important;
         }
     </style>
+    <style>
+        /* Hide auto-refresh UI introduced by auto-refresh.js when the frontend bundle isn't rebuilt */
+        #auto-refresh-toggle-container, #auto-refresh-indicator {
+            display: none !important;
+        }
+    </style>
     @stack('styles')
 </head>
-<body x-data="{ sidebarOpen: false, notificationOpen: false, notificationCount: 0, notifications: [] }" x-init="setInterval(() => { fetch('{{ route('notifications.unread-count') }}').then(r => r.json()).then(data => notificationCount = data.count); }, 5000)" class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-persian transition-colors duration-300">
+<body x-data="{ sidebarOpen: false, notificationOpen: false, notificationCount: 0, notifications: [] }" x-init="(()=>{ if (!window.NOTIFICATION_ENDPOINTS) { window.NOTIFICATION_ENDPOINTS = {
+            list: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications') }}',
+            unread: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/unread-count') }}',
+            markAll: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/mark-all-read') }}',
+            base: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications') }}'
+        }; }
+        const updateUnread = () => fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count).catch(()=>{});
+        updateUnread();
+        setInterval(updateUnread, 5000);
+    })()" class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-persian transition-colors duration-300">
     <div class="relative min-h-screen bg-gray-100 dark:bg-gray-800">
         <div x-show="sidebarOpen" x-cloak class="fixed inset-0 z-30 bg-black/50 lg:hidden" @click="sidebarOpen = false"></div>
 
@@ -139,7 +160,7 @@
             <!-- Sidebar -->
             <aside :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'" class="fixed inset-y-0 right-0 z-40 w-72 transform overflow-y-auto bg-gradient-to-b from-indigo-600 to-indigo-800 dark:from-indigo-900 dark:to-indigo-950 text-white shadow-lg transition-transform duration-300 lg:static lg:translate-x-0 lg:flex lg:flex-col">
             <!-- Logo Section - Fixed -->
-            <div style="padding: 24px; border-bottom: 1px solid rgba(255,255,255,.15); flex-shrink: 0;">
+            <div style="padding: 22px 20px; border-bottom: 1px solid rgba(255,255,255,.15); flex-shrink: 0;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 12px; flex-direction: row-reverse;">
                     <div style="width: 48px; height: 48px; background: rgba(255,255,255,.95); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 16px rgba(0,0,0,.2);">
                         <i class="fas fa-coins" style="font-size: 24px; color: #4f46e5;"></i>
@@ -156,85 +177,85 @@
                 @if(auth()->user()->isAdmin())
                     <a href="{{ route('admin.dashboard') }}" class="sidebar-item @if(Route::currentRouteName() === 'admin.dashboard') active @endif">
                         <i class="fas fa-shield-alt"></i>
-                        پنل ادمین
+                        {{ __('nav.admin_panel') }}
                     </a>
                 @endif
 
                 @if(auth()->user()->isMerchant())
                     <!-- Merchant Menu -->
                     <a href="{{ route('merchant.dashboard') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.dashboard') active @endif">
-                        داشبورد اصلی
+                        {{ __('nav.merchant_dashboard') }}
                     </a>
 
                     <a href="{{ route('merchant.payments') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.payments') active @endif">
-                        درخواست‌های پرداخت
+                        {{ __('nav.payment_requests') }}
                     </a>
 
                     <a href="{{ route('merchant.invoices') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.invoices') active @endif">
-                        فاکتورها
+                        {{ __('nav.invoices') }}
                     </a>
 
                     <a href="{{ route('merchant.settlements') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.settlements') active @endif">
-                        تسویه‌حساب
+                        {{ __('nav.settlements') }}
                     </a>
 
                     <a href="{{ route('merchant.customers') }}" class="sidebar-item @if(in_array(Route::currentRouteName(), ['merchant.customers', 'merchant.customers.show'])) active @endif">
-                        مشتریان
+                        {{ __('nav.customers') }}
                     </a>
 
                     <a href="{{ route('merchant.wallets') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.wallets') active @endif">
-                        کیف پول‌های من
+                                            {{ __('nav.my_wallets') }}
                     </a>
 
                     <a href="{{ route('merchant.transactions') }}" class="sidebar-item">
-                        تراکنش‌ها
+                        {{ __('nav.transactions') }}
                     </a>
 
                     <a href="{{ route('merchant.settings') }}" class="sidebar-item">
-                        تنظیمات عمومی
+                        {{ __('nav.general_settings') }}
                     </a>
 
                     <a href="{{ route('tickets.index') }}" class="sidebar-item @if(\Illuminate\Support\Str::startsWith(Route::currentRouteName(), 'tickets')) active @endif">
                         <i class="fas fa-headset"></i>
-                        پشتیبانی / تیکت‌ها
+                                                {{ __('nav.support_tickets') }}
                     </a>
                     
                 @else
                     <!-- User Menu -->
                     <a href="{{ route('user.dashboard') }}" class="sidebar-item @if(Route::currentRouteName() === 'user.dashboard') active @endif">
                         <i class="fas fa-home"></i>
-                        خانه
+                                                {{ __('nav.home') }}
                     </a>
 
                     <a href="{{ route('user.wallets') }}" class="sidebar-item">
                         <i class="fas fa-wallet"></i>
-                        کیف پول‌های من
+                                            {{ __('nav.my_wallets') }}
                     </a>
 
 
                     <a href="{{ route('user.receive') }}" class="sidebar-item">
                         <i class="fas fa-inbox"></i>
-                        دریافت ارز
+                                                {{ __('nav.receive_currency') }}
                     </a>
 
                     <a href="{{ route('user.transactions') }}" class="sidebar-item">
                         <i class="fas fa-history"></i>
-                        تاریخچه تراکنش‌ها
+                        {{ __('nav.transaction_history') }}
                     </a>
 
                     <a href="{{ route('user.pending-payments') }}" class="sidebar-item">
                         <i class="fas fa-hourglass-end"></i>
-                        پرداخت‌های در انتظار
+                        {{ __('nav.pending_payments') }}
                     </a>
 
                     <a href="{{ route('user.settings') }}" class="sidebar-item">
                         <i class="fas fa-cog"></i>
-                        تنظیمات حساب
+                        {{ __('nav.account_settings') }}
                     </a>
 
                     <a href="{{ route('tickets.index') }}" class="sidebar-item @if(\Illuminate\Support\Str::startsWith(Route::currentRouteName(), 'tickets')) active @endif">
                         <i class="fas fa-headset"></i>
-                        پشتیبانی / تیکت‌ها
+                                                {{ __('nav.support_tickets') }}
                     </a>
                 @endif
             </nav>
@@ -266,45 +287,59 @@
                         <button @click="sidebarOpen = true" aria-label="Open sidebar navigation" class="lg:hidden inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white/90 px-3 py-2 text-gray-600 dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                             <i class="fas fa-bars"></i>
                         </button>
-                        <div>
-                            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100">@yield('page-title')</h2>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">@yield('page-subtitle')</p>
+                        <div class="space-y-1">
+                            <h2 class="text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">@yield('page-title')</h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">@yield('page-subtitle')</p>
                         </div>
                     </div>
 
                     <!-- Top Right Actions -->
                     <div class="flex items-center gap-4">
+                                            <!-- Language toggle (header) -->
+                                            <form method="POST" action="{{ route('set-locale') }}" class="inline-block">
+                                                @csrf
+                                                <input type="hidden" name="locale" value="{{ app()->getLocale() === 'fa' ? 'en' : 'fa' }}">
+                                                <button type="submit" class="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 shadow-sm transition hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-200 dark:hover:bg-indigo-800">
+                                                    <i class="fas fa-globe"></i>
+                                                    @if(app()->getLocale() === 'fa')
+                                                        English
+                                                    @else
+                                                        فارسی
+                                                    @endif
+                                                </button>
+                                            </form>
                         <!-- Notifications Bell -->
                         <div class="relative">
                             <button @click="
                                 notificationOpen = !notificationOpen;
                                 if (notificationOpen) {
-                                    fetch('{{ route('notifications.get') }}')
+                                                                    fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'})
                                         .then(r => r.json())
-                                        .then(data => $data.notifications = data);
+                                                                        .then(data => { notifications = data; try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){} });
                                 }
                             " class="relative p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition flex items-center">
-                                <i class="fas fa-bell text-lg"></i>
+                                <i class="fas fa-bell text-2xl"></i>
                                 <span x-show="notificationCount > 0" x-text="notificationCount" class="absolute top-0 right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center font-bold"></span>
                             </button>
 
                             <!-- Notifications Dropdown -->
-                            <div x-show="notificationOpen" @click.away="notificationOpen = false" class="absolute left-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                            <div x-show="notificationOpen" @click.away="notificationOpen = false" class="absolute left-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
                                 <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800">
-                                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">اعلان ها</h3>
+                                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">{{ __('notifications.title') }}</h3>
                                     <button @click="
-                                        fetch('{{ route('notifications.mark-all-read') }}', {method: 'POST', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}})
+                                        fetch(window.NOTIFICATION_ENDPOINTS.markAll, {method: 'POST', credentials: 'same-origin', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}})
                                             .then(() => {
                                                 notificationOpen = false;
-                                                fetch('{{ route('notifications.unread-count') }}').then(r => r.json()).then(data => $data.notificationCount = data.count);
-                                            });
-                                    " class="text-sm text-indigo-600 hover:text-indigo-700 font-semibold">علامت گذاری همه</button>
+                                                                                        fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count);
+                                                                                        notifications = [];
+                                                                                    }).catch(()=>{});
+                                    " class="text-sm text-indigo-600 hover:text-indigo-700 font-semibold">{{ __('notifications.mark_all') }}</button>
                                 </div>
 
                                 <template x-if="notifications.length === 0">
                                     <div class="p-8 text-center">
                                         <i class="fas fa-inbox text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
-                                        <p class="text-gray-500 dark:text-gray-400">اعلانی وجود ندارد</p>
+                                        <p class="text-gray-500 dark:text-gray-400">{{ __('No notifications') }}</p>
                                     </div>
                                 </template>
 
@@ -321,11 +356,11 @@
                                                     <p class="text-xs text-gray-400 dark:text-gray-500 mt-2" x-text="notification.created_at"></p>
                                                 </div>
                                                  <button @click="
-                                                    fetch(`/notifications/${notification.id}/delete`, {method: 'POST', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}})
+                                                    fetch(window.NOTIFICATION_ENDPOINTS.base + '/' + notification.id + '/delete', {method: 'POST', credentials: 'same-origin', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}})
                                                         .then(() => {
                                                             notifications = notifications.filter(n => n.id !== notification.id);
-                                                            fetch('{{ route('notifications.unread-count') }}').then(r => r.json()).then(data => $data.notificationCount = data.count);
-                                                        });
+                                                                                                                fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count);
+                                                                                                            }).catch(()=>{});
                                                 " class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition flex-shrink-0">
                                                     <i class="fas fa-times"></i>
                                                 </button>
@@ -349,18 +384,26 @@
                                 <i class="fas fa-chevron-down text-xs text-gray-500 dark:text-gray-400"></i>
                             </button>
 
+                            @php
+                                $profileSettingsRoute = auth()->user()->isMerchant()
+                                    ? route('merchant.settings')
+                                    : (auth()->user()->isUser() ? route('user.settings') : route('profile.edit'));
+                                $securitySettingsRoute = auth()->user()->isMerchant()
+                                    ? route('merchant.settings') . '#security'
+                                    : route('user.settings') . '#security';
+                            @endphp
                             <!-- Dropdown Menu -->
                             <div class="profile-dropdown bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 w-40 z-50">
-                                <a href="{{ auth()->user()->isMerchant() ? route('merchant.settings') : (auth()->user()->isUser() ? route('user.settings') : route('profile.edit')) }}" class="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
-                                    <i class="fas fa-user text-sm"></i>پروفایل
+                                <a href="{{ $profileSettingsRoute }}" class="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
+                                                                    <i class="fas fa-user text-sm"></i>{{ __('Profile') }}
                                 </a>
-                                <a href="@if(auth()->user()->isMerchant()) {{ route('merchant.settings') }}#security @else {{ route('user.settings') }}#security @endif" class="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
-                                    <i class="fas fa-lock text-sm"></i>رمز عبور
+                                <a href="{{ $securitySettingsRoute }}" class="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
+                                                                    <i class="fas fa-lock text-sm"></i>{{ __('Password') }}
                                 </a>
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
                                     <button type="submit" class="w-full text-right flex items-center gap-2 px-3 py-2 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
-                                        <i class="fas fa-sign-out-alt text-sm"></i>خروج
+                                        <i class="fas fa-sign-out-alt text-sm"></i>{{ __('Log Out') }}
                                     </button>
                                 </form>
                             </div>
@@ -377,7 +420,7 @@
                         <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start gap-3">
                             <i class="fas fa-check-circle text-green-600 dark:text-green-400 text-xl mt-0.5"></i>
                             <div>
-                                <p class="font-semibold text-green-800 dark:text-green-300">موفق!</p>
+                                <p class="font-semibold text-green-800 dark:text-green-300">{{ __('flash.success_title') }}</p>
                                 <p class="text-sm text-green-700 dark:text-green-200 mt-1">{{ session('success') }}</p>
                             </div>
                             <button onclick="this.parentElement.remove()" class="ml-auto text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300">
@@ -390,7 +433,7 @@
                         <div class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3">
                             <i class="fas fa-exclamation-circle text-red-600 dark:text-red-400 text-xl mt-0.5"></i>
                             <div>
-                                <p class="font-semibold text-red-800 dark:text-red-300">خطا!</p>
+                                <p class="font-semibold text-red-800 dark:text-red-300">{{ __('flash.error_title') }}</p>
                                 <p class="text-sm text-red-700 dark:text-red-200 mt-1">{{ session('error') }}</p>
                             </div>
                             <button onclick="this.parentElement.remove()" class="ml-auto text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
@@ -403,7 +446,7 @@
                         <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-start gap-3">
                             <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 text-xl mt-0.5"></i>
                             <div>
-                                <p class="font-semibold text-blue-800 dark:text-blue-300">اطلاعات</p>
+                                <p class="font-semibold text-blue-800 dark:text-blue-300">{{ __('flash.info_title') }}</p>
                                 <p class="text-sm text-blue-700 dark:text-blue-200 mt-1">{{ session('info') }}</p>
                             </div>
                             <button onclick="this.parentElement.remove()" class="ml-auto text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">

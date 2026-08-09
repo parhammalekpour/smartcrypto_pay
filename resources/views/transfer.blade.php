@@ -57,7 +57,7 @@ use Morilog\Jalali\Jalalian;
                     <select name="sender_wallet_id" required style="width: 100%; padding: 10px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 5px;">
                         <option value="">Select a wallet</option>
                         @foreach($wallets as $wallet)
-                            <option value="{{ $wallet->id }}">{{ $wallet->currency }} - {{ number_format($wallet->balance, 8) }}</option>
+                            <option value="{{ $wallet->id }}">{{ $wallet->currency }} - {{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }}</option>
                         @endforeach
                     </select>
                 </div>

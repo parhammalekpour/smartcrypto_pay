@@ -20,6 +20,9 @@ class AutoRefreshManager {
         this.isRefreshing = false;
         this.lastRefreshTime = 0;
         this.lastServerCheck = null;
+        // Feature flags - set to false to hide UI elements
+        this.showUI = false; // hide the header toggle container
+        this.showIndicator = false; // hide the floating refresh indicator
         
         this.init();
     }
@@ -280,6 +283,7 @@ class AutoRefreshManager {
     }
 
     showRefreshIndicator(source = 'manual') {
+        if (!this.showIndicator) return; // indicator disabled by config
         let indicator = document.getElementById('auto-refresh-indicator');
         
         if (!indicator) {
@@ -338,6 +342,7 @@ class AutoRefreshManager {
     }
 
     createControlUI() {
+        if (!this.showUI) return; // UI disabled by config
         // Check if control already exists
         if (document.getElementById('auto-refresh-toggle')) {
             return;
