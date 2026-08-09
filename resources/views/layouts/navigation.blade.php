@@ -74,10 +74,11 @@
                             fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'})
                                 .then(r => r.json())
                                 .then(data => {
+                                    console.log('Notifications fetched (nav):', data);
                                     notifications = data;
                                     // Update badge count based on unread notifications returned
                                     try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){}
-                                }).catch(()=>{});
+                                }).catch(err=>{ console.error('Notifications fetch error (nav):', err); });
                         }
                     " class="relative inline-flex items-center justify-center p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none transition">
                         <i class="fas fa-bell text-2xl"></i>
