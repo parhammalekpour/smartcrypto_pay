@@ -1,4 +1,4 @@
-<nav x-data="{ open: false, notificationOpen: false, notificationCount: 0, notifications: [], theme: document.documentElement.classList.contains('dark'), toggleTheme() { this.theme = !this.theme; document.documentElement.classList.toggle('dark', this.theme); localStorage.setItem('darkMode', this.theme ? 'true' : 'false'); } }" class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300" style="font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; direction: {{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }};" x-init="(()=>{ window.NOTIFICATION_ENDPOINTS = {
+<nav x-data="{ open: false, notificationOpen: false, notificationCount: 0, notifications: [], theme: document.documentElement.classList.contains('dark'), toggleTheme() { this.theme = !this.theme; document.documentElement.classList.toggle('dark', this.theme); localStorage.setItem('darkMode', this.theme ? 'true' : 'false'); } }" class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300" style="font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; direction: {{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }};" x-init="(()=>{ try { window.NOTIFICATION_ENDPOINTS = {
         list: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications') }}',
         unread: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/unread-count') }}',
         markAll: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/mark-all-read') }}',
@@ -34,6 +34,7 @@
     // Also fetch notifications list once on init so UI shows immediately/refresh server-provided
     fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'}).then(r => r.json()).then(data => { console.log('Notifications fetched (nav):', data); notifications = data; try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){} }).catch(err=>{ console.error('Notifications fetch error (nav):', err); });
     setInterval(updateUnread, 5000);
+    } catch(e) { console.error('Notifications init error (nav):', e); }
 })();">
 
     <!-- Primary Navigation Menu -->

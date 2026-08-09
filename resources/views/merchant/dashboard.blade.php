@@ -229,7 +229,7 @@ use Morilog\Jalali\Jalalian;
 
 <div class="container">
     <!-- Header -->
-    <div class="header" x-data="{ notificationOpen: false, notificationCount: 0, notifications: [] }" x-init="(()=>{ window.NOTIFICATION_ENDPOINTS = {
+    <div class="header" x-data="{ notificationOpen: false, notificationCount: 0, notifications: [] }" x-init="(()=>{ try { window.NOTIFICATION_ENDPOINTS = {
             list: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications') }}',
             unread: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/unread-count') }}',
             markAll: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/mark-all-read') }}',
@@ -260,7 +260,8 @@ use Morilog\Jalali\Jalalian;
             updateUnread();
             fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'}).then(r => r.json()).then(data => { console.log('Notifications fetched (merchant):', data); notifications = data; try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){} }).catch(err=>{ console.error('Notifications fetch error (merchant):', err); });
             setInterval(updateUnread, 5000);
-        })()">
+                    } catch(e) { console.error('Notifications init error (merchant):', e); }
+                    })()">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <div>
                 <h1>💼 Merchant Dashboard</h1>
