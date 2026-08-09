@@ -10,6 +10,7 @@ use Morilog\Jalali\Jalalian;
     <title>Merchant Dashboard - CryptoPay</title>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('css/responsive.css') }}">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -228,9 +229,52 @@ use Morilog\Jalali\Jalalian;
 
 <div class="container">
     <!-- Header -->
-    <div class="header">
-        <h1>💼 Merchant Dashboard</h1>
-        <p>Welcome, {{ auth()->user()->name }}</p>
+    <div class="header" x-data="{ notificationOpen: false, notificationCount: 0, notifications: [] }" x-init="(()=>{ window.NOTIFICATION_ENDPOINTS = {
+            list: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications') }}',
+            unread: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/unread-count') }}',
+            markAll: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/mark-all-read') }}',
+            base: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications') }}'
+        };
+        const updateUnread = () => fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count).catch(()=>{});
+        updateUnread();
+        fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'}).then(r => r.json()).then(data => { notifications = data; try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){} }).catch(()=>{});
+        setInterval(updateUnread, 5000);
+    })()">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h1>💼 Merchant Dashboard</h1>
+                <p>Welcome, {{ auth()->user()->name }}</p>
+            </div>
+            <div style="position:relative;">
+                <button @click="notificationOpen = !notificationOpen; if (notificationOpen) { fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'}).then(r=>r.json()).then(data=>{ notifications = data; try{ notificationCount = notifications.filter(n => !n.read).length;}catch(e){} }).catch(()=>{}); }" style="background:transparent;border:none;color:white;font-size:20px;cursor:pointer;">
+                    <i class="fas fa-bell"></i>
+                    <span x-show="notificationCount > 0" x-text="notificationCount" style="background:#ef4444;color:white;border-radius:999px;padding:2px 6px;font-size:12px;margin-left:6px;position:relative;top:-8px;left:-6px;"></span>
+                </button>
+
+                <div x-show="notificationOpen" @click.away="notificationOpen=false" style="position:absolute;right:0;top:34px;width:360px;background:white;color:#111;border-radius:8px;overflow:auto;max-height:320px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:999;">
+                    <div style="padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+                        <strong>Notifications</strong>
+                        <button @click="fetch(window.NOTIFICATION_ENDPOINTS.markAll, {method:'POST', credentials:'same-origin', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}}).then(()=>{ notificationOpen=false; notifications=[]; fetch(window.NOTIFICATION_ENDPOINTS.unread,{credentials:'same-origin'}).then(r=>r.json()).then(d=>notificationCount=d.count); }).catch(()=>{});" style="background:transparent;border:none;color:#667eea;cursor:pointer;">Mark all as read</button>
+                    </div>
+                    <template x-if="notifications.length === 0">
+                        <div style="padding:20px;text-align:center;color:#666;">No notifications</div>
+                    </template>
+                    <template x-for="notification in notifications" :key="notification.id">
+                        <div style="padding:12px;border-bottom:1px solid #f3f3f3;display:flex;gap:10px;align-items:flex-start;">
+                            <div style="font-size:18px;color:#3b82f6;"> <i :class="'fas ' + notification.icon"></i></div>
+                            <div style="flex:1;">
+                                <div style="font-weight:600;" x-text="notification.title"></div>
+                                <div style="font-size:13px;color:#555;" x-text="notification.message"></div>
+                                <div style="font-size:11px;color:#999;margin-top:6px;" x-text="notification.created_at"></div>
+                            </div>
+                            <div>
+                                <button @click="fetch(window.NOTIFICATION_ENDPOINTS.base + '/' + notification.id + '/delete', {method:'POST', credentials:'same-origin', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}}).then(()=>{ notifications = notifications.filter(n=>n.id!==notification.id); fetch(window.NOTIFICATION_ENDPOINTS.unread,{credentials:'same-origin'}).then(r=>r.json()).then(d=>notificationCount=d.count); }).catch(()=>{});" style="background:transparent;border:none;color:#999;cursor:pointer;"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Stats -->
