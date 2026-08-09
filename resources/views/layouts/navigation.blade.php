@@ -5,11 +5,34 @@
         base: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications') }}'
     };
 
+    // Seed initial notifications server-side to avoid fetch-order race when Alpine initializes
+    @auth
+        window.INITIAL_NOTIFICATIONS = {!! json_encode(
+            
+            App\Models\Notification::where('user_id', auth()->id())->orderBy('id', 'desc')->take(5)->get()->map(function($n){
+                return [
+                    'id' => $n->id,
+                    'title' => $n->title,
+                    'message' => $n->message,
+                    'icon' => $n->icon,
+                    'type' => $n->type,
+                    'read' => (bool) $n->read,
+                    'created_at' => $n->created_at->diffForHumans(),
+                ];
+            })
+        ) !!};
+    @else
+        window.INITIAL_NOTIFICATIONS = null;
+    @endauth
+
+    // If initial notifications were provided by server, use them immediately
+    try { if (window.INITIAL_NOTIFICATIONS && Array.isArray(window.INITIAL_NOTIFICATIONS)) { notifications = window.INITIAL_NOTIFICATIONS; notificationCount = notifications.filter(n => !n.read).length; } } catch(e){}
+
     // Fetch unread count immediately and then every 5s
     const updateUnread = () => fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count).catch(()=>{});
     updateUnread();
-    // Also fetch notifications list once on init so UI shows immediately
-    fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'}).then(r => r.json()).then(data => { notifications = data; try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){} }).catch(()=>{});
+    // Also fetch notifications list once on init so UI shows immediately/refresh server-provided
+    fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'}).then(r => r.json()).then(data => { console.log('Notifications fetched (nav):', data); notifications = data; try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){} }).catch(err=>{ console.error('Notifications fetch error (nav):', err); });
     setInterval(updateUnread, 5000);
 })();">
 
