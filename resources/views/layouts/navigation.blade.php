@@ -8,6 +8,8 @@
     // Fetch unread count immediately and then every 5s
     const updateUnread = () => fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count).catch(()=>{});
     updateUnread();
+    // Also fetch notifications list once on init so UI shows immediately
+    fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'}).then(r => r.json()).then(data => { notifications = data; try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){} }).catch(()=>{});
     setInterval(updateUnread, 5000);
 })();">
 

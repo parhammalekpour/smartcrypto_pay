@@ -151,6 +151,8 @@
         }; }
         const updateUnread = () => fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count).catch(()=>{});
         updateUnread();
+        // Also fetch notifications list once on init so UI shows immediately
+        fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'}).then(r => r.json()).then(data => { notifications = data; try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){} }).catch(()=>{});
         setInterval(updateUnread, 5000);
     })()" class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-persian transition-colors duration-300">
     <div class="relative min-h-screen bg-gray-100 dark:bg-gray-800">
