@@ -59,30 +59,27 @@
                     <div class="receive-card p-5 md:p-6">
                         <div class="flex {{ $isRtl ? 'flex-row-reverse' : '' }} flex-wrap items-start justify-between gap-4 pb-4 border-b border-slate-200">
                             <div class="flex {{ $isRtl ? 'flex-row-reverse' : '' }} items-center gap-3 min-w-0">
-                                <div class="flex h-12 w-12 items-center justify-center rounded-2xl
-                                    @if($wallet->currency === 'BTC') bg-orange-100
-                                    @elseif($wallet->currency === 'ETH') bg-slate-100
-                                    @else bg-teal-100 @endif">
-                                    @if($wallet->currency === 'BTC')
-                                        <i class="fab fa-bitcoin text-orange-600 text-lg"></i>
-                                    @elseif($wallet->currency === 'ETH')
-                                        <i class="fab fa-ethereum text-slate-700 text-lg"></i>
-                                    @else
-                                        <i class="fas fa-coins text-teal-600 text-lg"></i>
-                                    @endif
-                                </div>
-                                <div class="min-w-0 {{ $isRtl ? 'text-right' : 'text-left' }}">
-                                    <div class="flex {{ $isRtl ? 'flex-row-reverse' : '' }} items-center gap-2">
-                                        <h3 class="text-lg font-semibold text-slate-900">{{ $wallet->currency }}</h3>
-                                        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                                            {{ $wallet->currency === 'BTC' ? 'Bitcoin' : ($wallet->currency === 'ETH' ? 'Ethereum' : 'USDT') }}
-                                        </span>
+                                <div class="flex items-center gap-2">
+                                    <div class="h-6 w-6 flex items-center justify-center rounded-full
+                                        @if($wallet->currency === 'BTC') bg-orange-100
+                                        @elseif($wallet->currency === 'ETH') bg-slate-100
+                                        @else bg-teal-100 @endif">
+                                        @if($wallet->currency === 'BTC')
+                                            <i class="fab fa-bitcoin text-orange-600 text-base"></i>
+                                        @elseif($wallet->currency === 'ETH')
+                                            <i class="fab fa-ethereum text-slate-700 text-base"></i>
+                                        @else
+                                            <i class="fas fa-coins text-teal-600 text-base"></i>
+                                        @endif
                                     </div>
-                                    <p class="mt-1 text-sm text-slate-500">{{ __('wallets.balance') }}</p>
-                                    <p class="mt-1 text-xl font-semibold tracking-tight text-slate-900">
-                                        {{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }}
-                                        <span class="ml-1 text-base font-medium text-slate-500">{{ $wallet->currency }}</span>
-                                    </p>
+                                    <div class="{{ $isRtl ? 'text-right' : 'text-left' }}">
+                                        <div class="flex {{ $isRtl ? 'flex-row-reverse' : '' }} items-center gap-2">
+                                            <h3 class="text-lg font-semibold text-slate-900">{{ $wallet->currency }}</h3>
+                                            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                                {{ $wallet->currency === 'BTC' ? 'Bitcoin' : ($wallet->currency === 'ETH' ? 'Ethereum' : 'USDT') }}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600">
