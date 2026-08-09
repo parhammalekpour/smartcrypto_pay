@@ -143,7 +143,7 @@
     </style>
     @stack('styles')
 </head>
-<body x-data="{ sidebarOpen: false, notificationOpen: false, notificationCount: 0, notifications: [] }" x-init="(()=>{ if (!window.NOTIFICATION_ENDPOINTS) { window.NOTIFICATION_ENDPOINTS = {
+<body x-data="{ sidebarOpen: false, notificationOpen: false, notificationCount: 0, notifications: [] }" x-init="(()=>{ try { if (!window.NOTIFICATION_ENDPOINTS) { window.NOTIFICATION_ENDPOINTS = {
             list: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications') }}',
             unread: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/unread-count') }}',
             markAll: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/mark-all-read') }}',
@@ -154,7 +154,8 @@
         // Also fetch notifications list once on init so UI shows immediately
         fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'}).then(r => r.json()).then(data => { console.log('Notifications fetched (dashboard):', data); notifications = data; try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){} }).catch(err=>{ console.error('Notifications fetch error (dashboard):', err); });
         setInterval(updateUnread, 5000);
-    })()" class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-persian transition-colors duration-300">
+            } catch(e) { console.error('Notifications init error (dashboard):', e); }
+            })()" class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-persian transition-colors duration-300">
     <div class="relative min-h-screen bg-gray-100 dark:bg-gray-800">
         <div x-show="sidebarOpen" x-cloak class="fixed inset-0 z-30 bg-black/50 lg:hidden" @click="sidebarOpen = false"></div>
 
