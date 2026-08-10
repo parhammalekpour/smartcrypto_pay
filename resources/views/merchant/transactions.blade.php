@@ -426,32 +426,49 @@
             .then(data => {
                 const row = document.getElementById('merchant-transaction-row-' + id);
                 if (!row) return;
-                row.dataset.transactionStatus = data.status || '';
-                row.dataset.txhash = data.tx_hash || '';
 
-                // update tx hash cell
-                const hashCellWrapper = row.querySelector('td .tx-hash') || row.querySelector('td .copy-hash-btn') || null;
-                const hashCell = row.querySelector('td .tx-hash') || row.querySelector('td .tx-hash') || row.querySelector('td:nth-child(6)');
+            const existingStatus = (row.dataset.transactionStatus || '').toLowerCase();
+            const incomingStatus = (data.status || '').toLowerCase();
+
+            // Prevent overwriting an already-final status with a non-final one (regression guard)
+            const finalStatuses = ['confirmed','failed','completed','cancelled'];
+            if (finalStatuses.includes(existingStatus) && !finalStatuses.includes(incomingStatus)) {
+                // still update hash if needed, but don't touch the status
                 if (data.tx_hash) {
                     const wrapper = row.querySelector('td:nth-child(6)');
                     if (wrapper) {
                         wrapper.innerHTML = '<div class="flex items-center gap-2"><a href="'+explorerBaseLocal+data.tx_hash+'" target="_blank" rel="noopener noreferrer" class="tx-hash text-xs text-gray-700">'+shortHash(data.tx_hash)+'</a><button type="button" class="copy-hash-btn text-gray-500 hover:text-gray-700 p-1" data-hash="'+data.tx_hash+'" title="{{ __('merchant.transactions.copy') }}"><i class="far fa-copy text-xs"></i></button></div>';
                     }
-                } else {
-                    const wrapper = row.querySelector('td:nth-child(6)');
-                    if (wrapper) wrapper.textContent = (data.status === 'processing' || data.status === 'pending') ? '{{ __('merchant.transactions.waiting_for_broadcast') }}' : '-';
                 }
+                // do not overwrite status
+                return;
+            }
 
-                // update status cell
-                const statusCell = row.querySelector('.tx-status-cell') || row.querySelector('td:nth-child(5)');
-                if (statusCell) {
-                    const parent = statusCell.closest('td') || statusCell.parentElement;
-                    if (parent) parent.innerHTML = statusBadgeHtml(data.status);
-                }
+            // apply updates
+            row.dataset.transactionStatus = data.status || '';
+            row.dataset.txhash = data.tx_hash || '';
 
-                if (['confirmed','failed','completed','cancelled'].includes((data.status || '').toLowerCase())) {
-                    stopForRow(row);
+            // update tx hash cell
+            if (data.tx_hash) {
+                const wrapper = row.querySelector('td:nth-child(6)');
+                if (wrapper) {
+                    wrapper.innerHTML = '<div class="flex items-center gap-2"><a href="'+explorerBaseLocal+data.tx_hash+'" target="_blank" rel="noopener noreferrer" class="tx-hash text-xs text-gray-700">'+shortHash(data.tx_hash)+'</a><button type="button" class="copy-hash-btn text-gray-500 hover:text-gray-700 p-1" data-hash="'+data.tx_hash+'" title="{{ __('merchant.transactions.copy') }}"><i class="far fa-copy text-xs"></i></button></div>';
                 }
+            } else {
+                const wrapper = row.querySelector('td:nth-child(6)');
+                if (wrapper) wrapper.textContent = (data.status === 'processing' || data.status === 'pending') ? '{{ __('merchant.transactions.waiting_for_broadcast') }}' : '-';
+            }
+
+            // update status cell
+            const statusCell = row.querySelector('.tx-status-cell') || row.querySelector('td:nth-child(5)');
+            if (statusCell) {
+                const parent = statusCell.closest('td') || statusCell.parentElement;
+                if (parent) parent.innerHTML = statusBadgeHtml(data.status);
+            }
+
+            if (finalStatuses.includes(incomingStatus)) {
+                stopForRow(row);
+            }
             })
             .catch(()=>{});
     }

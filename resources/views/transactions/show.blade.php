@@ -199,16 +199,19 @@
                             return;
                         }
 
-                        if (data.tx_hash !== this.txHash || data.status !== this.status || data.confirmations !== this.confirmations || data.block_number !== this.blockNumber) {
-                            this.txHash = data.tx_hash;
-                            this.status = data.status;
-                            this.blockNumber = data.block_number;
-                            this.confirmations = data.confirmations;
-                            this.updatedAt = data.updated_at || this.updatedAt;
-                            this.displayStatus = this.statusLabels[this.status] || this.status;
-                            this.explorerLink = this.txHash ? ('https://sepolia.etherscan.io/tx/' + this.txHash) : '';
-                            this.failureReason = data.failure_reason || this.failureReason;
-                            this.updateStatusDetail(this.status);
+                        // Protect against overwriting a final client-side status with a non-final server value
+                        if (!(this.isFinalStatus(this.status) && !this.isFinalStatus(data.status))) {
+                            if (data.tx_hash !== this.txHash || data.status !== this.status || data.confirmations !== this.confirmations || data.block_number !== this.blockNumber) {
+                                this.txHash = data.tx_hash;
+                                this.status = data.status;
+                                this.blockNumber = data.block_number;
+                                this.confirmations = data.confirmations;
+                                this.updatedAt = data.updated_at || this.updatedAt;
+                                this.displayStatus = this.statusLabels[this.status] || this.status;
+                                this.explorerLink = this.txHash ? ('https://sepolia.etherscan.io/tx/' + this.txHash) : '';
+                                this.failureReason = data.failure_reason || this.failureReason;
+                                this.updateStatusDetail(this.status);
+                            }
                         }
 
                         if (this.isFinalStatus(data.status)) {

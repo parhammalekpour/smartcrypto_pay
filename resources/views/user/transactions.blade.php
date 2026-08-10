@@ -314,6 +314,22 @@
     }
 
     function updateRow(row, data) {
+        const existingStatus = (row.dataset.transactionStatus || '').toLowerCase();
+        const incomingStatus = (data.status || '').toLowerCase();
+        const finalStatuses = ['confirmed','failed','completed','cancelled'];
+
+        // If row already shows a final status, don't overwrite it with a non-final incoming status
+        if (finalStatuses.includes(existingStatus) && !finalStatuses.includes(incomingStatus)) {
+            // but still update tx hash cell if present
+            const hashCell = row.querySelector('[data-hash-cell]');
+            if (hashCell) {
+                if (data.tx_hash) {
+                    hashCell.innerHTML = '<a class="font-mono text-slate-300 hover:text-white" href="' + explorerBase + data.tx_hash + '" target="_blank" rel="noopener noreferrer">' + shortHash(data.tx_hash) + '</a>';
+                }
+            }
+            return;
+        }
+
         row.dataset.transactionStatus = data.status || '';
         row.dataset.txHash = data.tx_hash || '';
 
