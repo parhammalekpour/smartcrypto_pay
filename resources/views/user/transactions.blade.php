@@ -155,7 +155,7 @@
                                     $txHash = $transaction->tx_hash;
                                     $hashLabel = $txHash ? (strlen($txHash) > 18 ? substr($txHash, 0, 10) . '...' . substr($txHash, -8) : $txHash) : 'Waiting for broadcast';
                                 @endphp
-                                <tr id="transaction-row-{{ $transaction->id }}" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}">
+                                <tr id="transaction-row-{{ $transaction->id }}" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}">
                                     <td class="px-4 py-4 align-top">
                                         <div class="font-semibold text-white">#TX-{{ str_pad($transaction->id, 4, '0', STR_PAD_LEFT) }}</div>
                                         <div class="mt-1 text-xs text-slate-500">{{ $txHash ? 'Hash:' : 'Reference:' }} <span class="font-mono text-slate-300" data-hash-cell>{{ $hashLabel }}</span></div>
@@ -226,7 +226,7 @@
                         $txHash = $transaction->tx_hash;
                         $hashLabel = $txHash ? (strlen($txHash) > 18 ? substr($txHash, 0, 10) . '...' . substr($txHash, -8) : $txHash) : 'Waiting for broadcast';
                     @endphp
-                    <div id="transaction-row-{{ $transaction->id }}" class="rounded-[28px] border border-slate-700/70 bg-slate-900/80 p-5 shadow-sm shadow-slate-950/10" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}">
+                    <div id="transaction-row-{{ $transaction->id }}" class="rounded-[28px] border border-slate-700/70 bg-slate-900/80 p-5 shadow-sm shadow-slate-950/10" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}">
                         <div class="flex items-center justify-between gap-3">
                             <div>
                                 <p class="text-sm font-medium text-slate-400">#TX-{{ str_pad($transaction->id, 4, '0', STR_PAD_LEFT) }}</p>
@@ -285,12 +285,12 @@
     const explorerBase = network === 'mainnet' ? 'https://etherscan.io/tx/' : (network === 'sepolia' ? 'https://sepolia.etherscan.io/tx/' : 'https://etherscan.io/tx/');
 
     const statusLabels = {
-        'processing': 'Processing',
-        'pending': 'Pending',
-        'confirmed': 'Confirmed',
-        'completed': 'Completed',
-        'failed': 'Failed',
-        'cancelled': 'Cancelled'
+        'processing': '{{ __('transactions.processing') }}',
+        'pending': '{{ __('common.pending') }}',
+        'confirmed': '{{ __('common.confirmed') }}',
+        'completed': '{{ __('common.completed') }}',
+        'failed': '{{ __('common.failed') }}',
+        'cancelled': '{{ __('common.cancelled') }}'
     };
 
     const badgeClasses = {
@@ -304,8 +304,23 @@
 
     const pollers = {};
 
+    const statusRank = {
+        'processing': 1,
+        'pending': 2,
+        'confirmed': 3,
+        'completed': 4,
+        'failed': 100,
+        'cancelled': 100
+    };
+
     function isFinal(status) {
         return ['confirmed', 'completed', 'failed', 'cancelled'].includes(status);
+    }
+
+    function parseDate(value) {
+        if (!value) return null;
+        const t = Date.parse(value);
+        return isNaN(t) ? null : new Date(t);
     }
 
     function shortHash(hash) {
@@ -313,39 +328,59 @@
         return hash.length <= 18 ? hash : hash.slice(0, 10) + '...' + hash.slice(-8);
     }
 
+    function shouldApplyUpdate(row, incoming) {
+        const existingStatus = (row.dataset.transactionStatus || '').toLowerCase();
+        const existingUpdatedAt = parseDate(row.dataset.updatedAt || row.dataset.updated_at || '');
+        const incomingStatus = (incoming.status || '').toLowerCase();
+        const incomingUpdatedAt = parseDate(incoming.updated_at || '');
+
+        const existingFinal = isFinal(existingStatus);
+        const incomingFinal = isFinal(incomingStatus);
+
+        // Never overwrite a final client state with a non-final incoming state
+        if (existingFinal && !incomingFinal) return false;
+
+        // If no timestamps available, fall back to status rank
+        if (!existingUpdatedAt || !incomingUpdatedAt) {
+            return (statusRank[incomingStatus] || 0) >= (statusRank[existingStatus] || 0);
+        }
+
+        if (incomingUpdatedAt > existingUpdatedAt) return true;
+        if (incomingUpdatedAt.getTime() === existingUpdatedAt.getTime()) {
+            return (statusRank[incomingStatus] || 0) >= (statusRank[existingStatus] || 0);
+        }
+        // incoming is older, allow only if its rank is strictly higher and current is not final
+        if (incomingUpdatedAt < existingUpdatedAt) {
+            return (!existingFinal) && ((statusRank[incomingStatus] || 0) > (statusRank[existingStatus] || 0));
+        }
+        return false;
+    }
+
     function updateRow(row, data) {
         const existingStatus = (row.dataset.transactionStatus || '').toLowerCase();
         const incomingStatus = (data.status || '').toLowerCase();
-        const finalStatuses = ['confirmed','failed','completed','cancelled'];
 
-        // If row already shows a final status, don't overwrite it with a non-final incoming status
-        if (finalStatuses.includes(existingStatus) && !finalStatuses.includes(incomingStatus)) {
-            // but still update tx hash cell if present
-            const hashCell = row.querySelector('[data-hash-cell]');
-            if (hashCell) {
-                if (data.tx_hash) {
-                    hashCell.innerHTML = '<a class="font-mono text-slate-300 hover:text-white" href="' + explorerBase + data.tx_hash + '" target="_blank" rel="noopener noreferrer">' + shortHash(data.tx_hash) + '</a>';
-                }
+        // Update hash independently when present
+        const hashCell = row.querySelector('[data-hash-cell]');
+        if (hashCell) {
+            if (data.tx_hash) {
+                hashCell.innerHTML = '<a class="font-mono text-slate-300 hover:text-white" href="' + explorerBase + data.tx_hash + '" target="_blank" rel="noopener noreferrer">' + shortHash(data.tx_hash) + '</a>';
+            } else if (!isFinal(existingStatus)) {
+                hashCell.textContent = '{{ __('merchant.transactions.waiting_for_broadcast') ?? "Waiting for broadcast..." }}';
             }
-            return;
         }
 
+        if (!shouldApplyUpdate(row, data)) return;
+
+        // apply updates
         row.dataset.transactionStatus = data.status || '';
-        row.dataset.txHash = data.tx_hash || '';
+        row.dataset.updatedAt = data.updated_at || row.dataset.updatedAt || '';
+        if (data.tx_hash) row.dataset.txHash = data.tx_hash || '';
 
         const badge = row.querySelector('.status-badge');
         if (badge) {
             badge.textContent = statusLabels[data.status] || badge.textContent;
             badge.className = 'status-badge inline-flex rounded-full border px-3 py-2 text-xs font-semibold ' + (badgeClasses[data.status] || 'bg-slate-100 text-slate-700 border-slate-200');
-        }
-
-        const hashCell = row.querySelector('[data-hash-cell]');
-        if (hashCell) {
-            if (data.tx_hash) {
-                hashCell.innerHTML = '<a class="font-mono text-slate-300 hover:text-white" href="' + explorerBase + data.tx_hash + '" target="_blank" rel="noopener noreferrer">' + shortHash(data.tx_hash) + '</a>';
-            } else {
-                hashCell.textContent = 'Waiting for broadcast...';
-            }
         }
     }
 

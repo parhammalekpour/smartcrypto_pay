@@ -118,14 +118,15 @@
                     <tr id="merchant-transaction-row-{{ $transaction->id }}"
                         data-transaction-id="{{ $transaction->id }}"
                         data-transaction-status="{{ $transaction->status }}"
-                        data-customer="{{ e($transaction->sender->name ?? $transaction->recipient->name ?? $transaction->sender_wallet_address ?? '') }}"
-                        data-description="{{ e($transaction->description ?? '') }}"
-                        data-reference="{{ e($refTemp) }}"
-                        data-amount="{{ \App\Support\NumberHelper::formatCryptoAmount($transaction->amount) }}"
-                        data-currency="{{ e($transaction->currency) }}"
-                        data-txhash="{{ e($transaction->tx_hash) }}"
-                        data-date="{{ $transaction->created_at->format('Y/m/d H:i') }}"
-                        class="hover:bg-gray-50 cursor-pointer" onclick="viewTransactionDetail('{{ $transaction->id }}', 'transaction', event)">
+                                            data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}"
+                                            data-customer="{{ e($transaction->sender->name ?? $transaction->recipient->name ?? $transaction->sender_wallet_address ?? '') }}"
+                                            data-description="{{ e($transaction->description ?? '') }}"
+                                            data-reference="{{ e($refTemp) }}"
+                                            data-amount="{{ \App\Support\NumberHelper::formatCryptoAmount($transaction->amount) }}"
+                                            data-currency="{{ e($transaction->currency) }}"
+                                            data-txhash="{{ e($transaction->tx_hash) }}"
+                                            data-date="{{ $transaction->created_at->format('Y/m/d H:i') }}"
+                                            class="hover:bg-gray-50 cursor-pointer" onclick="viewTransactionDetail('{{ $transaction->id }}', 'transaction', event)">
 
                         <!-- ID -->
                         <td class="px-3 py-2" dir="ltr">
@@ -199,14 +200,15 @@
                     <tr id="merchant-transaction-row-{{ $payment->id }}"
                         data-transaction-id="{{ $payment->id }}"
                         data-transaction-status="{{ $payment->status }}"
-                        data-customer="{{ e($payment->recipient->name ?? '') }}"
-                        data-description="{{ e(__('merchant.transactions.invoice_number_prefix') . ' #' . $payment->invoice_number) }}"
-                        data-reference="{{ e($refTempP) }}"
-                        data-amount="{{ \App\Support\NumberHelper::formatCryptoAmount($payment->amount) }}"
-                        data-currency="{{ e($payment->currency) }}"
-                        data-txhash=""
-                        data-date="{{ $payment->created_at->format('Y/m/d H:i') }}"
-                        class="hover:bg-gray-50 cursor-pointer" onclick="viewTransactionDetail('{{ $payment->id }}', 'payment', event)">
+                                            data-updated-at="{{ $payment->updated_at?->toDateTimeString() }}"
+                                            data-customer="{{ e($payment->recipient->name ?? '') }}"
+                                            data-description="{{ e(__('merchant.transactions.invoice_number_prefix') . ' #' . $payment->invoice_number) }}"
+                                            data-reference="{{ e($refTempP) }}"
+                                            data-amount="{{ \App\Support\NumberHelper::formatCryptoAmount($payment->amount) }}"
+                                            data-currency="{{ e($payment->currency) }}"
+                                            data-txhash=""
+                                            data-date="{{ $payment->created_at->format('Y/m/d H:i') }}"
+                                            class="hover:bg-gray-50 cursor-pointer" onclick="viewTransactionDetail('{{ $payment->id }}', 'payment', event)">
 
                         <td class="px-3 py-2" dir="ltr"><code class="bg-gray-100 text-black px-2 py-1 rounded text-xs">{{ substr($refTempP, 0, 18) }}</code></td>
                         <td class="px-3 py-2 text-gray-700 font-semibold text-xs">{{ $payment->currency }}</td>
@@ -397,6 +399,25 @@
         return hash.slice(0, 10) + '...' + hash.slice(-6);
     }
 
+    const statusRank = {
+        'processing': 1,
+        'pending': 2,
+        'confirmed': 3,
+        'completed': 4,
+        'failed': 100,
+        'cancelled': 100
+    };
+
+    function parseDate(value) {
+        if (!value) return null;
+        const t = Date.parse(value);
+        return isNaN(t) ? null : new Date(t);
+    }
+
+    function isFinal(status) {
+        return ['confirmed','completed','failed','cancelled'].includes((status||'').toLowerCase());
+    }
+
     function statusBadgeHtml(status) {
         const normalized = (status || '').toLowerCase();
         if (['completed','confirmed'].includes(normalized)) return '<span class="tx-status-cell inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">✓ {{ __('merchant.transactions.completed') }}</span>';
@@ -405,18 +426,52 @@
     }
 
     const timers = {};
-    function startForRow(row) {
-        const id = row.dataset.transactionId || row.getAttribute('data-transaction-id');
-        if (!id) return;
-        const status = (row.dataset.transactionStatus || '').toLowerCase();
-        if (status !== 'processing' && status !== 'pending') return;
-        if (timers[id]) return;
-        fetchAndUpdate(id);
-        timers[id] = setInterval(()=> fetchAndUpdate(id), pollIntervalMs);
+
+    function shouldApply(row, incoming) {
+        const existingStatus = (row.dataset.transactionStatus || '').toLowerCase();
+        const existingUpdated = parseDate(row.dataset.updatedAt || row.dataset.updated_at || '');
+        const incomingStatus = (incoming.status || '').toLowerCase();
+        const incomingUpdated = parseDate(incoming.updated_at || '');
+
+        // never overwrite final with non-final
+        if (isFinal(existingStatus) && !isFinal(incomingStatus)) return false;
+
+        if (!existingUpdated || !incomingUpdated) {
+            return (statusRank[incomingStatus] || 0) >= (statusRank[existingStatus] || 0);
+        }
+
+        if (incomingUpdated > existingUpdated) return true;
+        if (incomingUpdated.getTime() === existingUpdated.getTime()) return (statusRank[incomingStatus] || 0) >= (statusRank[existingStatus] || 0);
+        if (incomingUpdated < existingUpdated) return (!isFinal(existingStatus)) && ((statusRank[incomingStatus] || 0) > (statusRank[existingStatus] || 0));
+        return false;
     }
-    function stopForRow(row) {
-        const id = row.dataset.transactionId || row.getAttribute('data-transaction-id');
-        if (timers[id]) { clearInterval(timers[id]); delete timers[id]; }
+
+    function applyUpdate(row, data) {
+        const existingStatus = (row.dataset.transactionStatus || '').toLowerCase();
+        const incomingStatus = (data.status || '').toLowerCase();
+
+        // update hash cell independently
+        if (data.tx_hash) {
+            const wrapper = row.querySelector('td:nth-child(6)');
+            if (wrapper) {
+                wrapper.innerHTML = '<div class="flex items-center gap-2"><a href="'+explorerBaseLocal+data.tx_hash+'" target="_blank" rel="noopener noreferrer" class="tx-hash text-xs text-gray-700">'+shortHash(data.tx_hash)+'</a><button type="button" class="copy-hash-btn text-gray-500 hover:text-gray-700 p-1" data-hash="'+data.tx_hash+'" title="{{ __('merchant.transactions.copy') }}"><i class="far fa-copy text-xs"></i></button></div>';
+            }
+        } else {
+            const wrapper = row.querySelector('td:nth-child(6)');
+            if (wrapper && !isFinal(existingStatus)) wrapper.textContent = (data.status === 'processing' || data.status === 'pending') ? '{{ __('merchant.transactions.waiting_for_broadcast') }}' : '-';
+        }
+
+        if (!shouldApply(row, data)) return;
+
+        row.dataset.transactionStatus = data.status || '';
+        if (data.updated_at) row.dataset.updatedAt = data.updated_at;
+        if (data.tx_hash) row.dataset.txhash = data.tx_hash || '';
+
+        const statusCell = row.querySelector('.tx-status-cell') || row.querySelector('td:nth-child(5)');
+        if (statusCell) {
+            const parent = statusCell.closest('td') || statusCell.parentElement;
+            if (parent) parent.innerHTML = statusBadgeHtml(data.status);
+        }
     }
 
     function fetchAndUpdate(id) {
@@ -427,57 +482,27 @@
                 const row = document.getElementById('merchant-transaction-row-' + id);
                 if (!row) return;
 
-            const existingStatus = (row.dataset.transactionStatus || '').toLowerCase();
-            const incomingStatus = (data.status || '').toLowerCase();
+                applyUpdate(row, data || {});
 
-            // Prevent overwriting an already-final status with a non-final one (regression guard)
-            const finalStatuses = ['confirmed','failed','completed','cancelled'];
-            if (finalStatuses.includes(existingStatus) && !finalStatuses.includes(incomingStatus)) {
-                // still update hash if needed, but don't touch the status
-                if (data.tx_hash) {
-                    const wrapper = row.querySelector('td:nth-child(6)');
-                    if (wrapper) {
-                        wrapper.innerHTML = '<div class="flex items-center gap-2"><a href="'+explorerBaseLocal+data.tx_hash+'" target="_blank" rel="noopener noreferrer" class="tx-hash text-xs text-gray-700">'+shortHash(data.tx_hash)+'</a><button type="button" class="copy-hash-btn text-gray-500 hover:text-gray-700 p-1" data-hash="'+data.tx_hash+'" title="{{ __('merchant.transactions.copy') }}"><i class="far fa-copy text-xs"></i></button></div>';
-                    }
+                if (isFinal(data.status)) {
+                    const timersId = id;
+                    if (timers[timersId]) { clearInterval(timers[timersId]); delete timers[timersId]; }
                 }
-                // do not overwrite status
-                return;
-            }
-
-            // apply updates
-            row.dataset.transactionStatus = data.status || '';
-            row.dataset.txhash = data.tx_hash || '';
-
-            // update tx hash cell
-            if (data.tx_hash) {
-                const wrapper = row.querySelector('td:nth-child(6)');
-                if (wrapper) {
-                    wrapper.innerHTML = '<div class="flex items-center gap-2"><a href="'+explorerBaseLocal+data.tx_hash+'" target="_blank" rel="noopener noreferrer" class="tx-hash text-xs text-gray-700">'+shortHash(data.tx_hash)+'</a><button type="button" class="copy-hash-btn text-gray-500 hover:text-gray-700 p-1" data-hash="'+data.tx_hash+'" title="{{ __('merchant.transactions.copy') }}"><i class="far fa-copy text-xs"></i></button></div>';
-                }
-            } else {
-                const wrapper = row.querySelector('td:nth-child(6)');
-                if (wrapper) wrapper.textContent = (data.status === 'processing' || data.status === 'pending') ? '{{ __('merchant.transactions.waiting_for_broadcast') }}' : '-';
-            }
-
-            // update status cell
-            const statusCell = row.querySelector('.tx-status-cell') || row.querySelector('td:nth-child(5)');
-            if (statusCell) {
-                const parent = statusCell.closest('td') || statusCell.parentElement;
-                if (parent) parent.innerHTML = statusBadgeHtml(data.status);
-            }
-
-            if (finalStatuses.includes(incomingStatus)) {
-                stopForRow(row);
-            }
             })
             .catch(()=>{});
     }
 
     document.addEventListener('DOMContentLoaded', function(){
-        document.querySelectorAll('tr[data-transaction-id]').forEach(function(row){ startForRow(row); });
+        document.querySelectorAll('tr[data-transaction-id]').forEach(function(row){
+            const st = (row.dataset.transactionStatus || '').toLowerCase();
+            if (!isFinal(st)) {
+                const id = row.dataset.transactionId || row.getAttribute('data-transaction-id');
+                if (!timers[id]) { fetchAndUpdate(id); timers[id] = setInterval(()=> fetchAndUpdate(id), pollIntervalMs); }
+            }
+        });
     });
 
-    // Copy button delegation also handled above (global listener)
+    // Copy button delegation handled by global listener in this file
 })();
 </script>
 @endpush

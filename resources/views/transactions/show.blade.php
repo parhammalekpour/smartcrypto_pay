@@ -137,8 +137,9 @@
             failureReason: '{{ $transaction->status === 'failed' ? addslashes($transaction->description ?? '') : '' }}',
             explorerLink: '',
             isRefreshing: false,
+            _pollTimer: null,
             statusLabels: {
-                'processing': 'Processing',
+                'processing': '{{ __('transactions.processing') }}',
                 'pending': '{{ __('common.pending') }}',
                 'confirmed': '{{ __('common.confirmed') }}',
                 'completed': '{{ __('common.completed') }}',
@@ -146,8 +147,17 @@
                 'cancelled': '{{ __('common.cancelled') }}'
             },
 
+            _statusRank: {
+                'processing': 1,
+                'pending': 2,
+                'confirmed': 3,
+                'completed': 4,
+                'failed': 100,
+                'cancelled': 100
+            },
+
             isFinalStatus(status) {
-                return ['confirmed', 'completed', 'failed', 'cancelled'].includes(status);
+                return ['confirmed', 'completed', 'failed', 'cancelled'].includes((status||'').toLowerCase());
             },
 
             refresh() {
@@ -156,27 +166,80 @@
             },
 
             updateStatusDetail(status) {
+                if (!status) { this.statusDetail = ''; return; }
+                status = status.toLowerCase();
                 if (status === 'failed') {
-                    this.statusDetail = 'The transaction failed on the network. Check the failure reason if available.';
+                    this.statusDetail = '{{ addslashes('The transaction failed on the network. Check the failure reason if available.') }}';
                     return;
                 }
                 if (status === 'confirmed') {
-                    this.statusDetail = 'This transaction has been confirmed on the blockchain.';
+                    this.statusDetail = '{{ addslashes('This transaction has been confirmed on the blockchain.') }}';
                     return;
                 }
                 if (status === 'completed') {
-                    this.statusDetail = 'This transaction is completed and settled.';
+                    this.statusDetail = '{{ addslashes('This transaction is completed and settled.') }}';
                     return;
                 }
                 if (status === 'pending') {
-                    this.statusDetail = 'The transaction is pending confirmation on blockchain.';
+                    this.statusDetail = '{{ addslashes('The transaction is pending confirmation on blockchain.') }}';
                     return;
                 }
                 if (status === 'processing') {
-                    this.statusDetail = 'The transaction is being prepared and broadcast to the network.';
+                    this.statusDetail = '{{ addslashes('The transaction is being prepared and broadcast to the network.') }}';
                     return;
                 }
-                this.statusDetail = 'Status is not available yet.';
+                this.statusDetail = '';
+            },
+
+            _parseDate(value) {
+                if (!value) return null;
+                const t = Date.parse(value);
+                return isNaN(t) ? null : new Date(t);
+            },
+
+            _shouldAccept(incoming) {
+                const existingStatus = (this.status || '').toLowerCase();
+                const incomingStatus = (incoming.status || '').toLowerCase();
+                const existingUpdated = this._parseDate(this.updatedAt || '');
+                const incomingUpdated = this._parseDate(incoming.updated_at || '');
+
+                const existingIsFinal = this.isFinalStatus(existingStatus);
+                const incomingIsFinal = this.isFinalStatus(incomingStatus);
+
+                if (existingIsFinal && !incomingIsFinal) return false;
+
+                if (!existingUpdated || !incomingUpdated) {
+                    return (this._statusRank[incomingStatus] || 0) >= (this._statusRank[existingStatus] || 0);
+                }
+
+                if (incomingUpdated > existingUpdated) return true;
+                if (incomingUpdated.getTime() === existingUpdated.getTime()) return (this._statusRank[incomingStatus] || 0) >= (this._statusRank[existingStatus] || 0);
+                if (incomingUpdated < existingUpdated) return (!existingIsFinal) && ((this._statusRank[incomingStatus] || 0) > (this._statusRank[existingStatus] || 0));
+                return false;
+            },
+
+            _applyIncoming(data) {
+                if (!data) return false;
+                // update txHash independently if present
+                if (data.tx_hash && data.tx_hash !== this.txHash) {
+                    this.txHash = data.tx_hash;
+                    this.explorerLink = this.txHash ? ('https://sepolia.etherscan.io/tx/' + this.txHash) : '';
+                }
+
+                if (!this._shouldAccept(data)) {
+                    return false;
+                }
+
+                // apply updates
+                this.status = data.status || this.status;
+                this.blockNumber = data.block_number !== undefined ? data.block_number : this.blockNumber;
+                this.confirmations = data.confirmations !== undefined ? data.confirmations : this.confirmations;
+                this.updatedAt = data.updated_at || this.updatedAt;
+                this.displayStatus = this.statusLabels[this.status] || this.status;
+                this.failureReason = data.failure_reason || this.failureReason;
+                this.updateStatusDetail(this.status);
+
+                return true;
             },
 
             init() {
@@ -184,46 +247,33 @@
                 this.explorerLink = this.txHash ? 'https://sepolia.etherscan.io/tx/' + this.txHash : '';
                 this.updateStatusDetail(this.status);
 
+                // stop immediately if already final
                 if (this.isFinalStatus(this.status)) {
                     return;
                 }
 
-                const poll = async () => {
+                const pollOnce = async () => {
                     try {
-                        const response = await fetch('/api/transaction/' + encodeURIComponent(this.id), { credentials: 'same-origin' });
-                        if (!response.ok) {
-                            return;
-                        }
-                        const data = await response.json();
-                        if (!data) {
-                            return;
-                        }
+                        const resp = await fetch('/api/transaction/' + encodeURIComponent(this.id), { credentials: 'same-origin' });
+                        if (!resp.ok) return;
+                        const data = await resp.json();
+                        if (!data) return;
 
-                        // Protect against overwriting a final client-side status with a non-final server value
-                        if (!(this.isFinalStatus(this.status) && !this.isFinalStatus(data.status))) {
-                            if (data.tx_hash !== this.txHash || data.status !== this.status || data.confirmations !== this.confirmations || data.block_number !== this.blockNumber) {
-                                this.txHash = data.tx_hash;
-                                this.status = data.status;
-                                this.blockNumber = data.block_number;
-                                this.confirmations = data.confirmations;
-                                this.updatedAt = data.updated_at || this.updatedAt;
-                                this.displayStatus = this.statusLabels[this.status] || this.status;
-                                this.explorerLink = this.txHash ? ('https://sepolia.etherscan.io/tx/' + this.txHash) : '';
-                                this.failureReason = data.failure_reason || this.failureReason;
-                                this.updateStatusDetail(this.status);
-                            }
-                        }
+                        const accepted = this._applyIncoming(data);
 
+                        // if incoming indicates final state, stop polling
                         if (this.isFinalStatus(data.status)) {
+                            if (this._pollTimer) { clearTimeout(this._pollTimer); this._pollTimer = null; }
                             return;
                         }
                     } catch (e) {
-                        // ignore polling errors
+                        // ignore
                     }
-                    setTimeout(poll, 3000);
+
+                    this._pollTimer = setTimeout(pollOnce, 3000);
                 };
 
-                poll();
+                pollOnce();
             }
         };
     }
