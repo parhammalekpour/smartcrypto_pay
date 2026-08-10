@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}" lang="{{ str_replace('_', '-', app()->getLocale()) }}" id="htmlElement" data-input-language="english" style="font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;">
+<html dir="<?php echo e(app()->getLocale() === 'fa' ? 'rtl' : 'ltr'); ?>" lang="<?php echo e(str_replace('_', '-', app()->getLocale())); ?>" id="htmlElement" data-input-language="english" style="font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Dashboard') - CryptoPay</title>
+    <title><?php echo $__env->yieldContent('title', 'Dashboard'); ?> - CryptoPay</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ asset('css/dark-mode.css') }}">
-    @vite(['resources/js/app.js'])
+    <link rel="stylesheet" href="<?php echo e(asset('css/dark-mode.css')); ?>">
+    <?php echo app('Illuminate\Foundation\Vite')(['resources/js/app.js']); ?>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
@@ -19,7 +19,7 @@
             
             // If nothing in storage, check user preference from DB
             if (darkModeFromStorage === null) {
-                if ({{ auth()->user()->dark_mode ? 'true' : 'false' }}) {
+                if (<?php echo e(auth()->user()->dark_mode ? 'true' : 'false'); ?>) {
                     htmlElement.classList.add('dark');
                     localStorage.setItem('darkMode', 'true');
                 } else {
@@ -142,13 +142,13 @@
             display: none !important;
         }
     </style>
-    @stack('styles')
+    <?php echo $__env->yieldPushContent('styles'); ?>
 </head>
 <body x-data="{ sidebarOpen: false, notificationOpen: false, notificationCount: 0, notifications: [] }" x-init="(()=>{ try { if (!window.NOTIFICATION_ENDPOINTS) { window.NOTIFICATION_ENDPOINTS = {
-            list: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications') }}',
-            unread: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/unread-count') }}',
-            markAll: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/mark-all-read') }}',
-            base: '{{ LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications') }}'
+            list: '<?php echo e(LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications')); ?>',
+            unread: '<?php echo e(LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/unread-count')); ?>',
+            markAll: '<?php echo e(LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications/mark-all-read')); ?>',
+            base: '<?php echo e(LaravelLocalization::getLocalizedURL(app()->getLocale(), '/notifications')); ?>'
         }; }
         const component = this;
         const syncNotificationsState = (listData, count = null) => {
@@ -236,115 +236,135 @@
 
             <!-- Menu - Scrollable -->
             <nav @click="sidebarOpen = false" class="flex-1 px-2 py-4 space-y-0 overflow-y-auto">
-                @if(auth()->user()->isAdmin())
-                    <a href="{{ route('admin.dashboard') }}" class="sidebar-item @if(Route::currentRouteName() === 'admin.dashboard') active @endif">
+                <?php if(auth()->user()->isAdmin()): ?>
+                    <a href="<?php echo e(route('admin.dashboard')); ?>" class="sidebar-item <?php if(Route::currentRouteName() === 'admin.dashboard'): ?> active <?php endif; ?>">
                         <i class="fas fa-shield-alt"></i>
-                        {{ __('nav.admin_panel') }}
-                    </a>
-                @endif
+                        <?php echo e(__('nav.admin_panel')); ?>
 
-                @if(auth()->user()->isMerchant())
+                    </a>
+                <?php endif; ?>
+
+                <?php if(auth()->user()->isMerchant()): ?>
                     <!-- Merchant Menu -->
-                    <a href="{{ route('merchant.dashboard') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.dashboard') active @endif">
-                        {{ __('nav.merchant_dashboard') }}
+                    <a href="<?php echo e(route('merchant.dashboard')); ?>" class="sidebar-item <?php if(Route::currentRouteName() === 'merchant.dashboard'): ?> active <?php endif; ?>">
+                        <?php echo e(__('nav.merchant_dashboard')); ?>
+
                     </a>
 
-                    <a href="{{ route('merchant.payments') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.payments') active @endif">
-                        {{ __('nav.payment_requests') }}
+                    <a href="<?php echo e(route('merchant.payments')); ?>" class="sidebar-item <?php if(Route::currentRouteName() === 'merchant.payments'): ?> active <?php endif; ?>">
+                        <?php echo e(__('nav.payment_requests')); ?>
+
                     </a>
 
-                    <a href="{{ route('merchant.invoices') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.invoices') active @endif">
-                        {{ __('nav.invoices') }}
+                    <a href="<?php echo e(route('merchant.invoices')); ?>" class="sidebar-item <?php if(Route::currentRouteName() === 'merchant.invoices'): ?> active <?php endif; ?>">
+                        <?php echo e(__('nav.invoices')); ?>
+
                     </a>
 
-                    <a href="{{ route('merchant.settlements') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.settlements') active @endif">
-                        {{ __('nav.settlements') }}
+                    <a href="<?php echo e(route('merchant.settlements')); ?>" class="sidebar-item <?php if(Route::currentRouteName() === 'merchant.settlements'): ?> active <?php endif; ?>">
+                        <?php echo e(__('nav.settlements')); ?>
+
                     </a>
 
-                    <a href="{{ route('merchant.customers') }}" class="sidebar-item @if(in_array(Route::currentRouteName(), ['merchant.customers', 'merchant.customers.show'])) active @endif">
-                        {{ __('nav.customers') }}
+                    <a href="<?php echo e(route('merchant.customers')); ?>" class="sidebar-item <?php if(in_array(Route::currentRouteName(), ['merchant.customers', 'merchant.customers.show'])): ?> active <?php endif; ?>">
+                        <?php echo e(__('nav.customers')); ?>
+
                     </a>
 
-                    <a href="{{ route('merchant.wallets') }}" class="sidebar-item @if(Route::currentRouteName() === 'merchant.wallets') active @endif">
-                                            {{ __('nav.my_wallets') }}
+                    <a href="<?php echo e(route('merchant.wallets')); ?>" class="sidebar-item <?php if(Route::currentRouteName() === 'merchant.wallets'): ?> active <?php endif; ?>">
+                                            <?php echo e(__('nav.my_wallets')); ?>
+
                     </a>
 
-                    <a href="{{ route('merchant.transactions') }}" class="sidebar-item">
-                        {{ __('nav.transactions') }}
+                    <a href="<?php echo e(route('merchant.transactions')); ?>" class="sidebar-item">
+                        <?php echo e(__('nav.transactions')); ?>
+
                     </a>
 
-                    <a href="{{ route('merchant.settings') }}" class="sidebar-item">
-                        {{ __('nav.general_settings') }}
+                    <a href="<?php echo e(route('merchant.settings')); ?>" class="sidebar-item">
+                        <?php echo e(__('nav.general_settings')); ?>
+
                     </a>
 
-                    <a href="{{ route('documentation.type', ['type' => 'merchant']) }}" class="sidebar-item @if(\Illuminate\Support\Str::startsWith(Route::currentRouteName(), 'documentation')) active @endif">
+                    <a href="<?php echo e(route('documentation.type', ['type' => 'merchant'])); ?>" class="sidebar-item <?php if(\Illuminate\Support\Str::startsWith(Route::currentRouteName(), 'documentation')): ?> active <?php endif; ?>">
                         <i class="fas fa-book-open"></i>
-                        {{ __('nav.documentation') }}
+                        <?php echo e(__('nav.documentation')); ?>
+
                     </a>
 
-                    <a href="{{ route('tickets.index') }}" class="sidebar-item @if(\Illuminate\Support\Str::startsWith(Route::currentRouteName(), 'tickets')) active @endif">
+                    <a href="<?php echo e(route('tickets.index')); ?>" class="sidebar-item <?php if(\Illuminate\Support\Str::startsWith(Route::currentRouteName(), 'tickets')): ?> active <?php endif; ?>">
                         <i class="fas fa-headset"></i>
-                                                {{ __('nav.support_tickets') }}
+                                                <?php echo e(__('nav.support_tickets')); ?>
+
                     </a>
                     
-                @else
+                <?php else: ?>
                     <!-- User Menu -->
-                    <a href="{{ route('user.dashboard') }}" class="sidebar-item @if(Route::currentRouteName() === 'user.dashboard') active @endif">
+                    <a href="<?php echo e(route('user.dashboard')); ?>" class="sidebar-item <?php if(Route::currentRouteName() === 'user.dashboard'): ?> active <?php endif; ?>">
                         <i class="fas fa-home"></i>
-                                                {{ __('nav.home') }}
+                                                <?php echo e(__('nav.home')); ?>
+
                     </a>
 
-                    <a href="{{ route('user.wallets') }}" class="sidebar-item">
+                    <a href="<?php echo e(route('user.wallets')); ?>" class="sidebar-item">
                         <i class="fas fa-wallet"></i>
-                                            {{ __('nav.my_wallets') }}
+                                            <?php echo e(__('nav.my_wallets')); ?>
+
                     </a>
 
 
-                    <a href="{{ route('user.receive') }}" class="sidebar-item">
+                    <a href="<?php echo e(route('user.receive')); ?>" class="sidebar-item">
                         <i class="fas fa-inbox"></i>
-                                                {{ __('nav.receive_currency') }}
+                                                <?php echo e(__('nav.receive_currency')); ?>
+
                     </a>
 
-                    <a href="{{ route('user.transactions') }}" class="sidebar-item">
+                    <a href="<?php echo e(route('user.transactions')); ?>" class="sidebar-item">
                         <i class="fas fa-history"></i>
-                        {{ __('nav.transaction_history') }}
+                        <?php echo e(__('nav.transaction_history')); ?>
+
                     </a>
 
-                    <a href="{{ route('user.pending-payments') }}" class="sidebar-item">
+                    <a href="<?php echo e(route('user.pending-payments')); ?>" class="sidebar-item">
                         <i class="fas fa-hourglass-end"></i>
-                        {{ __('nav.pending_payments') }}
+                        <?php echo e(__('nav.pending_payments')); ?>
+
                     </a>
 
-                    <a href="{{ route('user.settings') }}" class="sidebar-item">
+                    <a href="<?php echo e(route('user.settings')); ?>" class="sidebar-item">
                         <i class="fas fa-cog"></i>
-                        {{ __('nav.account_settings') }}
+                        <?php echo e(__('nav.account_settings')); ?>
+
                     </a>
 
-                    <a href="{{ route('documentation.type', ['type' => 'user']) }}" class="sidebar-item @if(\Illuminate\Support\Str::startsWith(Route::currentRouteName(), 'documentation')) active @endif">
+                    <a href="<?php echo e(route('documentation.type', ['type' => 'user'])); ?>" class="sidebar-item <?php if(\Illuminate\Support\Str::startsWith(Route::currentRouteName(), 'documentation')): ?> active <?php endif; ?>">
                         <i class="fas fa-book-open"></i>
-                        {{ __('nav.documentation') }}
+                        <?php echo e(__('nav.documentation')); ?>
+
                     </a>
 
-                    <a href="{{ route('tickets.index') }}" class="sidebar-item @if(\Illuminate\Support\Str::startsWith(Route::currentRouteName(), 'tickets')) active @endif">
+                    <a href="<?php echo e(route('tickets.index')); ?>" class="sidebar-item <?php if(\Illuminate\Support\Str::startsWith(Route::currentRouteName(), 'tickets')): ?> active <?php endif; ?>">
                         <i class="fas fa-headset"></i>
-                                                {{ __('nav.support_tickets') }}
+                                                <?php echo e(__('nav.support_tickets')); ?>
+
                     </a>
-                @endif
+                <?php endif; ?>
             </nav>
 
             <!-- User Profile - Fixed at Bottom -->
             <div class="border-t border-indigo-500 dark:border-indigo-700 p-4 flex-shrink-0">
                 <div class="flex items-center gap-3 p-3 bg-indigo-700 rounded-lg">
-                    @if(auth()->user()->avatar)
-                        <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="avatar" class="w-10 h-10 rounded-full object-cover flex-shrink-0">
-                    @else
+                    <?php if(auth()->user()->avatar): ?>
+                        <img src="<?php echo e(asset('storage/' . auth()->user()->avatar)); ?>" alt="avatar" class="w-10 h-10 rounded-full object-cover flex-shrink-0">
+                    <?php else: ?>
                         <div class="w-10 h-10 bg-indigo-300 rounded-full flex items-center justify-center text-indigo-800 font-bold text-sm flex-shrink-0">
-                            {{ substr(auth()->user()->name, 0, 1) }}
+                            <?php echo e(substr(auth()->user()->name, 0, 1)); ?>
+
                         </div>
-                    @endif
+                    <?php endif; ?>
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold truncate">{{ auth()->user()->name }}</p>
-                        <p class="text-xs text-indigo-300 truncate">{{ auth()->user()->email }}</p>
+                        <p class="text-sm font-semibold truncate"><?php echo e(auth()->user()->name); ?></p>
+                        <p class="text-xs text-indigo-300 truncate"><?php echo e(auth()->user()->email); ?></p>
                     </div>
                 </div>
             </div>
@@ -360,24 +380,24 @@
                             <i class="fas fa-bars"></i>
                         </button>
                         <div class="space-y-1">
-                            <h2 class="text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">@yield('page-title')</h2>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">@yield('page-subtitle')</p>
+                            <h2 class="text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100"><?php echo $__env->yieldContent('page-title'); ?></h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400"><?php echo $__env->yieldContent('page-subtitle'); ?></p>
                         </div>
                     </div>
 
                     <!-- Top Right Actions -->
                     <div class="flex items-center gap-4">
                                             <!-- Language toggle (header) -->
-                                            <form method="POST" action="{{ route('set-locale') }}" class="inline-block">
-                                                @csrf
-                                                <input type="hidden" name="locale" value="{{ app()->getLocale() === 'fa' ? 'en' : 'fa' }}">
+                                            <form method="POST" action="<?php echo e(route('set-locale')); ?>" class="inline-block">
+                                                <?php echo csrf_field(); ?>
+                                                <input type="hidden" name="locale" value="<?php echo e(app()->getLocale() === 'fa' ? 'en' : 'fa'); ?>">
                                                 <button type="submit" class="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 shadow-sm transition hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-200 dark:hover:bg-indigo-800">
                                                     <i class="fas fa-globe"></i>
-                                                    @if(app()->getLocale() === 'fa')
+                                                    <?php if(app()->getLocale() === 'fa'): ?>
                                                         English
-                                                    @else
+                                                    <?php else: ?>
                                                         فارسی
-                                                    @endif
+                                                    <?php endif; ?>
                                                 </button>
                                             </form>
                         <!-- Notifications Bell -->
@@ -395,23 +415,23 @@
                             </button>
 
                             <!-- Notifications Dropdown -->
-                            <div x-show="notificationOpen" @click.away="notificationOpen = false" class="absolute top-full mt-2 w-[min(24rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto border border-gray-200 dark:border-gray-700" style="left: {{ app()->getLocale() === 'fa' ? '0' : 'auto' }}; right: {{ app()->getLocale() === 'fa' ? 'auto' : '0' }}; direction: {{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }};">
+                            <div x-show="notificationOpen" @click.away="notificationOpen = false" class="absolute top-full mt-2 w-[min(24rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto border border-gray-200 dark:border-gray-700" style="left: <?php echo e(app()->getLocale() === 'fa' ? '0' : 'auto'); ?>; right: <?php echo e(app()->getLocale() === 'fa' ? 'auto' : '0'); ?>; direction: <?php echo e(app()->getLocale() === 'fa' ? 'rtl' : 'ltr'); ?>;">
                                 <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2 sticky top-0 bg-white dark:bg-gray-800">
-                                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">{{ __('notifications.title') }}</h3>
+                                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100"><?php echo e(__('notifications.title')); ?></h3>
                                     <button @click="
-                                        fetch(window.NOTIFICATION_ENDPOINTS.markAll, {method: 'POST', credentials: 'same-origin', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}})
+                                        fetch(window.NOTIFICATION_ENDPOINTS.markAll, {method: 'POST', credentials: 'same-origin', headers: {'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'}})
                                             .then(() => {
                                                 notificationOpen = false;
                                                                                         fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count);
                                                                                         notifications = [];
                                                                                     }).catch(()=>{});
-                                    " class="text-sm text-indigo-600 hover:text-indigo-700 font-semibold">{{ __('notifications.mark_all') }}</button>
+                                    " class="text-sm text-indigo-600 hover:text-indigo-700 font-semibold"><?php echo e(__('notifications.mark_all')); ?></button>
                                 </div>
 
                                 <template x-if="notifications.length === 0">
                                     <div class="p-8 text-center">
                                         <i class="fas fa-inbox text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
-                                        <p class="text-gray-500 dark:text-gray-400">{{ __('No notifications') }}</p>
+                                        <p class="text-gray-500 dark:text-gray-400"><?php echo e(__('No notifications')); ?></p>
                                     </div>
                                 </template>
 
@@ -428,7 +448,7 @@
                                                     <p class="text-xs text-gray-400 dark:text-gray-500 mt-2" x-text="notification.created_at"></p>
                                                 </div>
                                                  <button @click="
-                                                    fetch(window.NOTIFICATION_ENDPOINTS.base + '/' + notification.id + '/delete', {method: 'POST', credentials: 'same-origin', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}})
+                                                    fetch(window.NOTIFICATION_ENDPOINTS.base + '/' + notification.id + '/delete', {method: 'POST', credentials: 'same-origin', headers: {'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'}})
                                                         .then(() => {
                                                             notifications = notifications.filter(n => n.id !== notification.id);
                                                                                                                 fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count);
@@ -446,36 +466,40 @@
                         <!-- Profile Dropdown -->
                         <div class="relative">
                             <button class="profile-button flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
-                                @if(auth()->user()->avatar)
-                                    <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="avatar" class="w-8 h-8 rounded-full object-cover">
-                                @else
+                                <?php if(auth()->user()->avatar): ?>
+                                    <img src="<?php echo e(asset('storage/' . auth()->user()->avatar)); ?>" alt="avatar" class="w-8 h-8 rounded-full object-cover">
+                                <?php else: ?>
                                     <div class="w-8 h-8 bg-indigo-600 dark:bg-indigo-700 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                        {{ substr(auth()->user()->name, 0, 1) }}
+                                        <?php echo e(substr(auth()->user()->name, 0, 1)); ?>
+
                                     </div>
-                                @endif
+                                <?php endif; ?>
                                 <i class="fas fa-chevron-down text-xs text-gray-500 dark:text-gray-400"></i>
                             </button>
 
-                            @php
+                            <?php
                                 $profileSettingsRoute = auth()->user()->isMerchant()
                                     ? route('merchant.settings')
                                     : (auth()->user()->isUser() ? route('user.settings') : route('profile.edit'));
                                 $securitySettingsRoute = auth()->user()->isMerchant()
                                     ? route('merchant.settings') . '#security'
                                     : route('user.settings') . '#security';
-                            @endphp
+                            ?>
                             <!-- Dropdown Menu -->
                             <div class="profile-dropdown bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 w-40 z-50">
-                                <a href="{{ $profileSettingsRoute }}" class="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
-                                                                    <i class="fas fa-user text-sm"></i>{{ __('Profile') }}
+                                <a href="<?php echo e($profileSettingsRoute); ?>" class="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
+                                                                    <i class="fas fa-user text-sm"></i><?php echo e(__('Profile')); ?>
+
                                 </a>
-                                <a href="{{ $securitySettingsRoute }}" class="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
-                                                                    <i class="fas fa-lock text-sm"></i>{{ __('Password') }}
+                                <a href="<?php echo e($securitySettingsRoute); ?>" class="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
+                                                                    <i class="fas fa-lock text-sm"></i><?php echo e(__('Password')); ?>
+
                                 </a>
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
+                                <form method="POST" action="<?php echo e(route('logout')); ?>">
+                                    <?php echo csrf_field(); ?>
                                     <button type="submit" class="w-full text-right flex items-center gap-2 px-3 py-2 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
-                                        <i class="fas fa-sign-out-alt text-sm"></i>{{ __('Log Out') }}
+                                        <i class="fas fa-sign-out-alt text-sm"></i><?php echo e(__('Log Out')); ?>
+
                                     </button>
                                 </form>
                             </div>
@@ -488,50 +512,51 @@
             <main class="flex-1 overflow-y-auto">
                 <div class="p-6">
                     <!-- Flash Messages -->
-                    @if(session('success'))
+                    <?php if(session('success')): ?>
                         <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start gap-3">
                             <i class="fas fa-check-circle text-green-600 dark:text-green-400 text-xl mt-0.5"></i>
                             <div>
-                                <p class="font-semibold text-green-800 dark:text-green-300">{{ __('flash.success_title') }}</p>
-                                <p class="text-sm text-green-700 dark:text-green-200 mt-1">{{ session('success') }}</p>
+                                <p class="font-semibold text-green-800 dark:text-green-300"><?php echo e(__('flash.success_title')); ?></p>
+                                <p class="text-sm text-green-700 dark:text-green-200 mt-1"><?php echo e(session('success')); ?></p>
                             </div>
                             <button onclick="this.parentElement.remove()" class="ml-auto text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                    @endif
+                    <?php endif; ?>
 
-                    @if(session('error'))
+                    <?php if(session('error')): ?>
                         <div class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3">
                             <i class="fas fa-exclamation-circle text-red-600 dark:text-red-400 text-xl mt-0.5"></i>
                             <div>
-                                <p class="font-semibold text-red-800 dark:text-red-300">{{ __('flash.error_title') }}</p>
-                                <p class="text-sm text-red-700 dark:text-red-200 mt-1">{{ session('error') }}</p>
+                                <p class="font-semibold text-red-800 dark:text-red-300"><?php echo e(__('flash.error_title')); ?></p>
+                                <p class="text-sm text-red-700 dark:text-red-200 mt-1"><?php echo e(session('error')); ?></p>
                             </div>
                             <button onclick="this.parentElement.remove()" class="ml-auto text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                    @endif
+                    <?php endif; ?>
 
-                    @if(session('info'))
+                    <?php if(session('info')): ?>
                         <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-start gap-3">
                             <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 text-xl mt-0.5"></i>
                             <div>
-                                <p class="font-semibold text-blue-800 dark:text-blue-300">{{ __('flash.info_title') }}</p>
-                                <p class="text-sm text-blue-700 dark:text-blue-200 mt-1">{{ session('info') }}</p>
+                                <p class="font-semibold text-blue-800 dark:text-blue-300"><?php echo e(__('flash.info_title')); ?></p>
+                                <p class="text-sm text-blue-700 dark:text-blue-200 mt-1"><?php echo e(session('info')); ?></p>
                             </div>
                             <button onclick="this.parentElement.remove()" class="ml-auto text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                    @endif
-                    @yield('content')
+                    <?php endif; ?>
+                    <?php echo $__env->yieldContent('content'); ?>
                 </div>
             </main>
         </div>
     </div>
 
-    @stack('scripts')
+    <?php echo $__env->yieldPushContent('scripts'); ?>
 </body>
 </html>
+<?php /**PATH E:\smart-cryptopay\resources\views/layouts/dashboard.blade.php ENDPATH**/ ?>

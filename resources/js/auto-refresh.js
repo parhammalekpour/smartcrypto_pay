@@ -9,7 +9,7 @@ class AutoRefreshManager {
         this.enabled = options.enabled !== false; // Enabled by default
         this.mode = options.mode || 'event'; // 'event' or 'interval'
         this.refreshInterval = options.refreshInterval || 0; // 0 = no interval, only events
-        this.refreshDelay = options.refreshDelay || 1000; // تأخیر بعد از آپریشن
+        this.refreshDelay = options.refreshDelay || 10000; // تأخیر بعد از آپریشن (پیش‌فرض 10 ثانیه)
         this.pollingInterval = options.pollingInterval || 10000; // Poll every 10 seconds
         this.storageKey = 'autoRefreshEnabled';
         this.modeKey = 'autoRefreshMode';
@@ -93,11 +93,18 @@ class AutoRefreshManager {
         if (window.axios) {
             window.axios.interceptors.response.use(
                 (response) => {
-                    if (this.enabled && response.status >= 200 && response.status < 300) {
-                        setTimeout(() => {
-                            this.refresh('ajax_success');
-                        }, this.refreshDelay);
+                    try {
+                        // Avoid triggering full-page auto-refresh for notification-related API calls
+                        const respUrl = response?.config?.url || '';
+                        if (this.enabled && response.status >= 200 && response.status < 300 && !/\/notifications(\/|$)/.test(respUrl)) {
+                            setTimeout(() => {
+                                this.refresh('ajax_success');
+                            }, this.refreshDelay);
+                        }
+                    } catch (e) {
+                        console.error('auto-refresh axios wrapper error:', e);
                     }
+
                     return response;
                 },
                 (error) => {
@@ -108,19 +115,32 @@ class AutoRefreshManager {
 
         // 3. Intercept fetch requests
         const originalFetch = window.fetch;
+        // Capture the manager instance so the wrapper doesn't rely on a dynamic `this`
+        const self = this;
         window.fetch = function(...args) {
-            return originalFetch.apply(this, args).then(response => {
-                if (this.enabled && response.ok) {
-                    // Check if it's a POST/PUT/DELETE request
-                    const method = (args[1]?.method || 'GET').toUpperCase();
-                    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-                        setTimeout(() => {
-                            this.refresh('fetch_success');
-                        }, this.refreshDelay);
+            // Call the original fetch with the global/window context to avoid recursion
+            return originalFetch.apply(window, args)
+                .then(response => {
+                    try {
+                        if (self.enabled && response && response.ok) {
+                            // Check if it's a POST/PUT/DELETE/PATCH request
+                            const method = (args[1]?.method || 'GET').toUpperCase();
+                            if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+                                // Inspect URL and skip auto-refresh for notification endpoints
+                                const requestUrl = String(args[0] || '');
+                                if (!/\/notifications(\/|$)/.test(requestUrl)) {
+                                    setTimeout(() => {
+                                        self.refresh('fetch_success');
+                                    }, self.refreshDelay);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        // Don't break the fetch promise chain if something goes wrong
+                        console.error('auto-refresh fetch wrapper error:', e);
                     }
-                }
-                return response;
-            }).bind(this);
+                    return response;
+                });
         };
 
         // 4. Listen for Alpine.js or jQuery AJAX
@@ -179,10 +199,19 @@ class AutoRefreshManager {
         .then(data => {
             // Update last check time
             localStorage.setItem('autoRefreshLastCheck', data.timestamp);
-            
-            // If there are changes, refresh the page
+
+            // If there are changes, either perform a FORCE refresh (server requested)
+            // or dispatch a 'server-change' event so the page can react without a full reload.
             if (data.hasChanges) {
-                this.refresh('server_update:' + (data.changeType || 'unknown'));
+                if (data.forceRefresh) {
+                    this.refresh('server_update:' + (data.changeType || 'unknown'));
+                } else {
+                    try {
+                        window.dispatchEvent(new CustomEvent('server-change', { detail: data }));
+                    } catch (e) {
+                        console.error('server-change event dispatch error:', e);
+                    }
+                }
             }
         })
         .catch(error => {
@@ -276,9 +305,13 @@ class AutoRefreshManager {
         // Add visual feedback
         this.showRefreshIndicator(source);
         
-        // Reload page
+        // Debugging: trace and suppress reload temporarily to identify callers
+        console.trace('[AUTO-REFRESH] refresh triggered, source:', source);
+        // Prevent an immediate full reload during investigation. Replace with a logged message so the page doesn't keep reloading while we debug.
         setTimeout(() => {
-            window.location.reload();
+            console.warn('[AUTO-REFRESH] (DEBUG) reload suppressed. Source:', source);
+            // Uncomment next line to actually reload after debugging is complete.
+            // window.location.reload();
         }, 500);
     }
 
@@ -488,7 +521,7 @@ if (document.readyState === 'loading') {
             window.autoRefreshManager = new AutoRefreshManager({
                 mode: 'event', // Event-based by default
                 enabled: true,
-                refreshDelay: 1000 // 1 second delay after operation
+                refreshDelay: 10000 // 10 second delay after operation
             });
         }
     });
@@ -497,7 +530,7 @@ if (document.readyState === 'loading') {
         window.autoRefreshManager = new AutoRefreshManager({
             mode: 'event',
             enabled: true,
-            refreshDelay: 1000
+            refreshDelay: 10000
         });
     }
 }

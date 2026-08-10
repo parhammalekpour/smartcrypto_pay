@@ -241,8 +241,8 @@ use Morilog\Jalali\Jalalian;
                     App\Models\Notification::where('user_id', auth()->id())->orderBy('id', 'desc')->take(5)->get()->map(function($n){
                         return [
                             'id' => $n->id,
-                            'title' => $n->title,
-                            'message' => $n->message,
+                            'title' => App\Models\Notification::localizeText($n->title),
+                            'message' => App\Models\Notification::localizeText($n->message),
                             'icon' => $n->icon,
                             'type' => $n->type,
                             'read' => (bool) $n->read,
@@ -254,12 +254,60 @@ use Morilog\Jalali\Jalalian;
                 window.INITIAL_NOTIFICATIONS = null;
             @endauth
 
-            try { if (window.INITIAL_NOTIFICATIONS && Array.isArray(window.INITIAL_NOTIFICATIONS)) { notifications = window.INITIAL_NOTIFICATIONS; notificationCount = notifications.filter(n => !n.read).length; } } catch(e){}
+            const component = this;
+            try { if (window.INITIAL_NOTIFICATIONS && Array.isArray(window.INITIAL_NOTIFICATIONS)) { component.notifications = window.INITIAL_NOTIFICATIONS; component.notificationCount = component.notifications.filter(n => !n.read).length; } } catch(e){}
 
-            const updateUnread = () => fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => { console.log('Notifications unread (merchant):', data); notificationCount = data.count }).catch(err=>{ console.error('Unread fetch error (merchant):', err); });
+            const updateUnread = async () => {
+                console.debug('[Notifications] updateUnread called (merchant)');
+                try {
+                    console.debug('[Notifications] requesting unread (merchant):', window.NOTIFICATION_ENDPOINTS.unread);
+                    const res = await fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'});
+                    console.debug('[Notifications] unread response (merchant):', res);
+                    const data = await res.json();
+                    console.debug('[Notifications] unread data (merchant):', data);
+                    const newCount = Number(data.count || 0);
+
+                    if (typeof window.__notificationLastCount === 'undefined') {
+                        window.__notificationLastCount = newCount;
+                    }
+
+                    if (newCount > (window.__notificationLastCount || 0)) {
+                        try {
+                            const listRes = await fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'});
+                            const listData = await listRes.json();
+                            console.log('Notifications fetched (merchant on delta):', listData);
+
+                            try {
+                                const existingIds = new Set((component.notifications || []).map(n => n.id));
+                                const newItems = (listData || []).filter(n => !existingIds.has(n.id));
+                                if (newItems.length > 0) {
+                                    component.notifications = newItems.concat(component.notifications || []);
+                                    if (component.notifications.length > 50) component.notifications = component.notifications.slice(0, 50);
+                                    try { component.notificationCount = component.notifications.filter(n => !n.read).length; } catch(e) { component.notificationCount = newCount; }
+                                    try { if (typeof window.showToast === 'function') { newItems.forEach(i=>window.showToast(i.title||'Notification', i.message||'')); } } catch(e){}
+                                } else {
+                                    component.notificationCount = newCount;
+                                }
+                            } catch(e) {
+                                component.notifications = listData;
+                                try { component.notificationCount = component.notifications.filter(n => !n.read).length; } catch(e) { component.notificationCount = newCount; }
+                            }
+                        } catch(err) {
+                            console.error('Notifications fetch error (merchant on delta):', err);
+                            component.notificationCount = newCount;
+                        }
+                    } else {
+                        component.notificationCount = newCount;
+                    }
+
+                    window.__notificationLastCount = newCount;
+                } catch(e) {}
+            };
+
             updateUnread();
-            fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'}).then(r => r.json()).then(data => { console.log('Notifications fetched (merchant):', data); notifications = data; try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){} }).catch(err=>{ console.error('Notifications fetch error (merchant):', err); });
-            setInterval(updateUnread, 5000);
+            fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'}).then(r => r.json()).then(data => { console.log('Notifications fetched (merchant):', data); component.notifications = data; try { component.notificationCount = component.notifications.filter(n => !n.read).length; } catch(e){} }).catch(err=>{ console.error('Notifications fetch error (merchant):', err); });
+
+            if (!window.__notificationPollStarted) { window.__notificationPollStarted = true; setInterval(updateUnread, 5000); }
                     } catch(e) { console.error('Notifications init error (merchant):', e); }
                     })()">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -273,23 +321,23 @@ use Morilog\Jalali\Jalalian;
                     <span x-show="notificationCount > 0" x-text="notificationCount" style="background:#ef4444;color:white;border-radius:999px;padding:2px 6px;font-size:12px;margin-left:6px;position:relative;top:-8px;left:-6px;"></span>
                 </button>
 
-                <div x-show="notificationOpen" @click.away="notificationOpen=false" style="position:absolute;right:0;top:34px;width:360px;background:white;color:#111;border-radius:8px;overflow:auto;max-height:320px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:999;">
-                    <div style="padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
-                        <strong>Notifications</strong>
-                        <button @click="fetch(window.NOTIFICATION_ENDPOINTS.markAll, {method:'POST', credentials:'same-origin', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}}).then(()=>{ notificationOpen=false; notifications=[]; fetch(window.NOTIFICATION_ENDPOINTS.unread,{credentials:'same-origin'}).then(r=>r.json()).then(d=>notificationCount=d.count); }).catch(()=>{});" style="background:transparent;border:none;color:#667eea;cursor:pointer;">Mark all as read</button>
+                <div x-show="notificationOpen" @click.away="notificationOpen=false" style="position:absolute;top:calc(100% + 0.5rem);width:min(24rem, calc(100vw - 2rem));max-width:calc(100vw - 2rem);max-height:min(80vh, 32rem);overflow-y:auto;background:white;color:#111;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:999;left:{{ app()->getLocale() === 'fa' ? '0' : 'auto' }};right:{{ app()->getLocale() === 'fa' ? 'auto' : '0' }};direction:{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }};">
+                    <div style="padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                        <strong>{{ __('Notifications') }}</strong>
+                        <button @click="fetch(window.NOTIFICATION_ENDPOINTS.markAll, {method:'POST', credentials:'same-origin', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}}).then(()=>{ notificationOpen=false; notifications=[]; fetch(window.NOTIFICATION_ENDPOINTS.unread,{credentials:'same-origin'}).then(r=>r.json()).then(d=>notificationCount=d.count); }).catch(()=>{});" style="background:transparent;border:none;color:#667eea;cursor:pointer;">{{ __('Mark all as read') }}</button>
                     </div>
                     <template x-if="notifications.length === 0">
-                        <div style="padding:20px;text-align:center;color:#666;">No notifications</div>
+                        <div style="padding:20px;text-align:center;color:#666;">{{ __('No notifications') }}</div>
                     </template>
                     <template x-for="notification in notifications" :key="notification.id">
                         <div style="padding:12px;border-bottom:1px solid #f3f3f3;display:flex;gap:10px;align-items:flex-start;">
-                            <div style="font-size:18px;color:#3b82f6;"> <i :class="'fas ' + notification.icon"></i></div>
-                            <div style="flex:1;">
+                            <div style="font-size:18px;color:#3b82f6;flex-shrink:0;"> <i :class="'fas ' + notification.icon"></i></div>
+                            <div style="flex:1;min-width:0;overflow-wrap:anywhere;word-break:break-word;white-space:normal;">
                                 <div style="font-weight:600;" x-text="notification.title"></div>
-                                <div style="font-size:13px;color:#555;" x-text="notification.message"></div>
+                                <div style="font-size:13px;color:#555;margin-top:4px;" x-text="notification.message"></div>
                                 <div style="font-size:11px;color:#999;margin-top:6px;" x-text="notification.created_at"></div>
                             </div>
-                            <div>
+                            <div style="flex-shrink:0;">
                                 <button @click="fetch(window.NOTIFICATION_ENDPOINTS.base + '/' + notification.id + '/delete', {method:'POST', credentials:'same-origin', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}}).then(()=>{ notifications = notifications.filter(n=>n.id!==notification.id); fetch(window.NOTIFICATION_ENDPOINTS.unread,{credentials:'same-origin'}).then(r=>r.json()).then(d=>notificationCount=d.count); }).catch(()=>{});" style="background:transparent;border:none;color:#999;cursor:pointer;"><i class="fas fa-times"></i></button>
                             </div>
                         </div>

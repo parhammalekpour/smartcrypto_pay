@@ -9,15 +9,22 @@ class Transaction extends Model
 {
     protected $fillable = [
         'wallet_id',
+        'user_id',
+        'merchant_id',
         'sender_id',
         'recipient_id',
         'type',
         'amount',
+        'currency',
         'status',
         'reference',
         'description',
         'payment_request_id',
-        'sender_wallet_address'
+        'sender_wallet_address',
+        'receiver_wallet_address',
+        'tx_hash',
+        'block_number',
+        'confirmations'
     ];
 
     public function wallet()

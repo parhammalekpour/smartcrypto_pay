@@ -4,26 +4,29 @@ namespace App\Observers;
 
 use App\Models\User;
 use App\Models\Wallet;
+use Illuminate\Support\Facades\DB;
 
 class UserObserver
 {
     /**
      * Handle the User "created" event.
      */
- public function created(User $user): void
-{
-    $currencies = ['BTC', 'ETH', 'USDT'];
+    public function created(User $user): void
+    {
+        $currencies = ['BTC', 'ETH', 'USDT'];
 
-    foreach ($currencies as $currency) {
-
-        Wallet::create([
-            'user_id' => $user->id,
-            'wallet_address' => $currency . '_' . strtoupper(substr(md5(uniqid()), 0, 12)),
-            'currency' => $currency,
-            'balance' => 0
-        ]);
+        DB::transaction(function () use ($user, $currencies) {
+            foreach ($currencies as $currency) {
+                // Create a wallet record and let the Wallet model's creating() hook
+                // generate a real HD wallet (address + encrypted private key) via
+                // BlockchainWalletService. Do not use placeholder or fake addresses.
+                $user->wallets()->create([
+                    'currency' => $currency,
+                    'balance' => 0,
+                ]);
+            }
+        });
     }
-}
 
     /**
      * Handle the User "updated" event.

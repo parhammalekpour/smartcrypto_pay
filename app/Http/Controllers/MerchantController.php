@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Customer;
 use App\Models\PaymentRequest;
 use App\Models\Transaction;
@@ -12,6 +13,7 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Notification;
 use App\Services\CryptoPrice;
+use App\Services\EthereumService;
 
 class MerchantController extends Controller
 {
@@ -36,17 +38,19 @@ class MerchantController extends Controller
             ->get();
 
         // Transaction Statistics
-        $totalTransactions = Transaction::whereHas('wallet', function ($query) {
-            $query->where('user_id', auth()->id());
-        })->count();
-
-        $successfulTransactions = Transaction::whereHas('wallet', function ($query) {
-            $query->where('user_id', auth()->id());
-        })->where('status', 'completed')->count();
-
-        $failedTransactions = Transaction::whereHas('wallet', function ($query) {
-            $query->where('user_id', auth()->id());
-        })->whereIn('status', ['pending', 'failed', 'cancelled', 'rejected'])->count();
+        $merchantTransactionScope = function ($query) {
+            $query->whereHas('wallet', function ($q) {
+                $q->where('user_id', auth()->id());
+            })->orWhere('merchant_id', auth()->id());
+        };
+ 
+        $totalTransactions = Transaction::where($merchantTransactionScope)->count();
+ 
+        $successfulTransactions = Transaction::where($merchantTransactionScope)
+            ->whereIn('status', ['completed', 'confirmed'])->count();
+ 
+        $failedTransactions = Transaction::where($merchantTransactionScope)
+            ->whereIn('status', ['pending', 'failed', 'cancelled', 'rejected'])->count();
 
         // درآمد روزانه برای نمودار (۷ روز گذشته)
         $dailyRevenue = [];
@@ -82,9 +86,14 @@ class MerchantController extends Controller
 
     public function transactions()
     {
-        $query = Transaction::whereHas('wallet', function ($query) {
-            $query->where('user_id', auth()->id());
-        })->with(['wallet', 'sender', 'recipient', 'paymentRequest', 'deposit']);
+        $merchantTransactionScope = function ($query) {
+            $query->whereHas('wallet', function ($q) {
+                $q->where('user_id', auth()->id());
+            })->orWhere('merchant_id', auth()->id());
+        };
+
+        $query = Transaction::where($merchantTransactionScope)
+            ->with(['wallet', 'sender', 'recipient', 'paymentRequest', 'deposit']);
 
         // Search by transaction ID or description
         if (request('search')) {
@@ -134,14 +143,16 @@ class MerchantController extends Controller
         $paymentRequests = $paymentRequestsQuery->latest()->get();
 
         // Calculate stats from ALL transactions and payments (not just paginated/filtered)
-        $allTransactions = Transaction::whereHas('wallet', function ($q) {
-            $q->where('user_id', auth()->id());
+        $allTransactions = Transaction::where(function ($query) {
+            $query->whereHas('wallet', function ($q) {
+                $q->where('user_id', auth()->id());
+            })->orWhere('merchant_id', auth()->id());
         })->get();
         
         $allPaymentRequests = PaymentRequest::where('merchant_id', auth()->id())->get();
         
         $totalCount = $allTransactions->count() + $allPaymentRequests->count();
-        $completedCount = $allTransactions->where('status', 'completed')->count() + $allPaymentRequests->where('status', 'paid')->count();
+        $completedCount = $allTransactions->whereIn('status', ['completed', 'confirmed'])->count() + $allPaymentRequests->where('status', 'paid')->count();
         $pendingCount = $allTransactions->where('status', 'pending')->count() + $allPaymentRequests->where('status', 'pending')->count();
         
         // Failed count includes: failed transactions, rejected and cancelled payments
@@ -161,8 +172,10 @@ class MerchantController extends Controller
      */
     public function exportTransactions()
     {
-        $query = Transaction::whereHas('wallet', function ($q) {
-            $q->where('user_id', auth()->id());
+        $query = Transaction::where(function ($query) {
+            $query->whereHas('wallet', function ($q) {
+                $q->where('user_id', auth()->id());
+            })->orWhere('merchant_id', auth()->id());
         })->with(['wallet', 'sender', 'recipient', 'paymentRequest']);
 
         if (request('search')) {
@@ -207,16 +220,21 @@ class MerchantController extends Controller
         $filename = 'merchant-transactions-' . now()->format('Ymd_His') . '.csv';
 
         $headers = [
-            'Content-Type' => 'text/csv',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"$filename\"",
         ];
 
         $callback = function() use ($transactions, $paymentRequests) {
             $out = fopen('php://output', 'w');
+            // Write UTF-8 BOM for Excel compatibility with Unicode/Persian text
+            fwrite($out, "\xEF\xBB\xBF");
             // Header row
             fputcsv($out, ['type','id','reference','invoice_number','description','amount','currency','status','sender','recipient','created_at']);
 
             foreach ($transactions as $t) {
+                $senderName = $t->sender?->name ?? $t->sender_wallet_address ?? '';
+                $recipientName = $t->recipient?->name ?? '';
+
                 fputcsv($out, [
                     'transaction',
                     $t->id,
@@ -226,8 +244,8 @@ class MerchantController extends Controller
                     $t->amount,
                     $t->currency ?? ($t->wallet?->currency ?? ''),
                     $t->status,
-                    $t->sender?->name ?? '',
-                    $t->recipient?->name ?? '',
+                    $senderName,
+                    $recipientName,
                     $t->created_at->toDateTimeString(),
                 ]);
             }
@@ -490,14 +508,24 @@ class MerchantController extends Controller
             'currency' => 'required|in:BTC,ETH,USDT',
         ]);
 
-        // Generate a public wallet address based on currency
-        $walletAddress = $this->generateWalletAddress($validated['currency']);
-
-        auth()->user()->wallets()->create([
-            'currency' => $validated['currency'],
-            'wallet_address' => $walletAddress,
-            'balance' => 0,
-        ]);
+        // Create a wallet record and let the Wallet model's creating() hook
+        // generate a real HD wallet (address + encrypted private key) via
+        // BlockchainWalletService. Do not use ad-hoc random generation here.
+        try {
+            DB::transaction(function () use ($validated) {
+                auth()->user()->wallets()->create([
+                    'currency' => $validated['currency'],
+                    'balance' => 0,
+                ]);
+            });
+        } catch (\Throwable $e) {
+            Log::error('Failed to create merchant wallet', [
+                'merchant_id' => auth()->id(),
+                'currency' => $validated['currency'],
+                'error_message' => $e->getMessage(),
+            ]);
+            return redirect()->route('merchant.wallets')->withErrors(['currency' => 'Unable to create wallet at this time. Please try again later.']);
+        }
 
         return redirect()->route('merchant.wallets')->with('success', __('wallets.create_wallet_success', ['currency' => $request->currency]));
     }
@@ -526,21 +554,124 @@ class MerchantController extends Controller
 
     private function generateWalletAddress($currency)
     {
-        // Generate a mock wallet address based on currency
-        // In production, you would integrate with blockchain APIs to generate real addresses
-        switch ($currency) {
-            case 'BTC':
-                // Bitcoin address format (P2PKH starts with 1, P2SH with 3, Segwit with bc1)
-                return '1' . bin2hex(random_bytes(20));
-            case 'ETH':
-                // Ethereum address format
-                return '0x' . bin2hex(random_bytes(20));
-            case 'USDT':
-                // Tether on Ethereum network (same format as ETH)
-                return '0x' . bin2hex(random_bytes(20));
-            default:
-                return 'addr_' . bin2hex(random_bytes(16));
+        // Use BlockchainWalletService to derive a proper address if needed.
+        $service = new \App\Services\BlockchainWalletService();
+        try {
+            $res = $service->generateHdWallet($currency);
+            return $res['address'] ?? null;
+        } catch (\Throwable $e) {
+            \Log::error('Failed to generate wallet address: ' . $e->getMessage());
+            throw $e;
         }
+    }
+
+    public function sendCrypto(Request $request)
+    {
+        $request->validate([
+            'sender_wallet_id' => 'required|integer|exists:wallets,id',
+            'wallet_address' => 'required|string',
+            'amount' => 'required|string',
+        ]);
+
+        $network = env('ETHEREUM_NETWORK', 'sepolia');
+        if (strtolower((string)$network) !== 'sepolia') {
+            return back()->withErrors(['wallet_address' => 'Ethereum network is not configured for Sepolia.'])->withInput();
+        }
+
+        $wallet = Wallet::where('id', $request->sender_wallet_id)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        if (strtoupper((string)$wallet->currency) !== 'ETH') {
+            return back()->withErrors(['sender_wallet_id' => 'Only ETH wallets can be used for Sepolia outgoing transfers.'])->withInput();
+        }
+
+        if (empty($wallet->wallet_address)) {
+            return back()->withErrors(['sender_wallet_id' => 'Sender wallet address is missing.'])->withInput();
+        }
+
+        $destination = trim($request->wallet_address);
+        $ethService = new EthereumService();
+        if (!$ethService->isValidAddress($destination)) {
+            return back()->withErrors(['wallet_address' => 'Invalid Ethereum destination address.'])->withInput();
+        }
+
+        if (strtolower($wallet->wallet_address) === strtolower($destination)) {
+            return back()->withErrors(['wallet_address' => 'Destination address cannot be the sender wallet.'])->withInput();
+        }
+
+        $amount = trim((string)$request->amount);
+        if (!preg_match('/^\d+(\.\d+)?$/', $amount) || bccomp($amount, '0', 18) <= 0) {
+            return back()->withErrors(['amount' => 'The amount must be a positive ETH string value greater than zero.'])->withInput();
+        }
+
+        try {
+            $amountWei = $ethService->parseEther($amount);
+            if ((string)$amountWei === '0' || (int)$amountWei <= 0) {
+                return back()->withErrors(['amount' => 'The amount must be greater than zero.'])->withInput();
+            }
+        } catch (\Throwable $e) {
+            Log::error('ParseEther failure: ' . $e->getMessage());
+            return back()->withErrors(['amount' => 'Invalid ETH amount.'])->withInput();
+        }
+
+        // Create transaction record with 'processing' status and dispatch background job.
+        // Do not perform any estimate, signing, or RPC broadcast inside the HTTP request.
+
+        // Ensure user wallet has sufficient balance for the requested amount (gas will be handled in the job)
+        $walletBalance = (string)$wallet->balance;
+        if (bccomp($walletBalance, $amount, 18) < 0) {
+            return back()->withErrors(['amount' => 'Insufficient ETH balance for requested amount.'])->withInput();
+        }
+
+        // Persist a 'processing' transaction entry immediately so job can pick it up.
+        $transaction = Transaction::create([
+            'wallet_id' => $wallet->id,
+            'user_id' => null,
+            'merchant_id' => auth()->id(),
+            'sender_id' => auth()->id(),
+            'recipient_id' => null,
+            'type' => 'withdraw',
+            'amount' => $amount,
+            'currency' => 'ETH',
+            'status' => 'processing',
+            'reference' => null,
+            'description' => 'ETH Sepolia send',
+            'sender_wallet_address' => $wallet->wallet_address,
+            'receiver_wallet_address' => $destination,
+            'tx_hash' => null,
+        ]);
+
+        try {
+            \App\Jobs\SendCryptoTransaction::dispatch($transaction->id)->onQueue(config('queue.connections.database.queue', 'default'));
+        } catch (\Throwable $e) {
+            // If dispatch fails, mark transaction as failed and inform user
+            Log::error('Failed to dispatch SendCryptoTransaction job', ['transaction_id' => $transaction->id, 'error' => $e->getMessage()]);
+            $transaction->status = 'failed';
+            $transaction->save();
+            return back()->withErrors(['wallet_address' => 'Unable to queue transaction for processing. Please try again later.'])->withInput();
+        }
+
+        // Warn if queue driver is 'sync' since that would run the job synchronously and defeat the async goal
+        if (config('queue.default') === 'sync') {
+            Log::warning('Queue connection is configured as sync; background job will run inline. Set QUEUE_CONNECTION=database and run a queue worker for true background processing.');
+        }
+
+        // Keep the user on the transactions list after creating the transaction instead
+        // of redirecting to the transaction detail page.
+        return redirect()
+            ->route('merchant.transactions')
+            ->with('success', 'Transaction has been queued and is being processed.');
+    }
+
+    public function showTransaction(Transaction $transaction)
+    {
+        // Ensure merchant owns this transaction
+        if ($transaction->merchant_id !== auth()->id()) {
+            abort(403);
+        }
+
+        return view('transactions.show', compact('transaction'));
     }
 
     public function send(Request $request)
@@ -676,16 +807,24 @@ class MerchantController extends Controller
             // Create notifications
             Notification::createNotification(
                 auth()->id(),
-                'انتقال موفق',
-                $request->amount . ' ' . $senderWallet->currency . ' به ' . $receiverWallet->user->name . ' ارسال شد',
+                __('notifications.transfer_sent.title'),
+                __('notifications.transfer_sent.message', [
+                    'amount' => number_format($request->amount, 8),
+                    'currency' => $senderWallet->currency,
+                    'name' => $receiverWallet->user->name,
+                ]),
                 'success',
                 'fa-paper-plane'
             );
 
             Notification::createNotification(
                 $receiverWallet->user_id,
-                'دریافت انتقال',
-                $request->amount . ' ' . $receiverWallet->currency . ' از ' . auth()->user()->name . ' دریافت شد',
+                __('notifications.transfer_received.title'),
+                __('notifications.transfer_received.message', [
+                    'amount' => number_format($request->amount, 8),
+                    'currency' => $receiverWallet->currency,
+                    'name' => auth()->user()->name,
+                ]),
                 'success',
                 'fa-inbox'
             );

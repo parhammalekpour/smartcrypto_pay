@@ -11,6 +11,7 @@ use App\Models\Transaction;
 use App\Models\PaymentRequest;
 use App\Models\Notification;
 use App\Services\CryptoPrice;
+use App\Services\EthereumService;
 
 class WalletController extends Controller
 {
@@ -86,15 +87,26 @@ class WalletController extends Controller
             'currency' => 'required|in:BTC,ETH,USDT'
         ]);
 
-        // Generate a unique wallet address
-        $walletAddress = $this->generateWalletAddress($request->currency);
+        // Create a wallet record and let the Wallet model's creating() hook
+        // generate a real HD wallet (address + encrypted private key) via
+        // BlockchainWalletService. This avoids producing invalid/fake addresses.
+        try {
+            DB::transaction(function () use ($request) {
+                Wallet::create([
+                    'user_id' => auth()->id(),
+                    'currency' => $request->currency,
+                    'balance' => 0,
+                ]);
+            });
+        } catch (\Throwable $e) {
+            Log::error('Failed to create wallet for user', [
+                'user_id' => auth()->id(),
+                'currency' => $request->currency,
+                'error_message' => $e->getMessage(),
+            ]);
 
-        Wallet::create([
-            'user_id' => auth()->id(),
-            'wallet_address' => $walletAddress,
-            'currency' => $request->currency,
-            'balance' => 0
-        ]);
+            return back()->withErrors(['currency' => 'Unable to create wallet at this time. Please try again later.'])->withInput();
+        }
 
         return back()->with('success', __('wallets.create_wallet_success', ['currency' => $request->currency]));
     }
@@ -125,19 +137,141 @@ class WalletController extends Controller
 
     private function generateWalletAddress($currency)
     {
-        // Generate a unique wallet address based on currency
-        $prefix = match($currency) {
-            'BTC' => '1',
-            'ETH' => '0x',
-            'USDT' => '0x',
-            default => '1'
-        };
+        // Prefer generating via BlockchainWalletService (ethers.js) so addresses
+        // are always valid and properly formatted. This helper is retained for
+        // backward compatibility but uses the same service used elsewhere.
+        $service = new \App\Services\BlockchainWalletService();
+        try {
+            $res = $service->generateHdWallet($currency);
+            return $res['address'] ?? null;
+        } catch (\Throwable $e) {
+            \Log::error('Failed to generate wallet address: ' . $e->getMessage());
+            throw $e;
+        }
+    }
 
-        do {
-            $address = $prefix . bin2hex(random_bytes($currency === 'BTC' ? 20 : 18));
-        } while (Wallet::where('wallet_address', $address)->exists());
+    public function sendCrypto(Request $request)
+    {
+        $request->validate([
+            'sender_wallet_id' => 'required|integer|exists:wallets,id',
+            'wallet_address' => 'required|string',
+            'amount' => 'required|string',
+        ]);
 
-        return $address;
+        $network = env('ETHEREUM_NETWORK', 'sepolia');
+        if (strtolower((string)$network) !== 'sepolia') {
+            return back()->withErrors(['wallet_address' => 'Ethereum network is not configured for Sepolia.'])->withInput();
+        }
+
+        $wallet = Wallet::where('id', $request->sender_wallet_id)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        if (strtoupper((string)$wallet->currency) !== 'ETH') {
+            return back()->withErrors(['sender_wallet_id' => 'Only ETH wallets can be used for Sepolia outgoing transfers.'])->withInput();
+        }
+
+        if (empty($wallet->wallet_address)) {
+            return back()->withErrors(['sender_wallet_id' => 'Sender wallet address is missing.'])->withInput();
+        }
+
+        try {
+            $balanceService = new \App\Services\BalanceSyncService();
+            $balanceService->syncWallet($wallet);
+            $wallet->refresh();
+        } catch (\Throwable $e) {
+            Log::warning('Balance sync before sendCrypto failed for wallet ' . $wallet->id . ': ' . $e->getMessage());
+        }
+
+        $destination = trim($request->wallet_address);
+        $ethService = new EthereumService();
+        if (!$ethService->isValidAddress($destination)) {
+            return back()->withErrors(['wallet_address' => 'Invalid Ethereum destination address.'])->withInput();
+        }
+
+        if (strtolower($wallet->wallet_address) === strtolower($destination)) {
+            return back()->withErrors(['wallet_address' => 'Destination address cannot be the sender wallet.'])->withInput();
+        }
+
+        $amount = trim((string)$request->amount);
+        if (!preg_match('/^\d+(\.\d+)?$/', $amount) || bccomp($amount, '0', 18) <= 0) {
+            return back()->withErrors(['amount' => 'The amount must be a positive ETH string value greater than zero.'])->withInput();
+        }
+
+        // Validate parseEther via ethers.js and keep raw string usage instead of float.
+        try {
+            $amountWei = $ethService->parseEther($amount);
+            if ((string)$amountWei === '0' || (int)$amountWei <= 0) {
+                return back()->withErrors(['amount' => 'The amount must be greater than zero.'])->withInput();
+            }
+        } catch (\Throwable $e) {
+            Log::error('ParseEther failure: ' . $e->getMessage());
+            return back()->withErrors(['amount' => 'Invalid ETH amount.'])->withInput();
+        }
+
+        $privateKey = $wallet->getPrivateKey();
+        if (empty($privateKey)) {
+            Log::error('Attempted ETH send without decryptable private key for wallet ' . $wallet->id, [
+                'wallet_id' => $wallet->id,
+                'wallet_address' => $wallet->wallet_address,
+            ]);
+            return back()->withErrors(['sender_wallet_id' => 'This wallet cannot sign transactions because its private key is unavailable.'])->withInput();
+        }
+
+        // Create transaction record with 'processing' status and dispatch background job.
+        // Do not perform estimate, signing, or RPC broadcast inside the HTTP request.
+
+        // Ensure user wallet has sufficient balance for the requested amount (gas will be handled in the job)
+        $walletBalance = (string)$wallet->balance;
+        if (bccomp($walletBalance, $amount, 18) < 0) {
+            return back()->withErrors(['amount' => 'Insufficient ETH balance for requested amount.'])->withInput();
+        }
+
+        // Persist a 'processing' transaction entry immediately so job can pick it up.
+        $transaction = Transaction::create([
+            'wallet_id' => $wallet->id,
+            'user_id' => auth()->id(),
+            'merchant_id' => null,
+            'sender_id' => auth()->id(),
+            'recipient_id' => null,
+            'type' => 'withdraw',
+            'amount' => $amount,
+            'currency' => 'ETH',
+            'status' => 'processing',
+            'reference' => null,
+            'description' => 'ETH Sepolia send',
+            'sender_wallet_address' => $wallet->wallet_address,
+            'receiver_wallet_address' => $destination,
+            'tx_hash' => null,
+        ]);
+
+        try {
+            \App\Jobs\SendCryptoTransaction::dispatch($transaction->id)->onQueue(config('queue.connections.database.queue', 'default'));
+        } catch (\Throwable $e) {
+            Log::error('Failed to dispatch SendCryptoTransaction job', ['transaction_id' => $transaction->id, 'error' => $e->getMessage()]);
+            $transaction->status = 'failed';
+            $transaction->save();
+            return back()->withErrors(['wallet_address' => 'Unable to queue transaction for processing. Please try again later.'])->withInput();
+        }
+
+        if (config('queue.default') === 'sync') {
+            Log::warning('Queue connection is configured as sync; background job will run inline. Set QUEUE_CONNECTION=database and run a queue worker for true background processing.');
+        }
+
+        // Redirect to the transactions list so the user stays on the transactions page.
+        return redirect()
+            ->route('user.transactions')
+            ->with('success', 'Transaction has been queued and is being processed.');
+    }
+
+    public function showTransaction(Transaction $transaction)
+    {
+        // Ensure the authenticated user has access via the wallet
+        if (!$transaction->wallet || $transaction->wallet->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        return view('transactions.show', compact('transaction'));
     }
 
     public function send(Request $request)
@@ -156,8 +290,9 @@ class WalletController extends Controller
     public function transactions(Request $request)
     {
         $wallets = auth()->user()->wallets ?? collect();
+        $walletIds = $wallets->pluck('id')->filter()->all();
         
-        $query = Transaction::whereIn('wallet_id', $wallets->pluck('id'));
+        $query = Transaction::whereIn('wallet_id', $walletIds);
 
         // Filter by type
         if ($request->type) {
@@ -197,8 +332,15 @@ class WalletController extends Controller
         }
 
         $transactions = $query->with(['paymentRequest.merchant', 'sender', 'recipient', 'wallet', 'deposit'])->latest()->paginate(20);
+
+        $stats = [
+            'total' => Transaction::whereIn('wallet_id', $walletIds)->count(),
+            'completed' => Transaction::whereIn('wallet_id', $walletIds)->whereIn('status', ['completed', 'confirmed'])->count(),
+            'pending' => Transaction::whereIn('wallet_id', $walletIds)->where('status', 'pending')->count(),
+            'failed' => Transaction::whereIn('wallet_id', $walletIds)->where('status', 'failed')->count(),
+        ];
         
-        return view('user.transactions', compact('transactions', 'wallets'));
+        return view('user.transactions', compact('transactions', 'wallets', 'stats'));
     }
 
     public function pendingPayments()
@@ -322,8 +464,11 @@ class WalletController extends Controller
 
         Notification::createNotification(
             auth()->id(),
-            'سپرده تجربی',
-            $amount . ' ' . $wallet->currency . ' به کیف پول شما اضافه شد',
+            __('notifications.demo_deposit.title'),
+            __('notifications.demo_deposit.message', [
+                'amount' => number_format($amount, 8),
+                'currency' => $wallet->currency,
+            ]),
             'success',
             'fa-gift'
         );
@@ -459,16 +604,24 @@ class WalletController extends Controller
             // Create notifications
             Notification::createNotification(
                 auth()->id(),
-                'انتقال موفق',
-                $request->amount . ' ' . $senderWallet->currency . ' به ' . $receiverWallet->user->name . ' ارسال شد',
+                __('notifications.transfer_sent.title'),
+                __('notifications.transfer_sent.message', [
+                    'amount' => number_format($request->amount, 8),
+                    'currency' => $senderWallet->currency,
+                    'name' => $receiverWallet->user->name,
+                ]),
                 'success',
                 'fa-paper-plane'
             );
 
             Notification::createNotification(
                 $receiverWallet->user_id,
-                'دریافت انتقال',
-                $request->amount . ' ' . $receiverWallet->currency . ' از ' . auth()->user()->name . ' دریافت شد',
+                __('notifications.transfer_received.title'),
+                __('notifications.transfer_received.message', [
+                    'amount' => number_format($request->amount, 8),
+                    'currency' => $receiverWallet->currency,
+                    'name' => auth()->user()->name,
+                ]),
                 'success',
                 'fa-inbox'
             );
@@ -570,8 +723,11 @@ class WalletController extends Controller
         // Create notification for merchant
         Notification::createNotification(
             $payment->merchant_id,
-            'درخواست رد شد',
-            $payment->invoice_number . ' توسط ' . auth()->user()->name . ' رد شد',
+            __('notifications.payment_rejected.title'),
+            __('notifications.payment_rejected.message', [
+                'invoice' => $payment->invoice_number,
+                'name' => auth()->user()->name,
+            ]),
             'danger',
             'fa-times-circle'
         );

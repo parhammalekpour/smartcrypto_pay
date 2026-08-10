@@ -11,6 +11,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\BlockchainScan::class,
         \App\Console\Commands\BlockchainProcessDeposits::class,
         \App\Console\Commands\WalletSyncBalances::class,
+        \App\Console\Commands\EthereumSignTest::class,
     ];
 
     protected function schedule(Schedule $schedule): void

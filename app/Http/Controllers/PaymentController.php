@@ -277,30 +277,38 @@ class PaymentController extends Controller
             // تراکنش کاربر
             Transaction::create([
                 'wallet_id' => $customerWallet->id,
+                'sender_id' => auth()->id(),
+                'recipient_id' => $payment->merchant_id,
                 'type' => 'payment',
                 'amount' => $payment->amount,
                 'status' => 'completed',
                 'description' => 'Invoice Payment',
-                'reference' => 'INV-' . $payment->invoice_number,
+                'reference' => (preg_match('/^INV-/i', $payment->invoice_number) ? $payment->invoice_number : ('INV-' . $payment->invoice_number)) ,
                 'payment_request_id' => $payment->id
             ]);
 
             // تراکنش merchant
             Transaction::create([
                 'wallet_id' => $merchantWallet->id,
+                'sender_id' => auth()->id(),
+                'recipient_id' => $payment->merchant_id,
                 'type' => 'deposit',
                 'amount' => $payment->amount,
                 'status' => 'completed',
                 'description' => 'Payment Received',
-                'reference' => 'INV-' . $payment->invoice_number,
+                'reference' => (preg_match('/^INV-/i', $payment->invoice_number) ? $payment->invoice_number : ('INV-' . $payment->invoice_number)) ,
                 'payment_request_id' => $payment->id
             ]);
 
             // Notification for customer (user who paid)
             \App\Models\Notification::createNotification(
                 $payment->recipient_user_id,
-                '✅ پرداختی شد',
-                'شما ' . number_format($payment->amount, 8) . ' ' . $payment->currency . ' به ' . $payment->merchant->name . ' پرداخت کردید',
+                __('notifications.payment_paid.title'),
+                __('notifications.payment_paid.message', [
+                    'amount' => number_format($payment->amount, 8),
+                    'currency' => $payment->currency,
+                    'merchant' => $payment->merchant->name,
+                ]),
                 'success',
                 'fa-check-circle'
             );
@@ -308,8 +316,12 @@ class PaymentController extends Controller
             // Notification for merchant (who received payment)
             \App\Models\Notification::createNotification(
                 $payment->merchant_id,
-                '✅ پرداخت دریافت شد',
-                'شما ' . number_format($payment->amount, 8) . ' ' . $payment->currency . ' از ' . $payment->recipient->name . ' دریافت کردید',
+                __('notifications.payment_received.title'),
+                __('notifications.payment_received.message', [
+                    'amount' => number_format($payment->amount, 8),
+                    'currency' => $payment->currency,
+                    'customer' => $payment->recipient->name,
+                ]),
                 'success',
                 'fa-inbox'
             );

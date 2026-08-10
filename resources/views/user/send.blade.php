@@ -11,7 +11,7 @@
     <div class="lg:col-span-2 bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-800 mb-6 pb-4 border-b border-gray-200">{{ __('user.send_crypto_title') }}</h3>
 
-        <form method="POST" action="{{ route('wallet.transfer') }}" class="space-y-6">
+        <form method="POST" action="{{ route('user.send.post') }}" class="space-y-6">
             @csrf
 
             <!-- Select Wallet to Send From -->
@@ -45,7 +45,7 @@
             <!-- Amount -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">{{ __('common.amount') }}</label>
-                <input type="number" step="0.00000001" name="amount" required placeholder="0.00000000" 
+                <input type="text" name="amount" required placeholder="0.001" 
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                 @error('amount')
                     <p class="text-red-600 text-xs mt-1">{{ $message }}</p>

@@ -12,8 +12,8 @@
             App\Models\Notification::where('user_id', auth()->id())->orderBy('id', 'desc')->take(5)->get()->map(function($n){
                 return [
                     'id' => $n->id,
-                    'title' => $n->title,
-                    'message' => $n->message,
+                    'title' => App\Models\Notification::localizeText($n->title),
+                    'message' => App\Models\Notification::localizeText($n->message),
                     'icon' => $n->icon,
                     'type' => $n->type,
                     'read' => (bool) $n->read,
@@ -28,12 +28,86 @@
     // If initial notifications were provided by server, use them immediately
     try { if (window.INITIAL_NOTIFICATIONS && Array.isArray(window.INITIAL_NOTIFICATIONS)) { notifications = window.INITIAL_NOTIFICATIONS; notificationCount = notifications.filter(n => !n.read).length; } } catch(e){}
 
-    // Fetch unread count immediately and then every 5s
-    const updateUnread = () => fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count).catch(()=>{});
+    // Fetch unread count immediately and then every 5s. If the unread count increases,
+    // fetch the latest notifications list and merge new items into the existing list.
+    const updateUnread = async () => {
+        console.debug('[Notifications] updateUnread called (nav)');
+        try {
+            console.debug('[Notifications] requesting unread:', window.NOTIFICATION_ENDPOINTS.unread);
+            const res = await fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'});
+            console.debug('[Notifications] unread response (nav):', res);
+            const data = await res.json();
+            console.debug('[Notifications] unread data (nav):', data);
+            const newCount = Number(data.count || 0);
+
+            // Ensure a global last-known count exists so multiple Alpine instances don't duplicate work
+            if (typeof window.__notificationLastCount === 'undefined') {
+                window.__notificationLastCount = newCount;
+            }
+
+            // If count increased, fetch list and merge new notifications
+            if (newCount > (window.__notificationLastCount || 0)) {
+                try {
+                    const listRes = await fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'});
+                    const listData = await listRes.json();
+                    console.log('Notifications fetched (nav on delta):', listData);
+
+                    // Merge new notifications at the beginning while avoiding duplicates
+                    try {
+                        const existingIds = new Set((notifications || []).map(n => n.id));
+                        const newItems = (listData || []).filter(n => !existingIds.has(n.id));
+                        if (newItems.length > 0) {
+                            // Prepend new items so newest appear on top
+                            notifications = newItems.concat(notifications || []);
+                            // Cap to reasonable size (keep server-side seed of 5 but allow growth)
+                            if (notifications.length > 50) notifications = notifications.slice(0, 50);
+
+                            // Update unread count based on merged list
+                            try { notificationCount = notifications.filter(n => !n.read).length; } catch(e) { notificationCount = newCount; }
+
+                            // If a toast function exists, show toasts for new items
+                            try {
+                                if (typeof window.showToast === 'function') {
+                                    newItems.forEach(item => {
+                                        try { window.showToast(item.title || 'Notification', item.message || ''); } catch(e){}
+                                    });
+                                }
+                            } catch(e){}
+                        } else {
+                            notificationCount = newCount;
+                        }
+                    } catch(e) {
+                        // Fallback: just replace notifications if merge fails
+                        notifications = listData;
+                        try { notificationCount = notifications.filter(n => !n.read).length; } catch(e) { notificationCount = newCount; }
+                    }
+                } catch(err) {
+                    console.error('Notifications fetch error (nav on delta):', err);
+                    // If list fetch fails, still update the count
+                    notificationCount = newCount;
+                }
+            } else {
+                // No increase — just update count
+                notificationCount = newCount;
+            }
+
+            window.__notificationLastCount = newCount;
+        } catch(e) {
+            // Ignore errors so polling doesn't break
+        }
+    };
+
+    // Run once immediately
     updateUnread();
+
     // Also fetch notifications list once on init so UI shows immediately/refresh server-provided
     fetch(window.NOTIFICATION_ENDPOINTS.list, {credentials: 'same-origin'}).then(r => r.json()).then(data => { console.log('Notifications fetched (nav):', data); notifications = data; try { notificationCount = notifications.filter(n => !n.read).length; } catch(e){} }).catch(err=>{ console.error('Notifications fetch error (nav):', err); });
-    setInterval(updateUnread, 5000);
+
+    // Avoid starting multiple intervals if the view is rendered multiple times
+    if (!window.__notificationPollStarted) {
+        window.__notificationPollStarted = true;
+        setInterval(updateUnread, 5000);
+    }
     } catch(e) { console.error('Notifications init error (nav):', e); }
 })();">
 
@@ -108,16 +182,9 @@
                         <i class="fas fa-bell text-2xl"></i>
                         <span x-show="notificationCount > 0" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full" x-text="notificationCount"></span>
                     </button>
-                </div>
-                @endauth
 
-                <button @click="toggleTheme()" class="inline-flex items-center justify-center p-2 rounded-md border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition" aria-label="Toggle theme">
-                    <i :class="theme ? 'fas fa-sun text-yellow-500' : 'fas fa-moon text-indigo-500'"></i>
-                </button>
-
-                    <!-- Notifications Dropdown -->
-                    <div x-show="notificationOpen" @click.away="notificationOpen = false" class="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700">
-                        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div x-show="notificationOpen" @click.away="notificationOpen = false" class="absolute top-full mt-2 w-[min(24rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto border border-gray-200 dark:border-gray-700" style="left: {{ app()->getLocale() === 'fa' ? '0' : 'auto' }}; right: {{ app()->getLocale() === 'fa' ? 'auto' : '0' }}; direction: {{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }};">
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
                             <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">{{ __('Notifications') }}</h3>
                             <button @click="
                                 fetch(window.NOTIFICATION_ENDPOINTS.markAll, {method: 'POST', credentials: 'same-origin', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}})
@@ -144,9 +211,9 @@
                                         <div class="mt-1">
                                             <i :class="'fas ' + notification.icon" class="text-xl" :style="'color: ' + (notification.type === 'success' ? '#10b981' : notification.type === 'error' ? '#ef4444' : notification.type === 'warning' ? '#f59e0b' : '#3b82f6')"></i>
                                         </div>
-                                        <div class="flex-1">
-                                            <p class="font-semibold text-gray-800 dark:text-gray-100" x-text="notification.title"></p>
-                                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1" x-text="notification.message"></p>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-semibold text-gray-800 dark:text-gray-100 break-words whitespace-normal" x-text="notification.title"></p>
+                                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words whitespace-normal" x-text="notification.message"></p>
                                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-2" x-text="notification.created_at"></p>
                                         </div>
                                         <button @click="
@@ -155,7 +222,7 @@
                                                     notifications = notifications.filter(n => n.id !== notification.id);
                                                     fetch(window.NOTIFICATION_ENDPOINTS.unread, {credentials: 'same-origin'}).then(r => r.json()).then(data => notificationCount = data.count);
                                                 }).catch(()=>{});
-                                        " class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition">
+                                        " class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition flex-shrink-0">
                                             <i class="fas fa-times"></i>
                                         </button>
                                     </div>
@@ -163,6 +230,12 @@
                             </template>
                         </div>
                     </div>
+                </div>
+                @endauth
+
+                <button @click="toggleTheme()" class="inline-flex items-center justify-center p-2 rounded-md border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition" aria-label="Toggle theme">
+                    <i :class="theme ? 'fas fa-sun text-yellow-500' : 'fas fa-moon text-indigo-500'"></i>
+                </button>
 
                 @auth
                 <x-dropdown align="right" width="48">

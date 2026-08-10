@@ -8,17 +8,55 @@ use App\Models\Transaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use App\Services\EthereumService;
 use App\Services\WalletBalanceUpdated as WalletBalanceUpdatedEvent;
 
 class BalanceSyncService
 {
+    protected EthereumService $ethereumService;
+
+    public function __construct(?EthereumService $ethereumService = null)
+    {
+        $this->ethereumService = $ethereumService ?? new EthereumService();
+    }
     /**
      * Calculate wallet balances and update the database.
      * Returns array: [ 'confirmed' => string, 'pending' => string, 'withdrawn' => string, 'balance' => string ]
      */
+    protected function getOnChainBalance(Wallet $wallet): ?string
+    {
+        if (strtoupper($wallet->currency ?? '') !== 'ETH') {
+            return null;
+        }
+
+        $address = trim((string)$wallet->wallet_address);
+        if ($address === '') {
+            return null;
+        }
+
+        try {
+            $balance = $this->ethereumService->getBalance($address);
+            return is_string($balance) ? $balance : null;
+        } catch (\Throwable $e) {
+            Log::warning('BalanceSyncService: failed to fetch on-chain balance for wallet ' . $wallet->id . ': ' . $e->getMessage());
+            return null;
+        }
+    }
+
     public function calculateWalletBalance(Wallet $wallet): array
     {
         $walletId = $wallet->id;
+
+        $onChainBalance = $this->getOnChainBalance($wallet);
+        if ($onChainBalance !== null) {
+            return [
+                'confirmed' => $onChainBalance,
+                'pending' => '0',
+                'withdrawn' => '0',
+                'balance' => $onChainBalance,
+                'source' => 'chain',
+            ];
+        }
 
         $confirmed = Deposit::where('wallet_id', $walletId)
             ->where('status', 'confirmed')
@@ -28,10 +66,13 @@ class BalanceSyncService
             ->where('status', 'pending')
             ->sum('amount');
 
-        // Treat withdrawals as Transaction entries with type 'withdrawal' and status 'completed'
+        // Treat withdrawals as Transaction entries with type 'withdraw' or 'withdrawal'.
+        // Include pending and completed withdrawals in the withdrawn sum so that
+        // once a withdrawal is broadcast (status pending) the wallet balance
+        // reflects the spent amount immediately.
         $withdrawn = Transaction::where('wallet_id', $walletId)
-            ->where('type', 'withdrawal')
-            ->where('status', 'completed')
+            ->whereIn('type', ['withdraw', 'withdrawal'])
+            ->whereIn('status', ['pending', 'completed', 'confirmed'])
             ->sum('amount');
 
         // Ensure string math using bc* functions when available

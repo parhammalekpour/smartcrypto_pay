@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Transaction {{ $data['reference'] ?? $data['id'] }}</title>
+    <title>{{ __('merchant.downloads.transaction_title', ['reference' => $data['reference'] ?? $data['id']]) }}</title>
     <style>
         body { font-family: Arial, Helvetica, sans-serif; color:#111; }
         .container { max-width:800px; margin:24px auto; padding:16px; border:1px solid #e5e7eb; border-radius:6px; }
@@ -18,46 +18,46 @@
 <div class="container">
     <div class="header">
         <div>
-            <h2>خلاصه تراکنش</h2>
-            <div style="color:#6b7280">شناسه: {{ $data['reference'] ?? $data['id'] }}</div>
+            <h2>{{ __('merchant.downloads.transaction_summary') }}</h2>
+            <div style="color:#6b7280">{{ __('merchant.downloads.transaction_id') }}: {{ $data['reference'] ?? $data['id'] }}</div>
         </div>
         <div style="text-align:left">
             <strong>CryptoPay</strong>
-            <div style="color:#6b7280">تاریخ: {{ $data['created_at'] }}</div>
+            <div style="color:#6b7280">{{ __('merchant.downloads.transaction_date') }}: {{ $data['created_at'] }}</div>
         </div>
     </div>
 
     <div class="meta">
         <table>
             <tr>
-                <th>نوع</th>
+                <th>{{ __('merchant.downloads.transaction_type') }}</th>
                 <td>{{ $data['type'] }}</td>
             </tr>
             <tr>
-                <th>توضیح</th>
+                <th>{{ __('merchant.downloads.transaction_description') }}</th>
                 <td>{{ $data['description'] }}</td>
             </tr>
             <tr>
-                <th>مبلغ</th>
+                <th>{{ __('merchant.downloads.transaction_amount') }}</th>
                 <td class="amount">{{ $data['amount'] }} {{ $data['currency'] }}</td>
             </tr>
             <tr>
-                <th>وضعیت</th>
+                <th>{{ __('merchant.downloads.transaction_status') }}</th>
                 <td>{{ $data['status'] }}</td>
             </tr>
             <tr>
-                <th>ارسال‌کننده</th>
+                <th>{{ __('merchant.downloads.transaction_sender') }}</th>
                 <td>{{ $data['sender'] }}</td>
             </tr>
             <tr>
-                <th>گیرنده</th>
+                <th>{{ __('merchant.downloads.transaction_recipient') }}</th>
                 <td>{{ $data['recipient'] }}</td>
             </tr>
         </table>
     </div>
 
     <div style="margin-top:18px;color:#6b7280;font-size:0.9rem">
-        این فایل تنها برای مرجع داخلی و حسابداری است. برای تولید PDF رسمی، پکیج PDF را در پروژه نصب کنید یا از خروجی HTML حاضر استفاده کنید.
+        {{ __('merchant.downloads.transaction_note') }}
     </div>
 </div>
 </body>

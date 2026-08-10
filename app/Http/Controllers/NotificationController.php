@@ -25,8 +25,8 @@ class NotificationController extends Controller
             ->map(function ($notification) {
                 return [
                     'id' => $notification->id,
-                    'title' => $notification->title,
-                    'message' => $notification->message,
+                    'title' => Notification::localizeText($notification->title),
+                    'message' => Notification::localizeText($notification->message),
                     'type' => $notification->type,
                     'icon' => $notification->icon,
                     'read' => $notification->read,
@@ -143,10 +143,13 @@ class NotificationController extends Controller
             }
         }
 
+        $forceRefresh = in_array($changeType, ['transaction', 'wallet_update']);
+
         return response()->json([
             'hasChanges' => $hasChanges,
             'changeType' => $changeType,
             'details' => $details,
+            'forceRefresh' => $forceRefresh,
             'timestamp' => now()->toIso8601String()
         ]);
     }

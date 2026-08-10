@@ -9,6 +9,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\MerchantController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\KycController;
+use App\Http\Controllers\DocumentationController;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
 use Illuminate\Http\Request;
 
@@ -31,6 +32,15 @@ Route::get('/dashboard', function () {
         return view('dashboard');
     }
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/documentation', [DocumentationController::class, 'index'])->name('documentation.index');
+    Route::get('/documentation/user', [DocumentationController::class, 'show'])->name('documentation.user');
+    Route::get('/documentation/merchant', [DocumentationController::class, 'show'])->name('documentation.merchant');
+    Route::get('/documentation/{type}', [DocumentationController::class, 'show'])->name('documentation.type');
+    Route::get('/documentation/{type}/{category}', [DocumentationController::class, 'show'])->name('documentation.category');
+    Route::get('/documentation/{type}/{category}/{article}', [DocumentationController::class, 'show'])->name('documentation.article');
+});
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin', [AdminController::class, 'index'])->name('admin.dashboard');
@@ -69,11 +79,13 @@ Route::middleware(['auth', 'role:user', 'verified'])->group(function () {
     
     // Send & Receive
     Route::get('/user/send', [WalletController::class, 'send'])->name('user.send');
+    Route::post('/user/send', [WalletController::class, 'sendCrypto'])->name('user.send.post');
     Route::get('/user/receive', [WalletController::class, 'receive'])->name('user.receive');
 
 
     // Transactions
     Route::get('/user/transactions', [WalletController::class, 'transactions'])->name('user.transactions');
+    Route::get('/user/transactions/{transaction}', [WalletController::class, 'showTransaction'])->name('user.transaction.show');
     Route::get('/user/pending-payments', [WalletController::class, 'pendingPayments'])->name('user.pending-payments');
     Route::post('/payment-request/{id}/reject', [WalletController::class, 'rejectPayment'])->name('payment-request.reject');
     
@@ -117,6 +129,9 @@ Route::middleware('auth')->group(function () {
     
     // Auto-refresh polling endpoint
     Route::get('/api/refresh-status', [NotificationController::class, 'checkRefreshStatus'])->name('api.refresh-status');
+
+    // Transaction JSON endpoint for UI polling
+    Route::get('/api/transaction/{transaction}', [\App\Http\Controllers\TransactionApiController::class, 'show'])->name('api.transaction.show');
 });
 
 // Tickets - available to any authenticated & verified user (user or merchant)
@@ -158,10 +173,11 @@ Route::middleware(['auth', 'role:merchant', 'verified'])->group(function () {
 
     // Merchant: Send / Withdraw (allow merchants to send to external wallets)
     Route::get('/merchant/send', [MerchantController::class, 'send'])->name('merchant.send');
-    Route::post('/merchant/send', [MerchantController::class, 'transfer'])->name('merchant.send.post');
+    Route::post('/merchant/send', [MerchantController::class, 'sendCrypto'])->name('merchant.send.post');
 
     // Transactions
     Route::get('/merchant/transactions', [MerchantController::class, 'transactions'])->name('merchant.transactions');
+    Route::get('/merchant/transactions/{transaction}', [MerchantController::class, 'showTransaction'])->name('merchant.transaction.show');
     // Export transactions (CSV)
     Route::get('/merchant/transactions/export', [MerchantController::class, 'exportTransactions'])->name('merchant.transactions.export');
     // Download single transaction (summary / invoice-like)

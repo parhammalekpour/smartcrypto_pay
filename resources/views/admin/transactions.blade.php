@@ -53,7 +53,8 @@
                                     @if($transaction->wallet?->wallet_address)
                                         <div>{{ __('admin.transactions.receiver_wallet') }}: <code dir="ltr" class="text-slate-700">{{ $transaction->wallet->wallet_address }}</code></div>
                                     @endif
-                                    <div>{{ __('admin.transactions.transaction_id') }}: <code dir="ltr" class="text-slate-700">{{ $transaction->reference }}</code></div>
+                                    <?php $refTemp = $transaction->reference ?? ('TRX-' . $transaction->id); $refTemp = preg_replace('/^(INV-)+/i', 'INV-', $refTemp); ?>
+                                    <div>{{ __('admin.transactions.transaction_id') }}: <code dir="ltr" class="text-slate-700">{{ $refTemp }}</code></div>
                                     <div>{{ __('admin.transactions.confirmations') }}: <strong class="text-slate-700">{{ $transaction->deposit->confirmations ?? 0 }}</strong></div>
                                     <div>{{ __('admin.transactions.deposit_status') }}: <strong class="text-slate-700">{{ $transaction->deposit->status }}</strong></div>
                                 </div>

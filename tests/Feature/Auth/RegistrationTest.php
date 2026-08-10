@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\App;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -27,5 +28,30 @@ class RegistrationTest extends TestCase
 
         $this->assertGuest();
         $response->assertRedirect(route('login', absolute: false));
+    }
+
+    public function test_registration_redirects_with_localized_welcome_message(): void
+    {
+        App::setLocale('en');
+
+        $response = $this->post('/register', [
+            'name' => 'Test User',
+            'email' => 'welcome@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
+
+        $response->assertSessionHas('status', __('auth.register.success_message'));
+
+        App::setLocale('fa');
+
+        $response = $this->post('/register', [
+            'name' => 'Test User',
+            'email' => 'welcome-fa@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
+
+        $response->assertSessionHas('status', __('auth.register.success_message'));
     }
 }

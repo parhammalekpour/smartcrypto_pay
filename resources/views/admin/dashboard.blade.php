@@ -105,9 +105,9 @@
                                     <div class="text-xs text-slate-400 mt-1">
                                         {{ $transaction->currency }} • {{ $transaction->created_at->format('Y/m/d H:i') }}
                                         @if($transaction->reference)
-                                            • {{ $transaction->reference }}
+                                                                                    • {{ preg_match('/^(INV-)+/i', $transaction->reference) ? preg_replace('/^(INV-)+/i', 'INV-', $transaction->reference) : $transaction->reference }}
                                         @elseif($transaction->paymentRequest && $transaction->paymentRequest->invoice_number)
-                                            • INV-{{ $transaction->paymentRequest->invoice_number }}
+                                                                                    • {{ preg_match('/^INV-/i', $transaction->paymentRequest->invoice_number) ? $transaction->paymentRequest->invoice_number : ('INV-' . $transaction->paymentRequest->invoice_number) }}
                                         @endif
                                     </div>
                                 </td>

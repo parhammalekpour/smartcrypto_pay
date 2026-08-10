@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 class BlockchainDepositService
 {
     protected EthereumService $ethService;
-    protected int $confirmationThreshold = 12;
+    protected int $confirmationThreshold;
 
     protected BalanceSyncService $balanceService;
 
@@ -19,6 +19,11 @@ class BlockchainDepositService
     {
         $this->ethService = $ethService;
         $this->balanceService = new BalanceSyncService();
+
+        // Confirmation threshold: configurable via ETH_CONFIRMATION_THRESHOLD env var.
+        // Default is lower for Sepolia (testnet) to make tests complete faster.
+        $defaultThreshold = (strtolower((string)env('ETHEREUM_NETWORK', 'sepolia')) === 'sepolia') ? 2 : 12;
+        $this->confirmationThreshold = (int) env('ETH_CONFIRMATION_THRESHOLD', $defaultThreshold);
     }
 
     /**
@@ -131,7 +136,7 @@ class BlockchainDepositService
                                                                 \App\Models\Transaction::where('reference', $existingDeposit->tx_hash)
                                                                     ->where('type', 'deposit')
                                                                     ->where('status', 'pending')
-                                                                    ->update(['status' => 'completed']);
+                                                                    ->update(['status' => 'confirmed']);
                                                             }
                                                         });
                                                     }
@@ -140,7 +145,7 @@ class BlockchainDepositService
                                                         \App\Models\Transaction::where('reference', $existingDeposit->tx_hash)
                                                             ->where('type', 'deposit')
                                                             ->where('status', 'pending')
-                                                            ->update(['status' => 'completed']);
+                                                            ->update(['status' => 'confirmed']);
                                                     }
  
                                                     // If it's now confirmed and unprocessed, process it
@@ -312,7 +317,7 @@ class BlockchainDepositService
                                             \App\Models\Transaction::where('reference', $existingDeposit->tx_hash)
                                                 ->where('type', 'deposit')
                                                 ->where('status', 'pending')
-                                                ->update(['status' => 'completed']);
+                                                ->update(['status' => 'confirmed']);
                                         }
                                     });
                                 }
@@ -321,7 +326,7 @@ class BlockchainDepositService
                                     \App\Models\Transaction::where('reference', $existingDeposit->tx_hash)
                                         ->where('type', 'deposit')
                                         ->where('status', 'pending')
-                                        ->update(['status' => 'completed']);
+                                        ->update(['status' => 'confirmed']);
                                 }
  
                                 if ($existingDeposit->status === 'confirmed' && $existingDeposit->processed_at === null) {
@@ -376,7 +381,7 @@ class BlockchainDepositService
                                     'sender_wallet_address' => $senderWalletAddress,
                                     'type' => 'deposit',
                                     'amount' => $amount,
-                                    'status' => ($confirmations >= $this->confirmationThreshold) ? 'completed' : 'pending',
+                                    'status' => ($confirmations >= $this->confirmationThreshold) ? 'confirmed' : 'pending',
                                     'reference' => $deposit->tx_hash,
                                     'description' => 'On-chain deposit ' . ($deposit->tx_hash ?? '')
                                 ]);
@@ -479,7 +484,7 @@ class BlockchainDepositService
             \App\Models\Transaction::where('reference', $deposit->tx_hash)
                 ->where('type', 'deposit')
                 ->where('status', 'pending')
-                ->update(['status' => 'completed']);
+                ->update(['status' => 'confirmed']);
  
             // Invalidate cache and broadcast if needed
             $this->balanceService->invalidateCache($wallet->id);
@@ -490,13 +495,17 @@ class BlockchainDepositService
                         try {
                             $ownerId = $deposit->user_id ?? $deposit->merchant_id ?? $wallet->user_id ?? null;
                             if ($ownerId) {
-                                $title = 'واریز دریافت شد';
+                                $title = __('notifications.deposit_received.title');
                                 $formattedAmount = rtrim(rtrim((string)$deposit->amount, '0'), '.');
                                 if ($formattedAmount === '') {
                                     $formattedAmount = '0';
                                 }
-                                $senderAddress = $deposit->sender_wallet_address ? $deposit->sender_wallet_address : 'ناشناخته';
-                                $message = 'واریز ' . $formattedAmount . ' ' . $deposit->currency . ' از ' . $senderAddress;
+                                $senderAddress = $deposit->sender_wallet_address ? $deposit->sender_wallet_address : __('notifications.unknown_sender');
+                                $message = __('notifications.deposit_received.message', [
+                                    'amount' => $formattedAmount,
+                                    'currency' => $deposit->currency,
+                                    'sender' => $senderAddress,
+                                ]);
                                 Notification::createNotification($ownerId, $title, $message, 'success', 'fa-money-bill-wave');
                             }
                         } catch (\Throwable $e) {
