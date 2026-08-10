@@ -56,7 +56,7 @@ class UpdateDepositConfirmationsJob implements ShouldQueue
                     $newConfirmations = max(0, $currentBlock - (int)$deposit->block_number + 1);
 
                     if ($deposit->confirmations !== $newConfirmations || $deposit->status !== ($newConfirmations >= $threshold ? 'confirmed' : 'pending')) {
-                        DB::transaction(function () use ($deposit, $newConfirmations, $balanceService) {
+                        DB::transaction(function () use ($deposit, $newConfirmations, $balanceService, $threshold) {
                             $deposit->confirmations = $newConfirmations;
 
                             $shouldConfirm = $newConfirmations >= $threshold;
@@ -115,6 +115,12 @@ class UpdateDepositConfirmationsJob implements ShouldQueue
                     $receiptConfirmations = isset($receiptResult['confirmations']) ? (int)$receiptResult['confirmations'] : null;
                     $receiptBlockNumber = null;
 
+                                        // If no receipt found on-chain yet, do not modify DB — keep transaction pending and do not re-broadcast
+                                        if ($receipt === null) {
+                                            // nothing to update yet
+                                            continue;
+                                        }
+
                     if (is_array($receipt) && isset($receipt['blockNumber'])) {
                         $blockValue = $receipt['blockNumber'];
                         if (is_string($blockValue) && str_starts_with($blockValue, '0x')) {
@@ -139,9 +145,10 @@ class UpdateDepositConfirmationsJob implements ShouldQueue
                         if ($receiptStatus === 0 || $receiptStatus === '0' || $receiptStatus === false) {
                             $newStatus = 'failed';
                         } elseif ($receiptConfirmations >= $threshold) {
-                            $newStatus = 'confirmed';
-                        }
-                    }
+                                                // Use project's convention for final state (completed preferred in repository migrations/services)
+                                                $newStatus = 'completed';
+                                            }
+                                        }
 
                     $updated = false;
                     if ($withdrawal->block_number !== $receiptBlockNumber) {
@@ -161,7 +168,7 @@ class UpdateDepositConfirmationsJob implements ShouldQueue
                         $withdrawal->save();
                         Log::info('Withdraw transaction updated from receipt', ['transaction_id' => $withdrawal->id, 'tx_hash' => $txHash, 'status' => $withdrawal->status, 'confirmations' => $withdrawal->confirmations, 'block_number' => $withdrawal->block_number]);
 
-                        if ($newStatus === 'confirmed' && $withdrawal->wallet) {
+                        if ($newStatus === 'completed' && $withdrawal->wallet) {
                             try {
                                 $balanceService->syncWallet($withdrawal->wallet);
                             } catch (\Throwable $e) {
