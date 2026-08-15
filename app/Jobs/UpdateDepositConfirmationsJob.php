@@ -38,15 +38,17 @@ class UpdateDepositConfirmationsJob implements ShouldQueue
                 Log::error('Failed to get current block number for confirmations update: ' . $e->getMessage());
             }
 
-            // Determine confirmation threshold (configurable via env; default lower on Sepolia)
-            $threshold = (int) env('ETH_CONFIRMATION_THRESHOLD', (strtolower((string)env('ETHEREUM_NETWORK', 'sepolia')) === 'sepolia') ? 2 : 12);
+            // Determine confirmation threshold (use centralized config to avoid duplication)
+            $threshold = (int) config('ethereum.confirmation_threshold');
 
             // Find pending deposits which have a block_number
             $pending = Deposit::where('status', 'pending')
                 ->whereNotNull('block_number')
                 ->get();
 
+            Log::info('[BlockchainConfirmation] Found pending deposits', ['count' => $pending->count(), 'current_block' => $currentBlock]);
             foreach ($pending as $deposit) {
+                Log::info('[BlockchainConfirmation] Checking deposit', ['deposit_id' => $deposit->id, 'tx_hash' => $deposit->tx_hash, 'block_number' => $deposit->block_number]);
                 try {
                     if ($currentBlock === null || $deposit->block_number === null) {
                         // can't compute confirmations
@@ -56,10 +58,13 @@ class UpdateDepositConfirmationsJob implements ShouldQueue
                     $newConfirmations = max(0, $currentBlock - (int)$deposit->block_number + 1);
 
                     if ($deposit->confirmations !== $newConfirmations || $deposit->status !== ($newConfirmations >= $threshold ? 'confirmed' : 'pending')) {
-                        DB::transaction(function () use ($deposit, $newConfirmations, $balanceService, $threshold) {
+                        DB::transaction(function () use ($deposit, $newConfirmations, $balanceService) {
+                            // Read threshold from config inside closure to avoid undefined-variable warnings
+                            $thresholdLocal = (int) config('ethereum.confirmation_threshold');
+
                             $deposit->confirmations = $newConfirmations;
 
-                            $shouldConfirm = $newConfirmations >= $threshold;
+                            $shouldConfirm = $newConfirmations >= $thresholdLocal;
                             if ($shouldConfirm) {
                                 $deposit->status = 'confirmed';
                                 Log::info('Deposit confirmed', ['deposit_id' => $deposit->id, 'tx_hash' => $deposit->tx_hash, 'wallet_id' => $deposit->wallet_id]);
@@ -103,8 +108,12 @@ class UpdateDepositConfirmationsJob implements ShouldQueue
                 ->whereIn('status', ['processing', 'pending', 'failed'])
                 ->get();
 
+            Log::info('[BlockchainConfirmation] Found withdraw transactions to check', ['count' => $withdrawals->count()]);
+
             foreach ($withdrawals as $withdrawal) {
                 try {
+                    Log::info('Checking withdrawal on-chain', ['transaction_id' => $withdrawal->id, 'tx_hash' => $withdrawal->tx_hash, 'db_status' => $withdrawal->status, 'currency' => $withdrawal->currency]);
+
                     $txHash = $withdrawal->tx_hash;
                     if (empty($txHash)) {
                         continue;
@@ -144,11 +153,14 @@ class UpdateDepositConfirmationsJob implements ShouldQueue
                     if (is_array($receipt)) {
                         if ($receiptStatus === 0 || $receiptStatus === '0' || $receiptStatus === false) {
                             $newStatus = 'failed';
-                        } elseif ($receiptConfirmations >= $threshold) {
-                                                // Use project's convention for final state (completed preferred in repository migrations/services)
-                                                $newStatus = 'completed';
-                                            }
-                                        }
+                        } else {
+                            $thresholdLocal = (int) config('ethereum.confirmation_threshold');
+                            if ($receiptConfirmations >= $thresholdLocal) {
+                                // Use project's convention for final state (completed preferred in repository migrations/services)
+                                $newStatus = 'completed';
+                            }
+                        }
+                    }
 
                     $updated = false;
                     if ($withdrawal->block_number !== $receiptBlockNumber) {

@@ -89,16 +89,16 @@
                             @endif
                         </div>
                         <div>
-                            <p class="font-bold text-gray-800">{{ $wallet->currency }}</p>
+                            <p class="font-bold text-gray-800">{{ $wallet->name ?: $wallet->currency }}</p>
                             <p class="text-xs text-gray-500">{{ $wallet->currency === 'BTC' ? 'Bitcoin' : ($wallet->currency === 'ETH' ? 'Ethereum' : 'Tether') }}</p>
                         </div>
                     </div>
-                    <div class="relative group">
-                        <button class="p-2 hover:bg-gray-100 rounded-lg">
+                    <div class="relative wallet-menu-wrapper">
+                        <button type="button" class="merchant-menu-toggle inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition hover:bg-gray-200" data-wallet-name="{{ $wallet->name ?? '' }}" data-wallet-route="{{ route('merchant.wallets.rename', $wallet) }}" aria-label="{{ __('wallets.rename_wallet_title') }}" aria-haspopup="true" aria-expanded="false">
                             <i class="fas fa-ellipsis-v text-gray-600"></i>
                         </button>
-                        <div class="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg hidden group-hover:block z-10">
-                            <button class="block w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        <div class="merchant-menu absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg hidden z-10">
+                            <button class="merchant-wallet-edit-trigger block w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" data-wallet-name="{{ $wallet->name ?? '' }}" data-wallet-route="{{ route('merchant.wallets.rename', $wallet) }}">
                                 <i class="fas fa-edit ml-2"></i>{{ __('common.edit') }}
                             </button>
                         </div>
@@ -197,6 +197,38 @@
                     {{ __('common.create') }}
                 </button>
                 <button type="button" onclick="closeAddWalletModal()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold hover:bg-gray-300 transition">
+                    {{ __('common.cancel') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Merchant Rename Wallet Modal -->
+<div id="merchantRenameWalletModal" class="hidden fixed inset-0 bg-black/50 px-4 py-6 flex items-center justify-center z-50">
+    <div class="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-2xl">
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">{{ __('wallets.rename_wallet_title') }}</h3>
+                <p class="mt-1 text-sm text-gray-500">{{ __('wallets.rename_wallet_description') }}</p>
+            </div>
+            <button type="button" onclick="closeMerchantRenameWalletModal()" class="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form id="merchantWalletRenameForm" method="POST" action="" class="mt-5 space-y-4">
+            @csrf
+            <div>
+                <label for="merchantWalletRenameInput" class="mb-2 block text-sm font-semibold text-gray-700">{{ __('wallets.rename_wallet_label') }}</label>
+                <input id="merchantWalletRenameInput" name="name" type="text" maxlength="80" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200" placeholder="{{ __('wallets.rename_wallet_placeholder') }}">
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button type="submit" class="flex-1 rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition">
+                    {{ __('wallets.rename_wallet_save') }}
+                </button>
+                <button type="button" onclick="closeMerchantRenameWalletModal()" class="flex-1 rounded-lg bg-gray-100 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition">
                     {{ __('common.cancel') }}
                 </button>
             </div>
@@ -336,6 +368,56 @@
 
     fetchAndDisplayPrices();
     setInterval(fetchAndDisplayPrices, 5000);
+
+    // Merchant wallet rename modal behavior
+    document.querySelectorAll('.merchant-wallet-edit-trigger').forEach(button => {
+        button.addEventListener('click', function (event) {
+            event.stopPropagation();
+            const modal = document.getElementById('merchantRenameWalletModal');
+            const form = document.getElementById('merchantWalletRenameForm');
+            const input = document.getElementById('merchantWalletRenameInput');
+
+            if (modal && form && input) {
+                form.action = this.dataset.walletRoute || '';
+                input.value = this.dataset.walletName || '';
+                input.focus();
+                modal.classList.remove('hidden');
+            }
+        });
+    });
+
+    // Merchant + wallet menu toggle helpers (click to open for reliable interaction)
+    function closeMerchantMenus() {
+        document.querySelectorAll('.merchant-menu, .wallet-menu').forEach(menu => menu.classList.add('hidden'));
+        document.querySelectorAll('.merchant-menu-toggle, .wallet-menu-toggle').forEach(btn => btn.setAttribute('aria-expanded', 'false'));
+    }
+
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('.merchant-menu-wrapper') && !event.target.closest('.wallet-menu-wrapper')) {
+            closeMerchantMenus();
+        }
+    });
+
+    document.querySelectorAll('.merchant-menu-toggle').forEach(button => {
+        button.addEventListener('click', function (event) {
+            event.stopPropagation();
+            const wrapper = this.closest('.merchant-menu-wrapper') || this.closest('.wallet-menu-wrapper');
+            const menu = wrapper ? wrapper.querySelector('.merchant-menu, .wallet-menu') : null;
+            const isHidden = menu ? menu.classList.contains('hidden') : true;
+
+            closeMerchantMenus();
+
+            if (menu && isHidden) {
+                menu.classList.remove('hidden');
+                this.setAttribute('aria-expanded', 'true');
+            }
+        });
+    });
+
+    function closeMerchantRenameWalletModal() {
+        const modal = document.getElementById('merchantRenameWalletModal');
+        if (modal) modal.classList.add('hidden');
+    }
 
 </script>
 @endpush

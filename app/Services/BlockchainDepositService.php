@@ -20,10 +20,8 @@ class BlockchainDepositService
         $this->ethService = $ethService;
         $this->balanceService = new BalanceSyncService();
 
-        // Confirmation threshold: configurable via ETH_CONFIRMATION_THRESHOLD env var.
-        // Default is lower for Sepolia (testnet) to make tests complete faster.
-        $defaultThreshold = (strtolower((string)env('ETHEREUM_NETWORK', 'sepolia')) === 'sepolia') ? 2 : 12;
-        $this->confirmationThreshold = (int) env('ETH_CONFIRMATION_THRESHOLD', $defaultThreshold);
+        // Confirmation threshold: use centralized config to avoid duplication
+        $this->confirmationThreshold = (int) config('ethereum.confirmation_threshold');
     }
 
     /**

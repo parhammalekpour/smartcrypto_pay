@@ -164,7 +164,9 @@ class MerchantController extends Controller
         // Get wallet activities (deposits/withdrawals)
         $walletTransactions = $transactions;
         
-        return view('merchant.transactions', compact('transactions', 'paymentRequests', 'walletTransactions', 'totalCount', 'completedCount', 'pendingCount', 'failedCount'));
+        $availableCurrencies = Wallet::where('user_id', auth()->id())->pluck('currency')->unique()->values();
+        
+        return view('merchant.transactions', compact('transactions', 'paymentRequests', 'walletTransactions', 'totalCount', 'completedCount', 'pendingCount', 'failedCount', 'availableCurrencies'));
     }
 
     /**
@@ -528,6 +530,23 @@ class MerchantController extends Controller
         }
 
         return redirect()->route('merchant.wallets')->with('success', __('wallets.create_wallet_success', ['currency' => $request->currency]));
+    }
+
+    public function rename(Request $request, Wallet $wallet)
+    {
+        if ($wallet->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized');
+        }
+
+        $validated = $request->validate([
+            'name' => ['nullable', 'string', 'max:80'],
+        ]);
+
+        $wallet->update([
+            'name' => trim((string) ($validated['name'] ?? '')) !== '' ? trim((string) $validated['name']) : null,
+        ]);
+
+        return redirect()->route('merchant.wallets')->with('success', __('wallets.rename_wallet_success'));
     }
 
     /**

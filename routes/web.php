@@ -74,6 +74,7 @@ Route::middleware(['auth', 'role:user', 'verified'])->group(function () {
     // Wallets
     Route::get('/user/wallets', [WalletController::class, 'wallets'])->name('user.wallets');
     Route::post('/user/wallets', [WalletController::class, 'storeWallet'])->name('user.wallets.store');
+    Route::post('/user/wallets/{wallet}/rename', [WalletController::class, 'rename'])->name('user.wallets.rename');
     // Delete a user wallet
     Route::delete('/user/wallets/{wallet}', [WalletController::class, 'destroy'])->name('user.wallets.destroy');
     
@@ -85,6 +86,7 @@ Route::middleware(['auth', 'role:user', 'verified'])->group(function () {
 
     // Transactions
     Route::get('/user/transactions', [WalletController::class, 'transactions'])->name('user.transactions');
+    // Show a single transaction detail (user-facing)
     Route::get('/user/transactions/{transaction}', [WalletController::class, 'showTransaction'])->name('user.transaction.show');
     Route::get('/user/pending-payments', [WalletController::class, 'pendingPayments'])->name('user.pending-payments');
     Route::post('/payment-request/{id}/reject', [WalletController::class, 'rejectPayment'])->name('payment-request.reject');
@@ -168,6 +170,7 @@ Route::middleware(['auth', 'role:merchant', 'verified'])->group(function () {
     // Wallets
     Route::get('/merchant/wallets', [MerchantController::class, 'wallets'])->name('merchant.wallets');
     Route::post('/merchant/wallets', [MerchantController::class, 'storeWallet'])->name('merchant.wallets.store');
+    Route::post('/merchant/wallets/{wallet}/rename', [MerchantController::class, 'rename'])->name('merchant.wallets.rename');
     // Delete a merchant wallet
     Route::delete('/merchant/wallets/{wallet}', [MerchantController::class, 'destroyWallet'])->name('merchant.wallets.destroy');
 
@@ -177,9 +180,9 @@ Route::middleware(['auth', 'role:merchant', 'verified'])->group(function () {
 
     // Transactions
     Route::get('/merchant/transactions', [MerchantController::class, 'transactions'])->name('merchant.transactions');
-    Route::get('/merchant/transactions/{transaction}', [MerchantController::class, 'showTransaction'])->name('merchant.transaction.show');
-    // Export transactions (CSV)
+    // Export transactions (CSV) — placed before parameterized routes so literal 'export' is matched
     Route::get('/merchant/transactions/export', [MerchantController::class, 'exportTransactions'])->name('merchant.transactions.export');
+    Route::get('/merchant/transactions/{transaction}', [MerchantController::class, 'showTransaction'])->name('merchant.transaction.show');
     // Download single transaction (summary / invoice-like)
     Route::get('/merchant/transactions/{transaction}/download', [MerchantController::class, 'downloadTransaction'])->name('merchant.transactions.download');
     

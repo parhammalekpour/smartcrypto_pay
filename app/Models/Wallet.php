@@ -22,6 +22,7 @@ class Wallet extends Model
         'encrypted_private_key',
         'network',
         'currency',
+        'name',
         'balance',
         'last_scanned_block'
     ];

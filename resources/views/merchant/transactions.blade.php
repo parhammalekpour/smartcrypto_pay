@@ -6,80 +6,106 @@
 
 @section('content')
 
-<!-- Stats -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-    <div class="bg-white rounded-lg shadow p-6">
-        <p class="text-gray-500 text-sm mb-2">{{ __('merchant.transactions.total_transactions') }}</p>
-        <p class="text-3xl font-bold text-gray-800">{{ $totalCount }}</p>
+<div class="transactions-shell max-w-[1400px] w-full mx-auto px-6 py-6" dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">
+
+<div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <!-- Total -->
+    <div class="h-28 rounded-2xl border border-slate-700/40 bg-slate-900/60 p-4 shadow-sm">
+        <div class="h-full flex flex-col items-center justify-center text-center">
+            <p class="text-xs uppercase tracking-widest text-slate-400">{{ __('merchant.transactions.total_transactions') }}</p>
+            <p class="mt-3 text-2xl lg:text-3xl font-semibold text-white">{{ $totalCount }}</p>
+        </div>
     </div>
-    <div class="bg-white rounded-lg shadow p-6">
-        <p class="text-gray-500 text-sm mb-2">{{ __('merchant.transactions.completed') }}</p>
-        <p class="text-3xl font-bold text-green-600">{{ $completedCount }}</p>
+
+    <!-- Completed -->
+    <div class="h-28 rounded-2xl border border-emerald-700/30 bg-emerald-900/10 p-4 shadow-sm">
+        <div class="h-full flex flex-col items-center justify-center text-center">
+            <p class="text-xs uppercase tracking-widest text-emerald-300">{{ __('merchant.transactions.completed') }}</p>
+            <p class="mt-3 text-2xl lg:text-3xl font-semibold text-white">{{ $completedCount }}</p>
+        </div>
     </div>
-    <div class="bg-white rounded-lg shadow p-6">
-        <p class="text-gray-500 text-sm mb-2">{{ __('merchant.transactions.pending') }}</p>
-        <p class="text-3xl font-bold text-yellow-600">{{ $pendingCount }}</p>
+
+    <!-- Pending -->
+    <div class="h-28 rounded-2xl border border-amber-700/30 bg-amber-900/5 p-4 shadow-sm">
+        <div class="h-full flex flex-col items-center justify-center text-center">
+            <p class="text-xs uppercase tracking-widest text-amber-300">{{ __('merchant.transactions.pending') }}</p>
+            <p class="mt-3 text-2xl lg:text-3xl font-semibold text-white">{{ $pendingCount }}</p>
+        </div>
     </div>
-    <div class="bg-white rounded-lg shadow p-6">
-        <p class="text-gray-500 text-sm mb-2">{{ __('merchant.transactions.failed') }}</p>
-        <p class="text-3xl font-bold text-red-600">{{ $failedCount }}</p>
+
+    <!-- Failed -->
+    <div class="h-28 rounded-2xl border border-rose-700/30 bg-rose-900/5 p-4 shadow-sm">
+        <div class="h-full flex flex-col items-center justify-center text-center">
+            <p class="text-xs uppercase tracking-widest text-rose-300">{{ __('merchant.transactions.failed') }}</p>
+            <p class="mt-3 text-2xl lg:text-3xl font-semibold text-white">{{ $failedCount }}</p>
+        </div>
     </div>
 </div>
 
-<!-- Filters -->
-<div class="bg-white rounded-lg shadow p-6 mb-6">
-    <form method="GET" action="{{ route('merchant.transactions') }}" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">{{ __('merchant.transactions.search') }}</label>
-                <input type="text" name="search" value="{{ request('search') }}"
-                    placeholder="{{ __('merchant.transactions.search_placeholder') }}"
-                    class="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 text-sm">
+<div class="mt-8 rounded-2xl border border-slate-700/40 bg-slate-900/40 backdrop-blur-sm p-5 shadow-sm">
+    <form id="transaction-filters" method="GET" action="{{ route('merchant.transactions') }}" class="grid gap-3 lg:grid-cols-5 items-center">
+        <div>
+            <label class="block text-xs font-semibold text-slate-400 lg:w-32">{{ __('merchant.transactions.type') }}</label>
+            <select name="type" onchange="this.form.submit()" class="mt-2 w-full rounded-lg border border-slate-700/50 bg-slate-900 px-3 h-11 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                <option value="">{{ __('merchant.transactions.all') }}</option>
+                <option value="deposit" @if(request('type') === 'deposit') selected @endif>{{ __('merchant.transactions.deposit') }}</option>
+                <option value="transfer" @if(request('type') === 'transfer') selected @endif>{{ __('merchant.transactions.transfer') }}</option>
+                <option value="withdraw" @if(request('type') === 'withdraw') selected @endif>{{ __('merchant.transactions.withdrawal') }}</option>
+                <option value="payment" @if(request('type') === 'payment') selected @endif>{{ __('merchant.transactions.payment') }}</option>
+                <option value="invoice" @if(request('type') === 'invoice') selected @endif>{{ __('merchant.transactions.invoice') }}</option>
+            </select>
+        </div>
+
+        <div class="flex flex-col lg:flex-row lg:items-center lg:gap-3">
+            <label class="block text-xs font-medium text-slate-400 mb-1 lg:mb-0 lg:w-32">{{ __('merchant.transactions.currency') }}</label>
+            <select name="currency" onchange="this.form.submit()" class="mt-2 lg:mt-0 w-full rounded-lg border border-slate-700/50 bg-slate-900 px-3 h-11 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                <option value="">{{ __('merchant.transactions.all') }}</option>
+                @foreach($availableCurrencies ?? [] as $c)
+                    <option value="{{ $c }}" @if(request('currency') === $c) selected @endif>{{ $c }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="flex flex-col lg:flex-row lg:items-center lg:gap-3">
+            <label class="block text-xs font-medium text-slate-400 mb-1 lg:mb-0 lg:w-32">{{ __('merchant.transactions.amount') }}</label>
+            <select name="amount_range" onchange="this.form.submit()" class="mt-2 lg:mt-0 w-full rounded-lg border border-slate-700/50 bg-slate-900 px-3 h-11 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                <option value="">{{ __('merchant.transactions.all') }}</option>
+                <option value="0-0.1" @if(request('amount_range') === '0-0.1') selected @endif>{{ __('transactions.amount_range_under_0_1') }}</option>
+                <option value="0.1-1" @if(request('amount_range') === '0.1-1') selected @endif>{{ __('transactions.amount_range_0_1_to_1') }}</option>
+                <option value="1-10" @if(request('amount_range') === '1-10') selected @endif>{{ __('transactions.amount_range_1_to_10') }}</option>
+                <option value="10+" @if(request('amount_range') === '10+') selected @endif>{{ __('transactions.amount_range_over_10') }}</option>
+            </select>
+        </div>
+
+        <div class="lg:col-span-1 flex flex-col lg:flex-row lg:items-center lg:gap-3">
+            <label class="block text-xs font-medium text-slate-400 mb-1 lg:mb-0 lg:w-32">{{ __('merchant.transactions.search') }}</label>
+            <div class="mt-2 lg:mt-0 relative w-full">
+                <span class="absolute inset-y-0 left-3 flex items-center text-slate-500">
+                    <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+                </span>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('merchant.transactions.search_placeholder') }}" class="w-full rounded-lg border border-slate-700/50 bg-slate-900 pl-10 pr-3 h-11 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
             </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">{{ __('merchant.transactions.type') }}</label>
-                <select name="type" class="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
-                    <option value="">{{ __('merchant.transactions.all') }}</option>
-                    <option value="deposit" {{ request('type') === 'deposit' ? 'selected' : '' }}>{{ __('merchant.transactions.deposit') }}</option>
-                    <option value="transfer" {{ request('type') === 'transfer' ? 'selected' : '' }}>{{ __('merchant.transactions.transfer') }}</option>
-                    <option value="withdraw" {{ request('type') === 'withdraw' ? 'selected' : '' }}>{{ __('merchant.transactions.withdrawal') }}</option>
-                    <option value="payment" {{ request('type') === 'payment' ? 'selected' : '' }}>{{ __('merchant.transactions.payment') }}</option>
-                    <option value="invoice" {{ request('type') === 'invoice' ? 'selected' : '' }}>{{ __('merchant.transactions.invoice') }}</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">{{ __('merchant.transactions.status_label') }}</label>
-                <select name="status" class="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
-                    <option value="">{{ __('merchant.transactions.all') }}</option>
-                    <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>{{ __('merchant.transactions.completed') }}</option>
-                    <option value="paid" {{ request('status') === 'paid' ? 'selected' : '' }}>{{ __('merchant.transactions.paid') }}</option>
-                    <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>{{ __('merchant.transactions.pending') }}</option>
-                    <option value="failed" {{ request('status') === 'failed' ? 'selected' : '' }}>{{ __('merchant.transactions.failed') }}</option>
-                    <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>{{ __('merchant.transactions.cancelled') }}</option>
-                </select>
-            </div>
-            <div class="flex items-end gap-2">
-                            <button type="submit" class="flex-1 bg-indigo-600 text-white py-1.5 rounded-md text-sm font-semibold hover:bg-indigo-700 transition px-3">
-                    <i class="fas fa-search ml-2"></i>{{ __('merchant.transactions.search') }}
-                </button>
-                            <a href="{{ route('merchant.transactions') }}" class="flex-1 bg-gray-200 text-gray-800 py-1.5 rounded-md text-sm font-semibold hover:bg-gray-300 transition text-center px-3">
-                    <i class="fas fa-times ml-2"></i>{{ __('merchant.transactions.clear') }}
-                </a>
-            </div>
+        </div>
+
+        <div class="lg:col-span-1 flex items-center justify-end gap-3 mt-2 lg:mt-0">
+            <a href="{{ route('merchant.transactions') }}" class="inline-flex items-center justify-center rounded-md border border-slate-700/50 bg-transparent px-4 h-11 text-sm font-semibold text-slate-300 hover:bg-slate-900/60 transition">Clear</a>
+            <button type="submit" class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 h-11 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition">Apply</button>
         </div>
     </form>
 </div>
 
+<form id="transaction-filters" method="GET" action="{{ route('merchant.transactions') }}" class="hidden"></form>
+
 <!-- Transactions & Payments Table -->
-<div class="bg-white rounded-lg shadow overflow-hidden">
-    <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+<div class="rounded-lg overflow-hidden bg-transparent">
+    <div class="p-4 border-b border-slate-700/40 flex items-center justify-between">
         <div class="flex items-center gap-4">
-            <h3 class="text-lg font-semibold text-gray-800">{{ __('merchant.transactions.transactions_and_invoices') }}</h3>
-            <a href="{{ route('merchant.transactions.export') }}?{{ request()->getQueryString() }}" class="text-sm bg-gray-100 px-3 py-1 rounded-lg text-gray-700 hover:bg-gray-200">
+            <h3 class="text-lg font-semibold text-white">{{ __('merchant.transactions.transactions_and_invoices') }}</h3>
+            <a href="{{ route('merchant.transactions.export') }}{{ request()->getQueryString() ? ('?' . request()->getQueryString()) : '' }}" class="inline-flex items-center gap-2 rounded-md border border-slate-700/50 px-3 py-1 text-sm font-semibold text-slate-200 hover:bg-slate-900/60 transition">
                 <i class="fas fa-file-csv ml-2"></i>{{ __('merchant.transactions.export_csv') }}
             </a>
         </div>
-        <span class="text-sm text-gray-600">{{ __('merchant.transactions.showing_items', ['count' => ($transactions->count() + $paymentRequests->count()), 'total' => $transactions->total() + $paymentRequests->count()]) }}</span>
+        <span class="text-sm text-slate-400">{{ __('merchant.transactions.showing_items', ['count' => ($transactions->count() + $paymentRequests->count()), 'total' => $transactions->total() + $paymentRequests->count()]) }}</span>
     </div>
 
     @php
@@ -87,193 +113,272 @@
         $explorerBase = $network === 'mainnet' ? 'https://etherscan.io/tx/' : ($network === 'sepolia' ? 'https://sepolia.etherscan.io/tx/' : 'https://etherscan.io/tx/');
     @endphp
 
-    <div class="overflow-x-auto">
-        <table class="w-full min-w-full text-sm">
-            <colgroup>
-                <col style="width:14%" /> <!-- ID -->
-                <col style="width:8%" />  <!-- Currency -->
-                <col style="width:12%" /> <!-- Type -->
-                <col style="width:18%" /> <!-- Amount -->
-                <col style="width:12%" /> <!-- Status -->
-                <col style="width:18%" /> <!-- Tx Hash -->
-                <col style="width:12%" /> <!-- Date -->
-                <col style="width:6%" />  <!-- Action -->
-            </colgroup>
-            <thead class="bg-gray-50 border-b border-gray-200">
-                <tr>
-                    <th class="px-3 py-2 text-right font-semibold text-gray-700 text-xs">{{ __('merchant.transactions.id') }}</th>
-                    <th class="px-3 py-2 text-right font-semibold text-gray-700 text-xs">{{ __('merchant.transactions.currency') }}</th>
-                    <th class="px-3 py-2 text-right font-semibold text-gray-700 text-xs">{{ __('merchant.transactions.type') }}</th>
-                    <th class="px-3 py-2 text-right font-semibold text-gray-700 text-xs">{{ __('merchant.transactions.amount') }}</th>
-                    <th class="px-3 py-2 text-right font-semibold text-gray-700 text-xs">{{ __('merchant.transactions.status_label') }}</th>
-                    <th class="px-3 py-2 text-right font-semibold text-gray-700 text-xs">{{ __('merchant.transactions.tx_hash') }}</th>
-                    <th class="px-3 py-2 text-right font-semibold text-gray-700 text-xs">{{ __('merchant.transactions.date') }}</th>
-                    <th class="px-3 py-2 text-right font-semibold text-gray-700 text-xs">{{ __('merchant.transactions.actions') }}</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                <!-- Transactions -->
-                @forelse($transactions as $transaction)
-                    <?php $refTemp = $transaction->reference ?? ('TRX-' . $transaction->id); $refTemp = preg_replace('/^(INV-)+/i', 'INV-', $refTemp); ?>
-                    <tr id="merchant-transaction-row-{{ $transaction->id }}"
-                        data-transaction-id="{{ $transaction->id }}"
-                        data-transaction-status="{{ $transaction->status }}"
-                                            data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}"
-                                            data-customer="{{ e($transaction->sender->name ?? $transaction->recipient->name ?? $transaction->sender_wallet_address ?? '') }}"
-                                            data-description="{{ e($transaction->description ?? '') }}"
-                                            data-reference="{{ e($refTemp) }}"
-                                            data-amount="{{ \App\Support\NumberHelper::formatCryptoAmount($transaction->amount) }}"
-                                            data-currency="{{ e($transaction->currency) }}"
-                                            data-txhash="{{ e($transaction->tx_hash) }}"
-                                            data-date="{{ $transaction->created_at->format('Y/m/d H:i') }}"
-                                            class="hover:bg-gray-50 cursor-pointer" onclick="viewTransactionDetail('{{ $transaction->id }}', 'transaction', event)">
-
-                        <!-- ID -->
-                        <td class="px-3 py-2" dir="ltr">
-                            <code class="bg-gray-100 text-black dark:text-black px-2 py-1 rounded text-xs">{{ substr($refTemp, 0, 18) }}</code>
-                        </td>
-
-                        <!-- Currency (compact) -->
-                        <td class="px-3 py-2 text-gray-700 font-semibold text-xs">{{ $transaction->currency }}</td>
-
-                        <!-- Type (compact badge) -->
-                        <td class="px-3 py-2">
+    <div class="mt-8 rounded-[32px] border border-slate-200/60 bg-slate-950/90 p-6 shadow-xl shadow-slate-900/10">
+    @if(($transactions->count() ?? 0) + ($paymentRequests->count() ?? 0) > 0)
+        <div class="hidden lg:block">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-700 text-left text-sm text-slate-300">
+                    <thead class="border-b border-slate-700/80 text-slate-400">
+                        <tr>
+                            <th class="px-4 py-3">{{ __('merchant.transactions.transaction') ?? 'Transaction' }}</th>
+                            <th class="px-4 py-3">{{ __('merchant.transactions.type') ?? 'Type' }}</th>
+                            <th class="px-4 py-3">{{ __('merchant.transactions.currency') ?? 'Asset' }}</th>
+                            <th class="px-4 py-3 text-right">{{ __('merchant.transactions.amount') ?? 'Amount' }}</th>
+                            <th class="px-4 py-3">{{ __('merchant.transactions.wallet') ?? 'Wallet' }}</th>
+                            <th class="px-4 py-3">{{ __('merchant.transactions.status_label') ?? 'Status' }}</th>
+                            <th class="px-4 py-3">{{ __('merchant.transactions.date') ?? 'Date' }}</th>
+                            <th class="px-4 py-3">{{ __('merchant.transactions.actions') ?? 'Action' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700 border-b border-slate-700/80">
+                        @foreach($transactions as $transaction)
                             @php
-                                $typeLabel = ucfirst($transaction->type ?? '');
+                                $transactionType = ucfirst($transaction->type ?? '');
+                                $currency = $transaction->wallet?->currency ?? $transaction->currency ?? 'ETH';
+                                $statusLabel = ucfirst($transaction->status ?? '');
+                                $statusClass = in_array($transaction->status, ['processing','pending']) ? 'bg-amber-100 text-amber-700 border-amber-200' : (in_array($transaction->status, ['confirmed','completed']) ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : (in_array($transaction->status, ['failed']) ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-slate-200 text-slate-700 border-slate-300'));
+                                $walletLabel = $transaction->wallet?->wallet_address ?: $transaction->receiver_wallet_address ?: $transaction->sender_wallet_address;
+                                $walletShort = $walletLabel ? substr($walletLabel, 0, 8) . '...' . substr($walletLabel, -6) : 'Unknown';
+                                $txHash = $transaction->tx_hash;
+                                $hashLabel = $txHash ? (strlen($txHash) > 18 ? substr($txHash, 0, 10) . '...' . substr($txHash, -8) : $txHash) : __('merchant.transactions.waiting_for_broadcast');
                             @endphp
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $transaction->type === 'deposit' ? 'bg-green-100 text-green-800' : ($transaction->type === 'withdraw' ? 'bg-red-100 text-red-800' : ($transaction->type === 'payment' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-700')) }}">
-                                @if($transaction->type === 'deposit') <i class="fas fa-arrow-down ml-1 text-[10px]"></i>@elseif($transaction->type === 'transfer') <i class="fas fa-arrow-right ml-1 text-[10px]"></i>@elseif($transaction->type === 'withdraw') <i class="fas fa-arrow-up ml-1 text-[10px]"></i>@elseif($transaction->type === 'payment') <i class="fas fa-file-invoice ml-1 text-[10px]"></i>@endif
-                                <span class="ml-1">{{ __("merchant.transactions.".$transaction->type) ?: $typeLabel }}</span>
-                            </span>
-                        </td>
+                            <tr id="merchant-transaction-row-{{ $transaction->id }}" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}" class="hover:bg-slate-900/40 transition-colors duration-150">
+                                <td class="px-4 py-4 align-top">
+                                    <div class="text-sm font-semibold text-white">#TRX-{{ str_pad($transaction->id, 4, '0', STR_PAD_LEFT) }}</div>
+                                    <div class="mt-1 text-xs text-slate-400 flex items-center gap-2">
+                                        <span class="font-mono text-slate-300 truncate" style="max-width:14rem;" data-hash-cell>
+                                            @if($txHash)
+                                            <a class="hover:text-white font-mono text-slate-300 truncate" href="{{ $explorerBase ?? '#' }}{{ $txHash }}" target="_blank" rel="noopener noreferrer">{{ $hashLabel }}</a>
+                                            @else
+                                                {{ $hashLabel }}
+                                            @endif
+                                        </span>
+                                        @if($txHash)
+                                        <button onclick="event.stopPropagation(); navigator.clipboard.writeText('{{ $txHash }}').then(()=>{ /* feedback handled by browser */ }).catch(()=>{});" title="{{ __('transactions.copy_hash') }}" class="ml-2 inline-flex items-center justify-center rounded-md px-2 py-1 bg-slate-800/50 hover:bg-slate-800/70 text-slate-300 transition">
+                                            <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 16h8M8 12h8M8 8h8"/></svg>
+                                        </button>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 align-top">
+                                    <span class="inline-flex items-center gap-2 rounded-lg px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em]" style="background-color: rgba(255,255,255,0.02);">
+                                        @if($transaction->type === 'deposit')
+                                            <svg class="h-4 w-4 text-emerald-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/></svg>
+                                        @elseif($transaction->type === 'withdraw')
+                                            <svg class="h-4 w-4 text-rose-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 20V4m-8 8h16"/></svg>
+                                        @else
+                                            <svg class="h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7h16M4 12h16M4 17h16"/></svg>
+                                        @endif
+                                        <span class="text-slate-300">{{ $transactionType }}</span>
+                                    </span>
+                                </td>
+                                <td class="px-4 py-4 align-top">
+                                    <span class="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-1 text-sm font-semibold text-white">{{ $currency }}</span>
+                                </td>
+                                <td class="px-4 py-4 align-top text-right">
+                                    @php $isDeposit = ($transaction->type === 'deposit'); @endphp
+                                    <div class="text-lg font-semibold {{ $isDeposit ? 'text-emerald-400' : 'text-rose-400' }}">{{ $isDeposit ? '+' : '-' }}{{ number_format((float)$transaction->amount, 8, '.', '') }}</div>
+                                    <div class="text-xs text-slate-400">{{ $currency }}</div>
+                                </td>
+                                <td class="px-4 py-4 align-top">
+                                    <div class="font-medium text-white">{{ $walletShort }}</div>
+                                </td>
+                                <td class="px-4 py-4 align-top">
+                                    <span class="status-badge inline-flex items-center gap-2 rounded-full border px-2 py-1 text-xs font-semibold {{ $statusClass }}">
+                                        @if((strtolower($transaction->status ?? '') === 'processing') || (strtolower($transaction->status ?? '') === 'pending'))
+                                            <svg class="h-3 w-3 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6l4 2"/></svg>
+                                        @elseif(in_array(strtolower($transaction->status ?? ''), ['confirmed','completed']))
+                                            <svg class="h-3 w-3 text-emerald-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/></svg>
+                                        @elseif(strtolower($transaction->status ?? '') === 'failed')
+                                            <svg class="h-3 w-3 text-rose-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                        @else
+                                            <svg class="h-3 w-3 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="3"/></svg>
+                                        @endif
+                                        <span>{{ $statusLabel }}</span>
+                                    </span>
+                                </td>
+                                <td class="px-4 py-4 align-top text-slate-400">{{ $transaction->created_at->format('d M Y') }}<div class="text-xs mt-1">{{ $transaction->created_at->format('H:i') }}</div></td>
+                                <td class="px-4 py-4 align-top">
+                                    <button onclick="event.stopPropagation(); viewTransactionDetail('{{ $transaction->id }}', 'transaction', event)" class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500">
+                                            <svg class="h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7S3.732 16.057 2.458 12z"/></svg>
+                                            <span>{{ __('transactions.view_button') }}</span>
+                                        </button>
+                                </td>
+                            </tr>
+                        @endforeach
 
-                        <!-- Amount (compact: amount + currency) -->
-                        <td class="px-3 py-2 font-semibold text-xs">
-                            {{ ($transaction->type === 'deposit' ? '+' : '-') }}{{ \App\Support\NumberHelper::formatCryptoAmount($transaction->amount) }} <span class="text-gray-500">{{ $transaction->currency }}</span>
-                        </td>
+                        @foreach($paymentRequests as $payment)
+                            @php
+                                $currency = $payment->currency ?? 'ETH';
+                                $walletShort = 'Invoice';
+                                $statusLabel = ucfirst($payment->status ?? '');
+                                $statusClass = in_array($payment->status, ['paid','completed']) ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : (in_array($payment->status, ['pending','processing']) ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-200 text-slate-700 border-slate-300');
+                                $hashLabel = __('merchant.transactions.invoice') . ' #' . ($payment->invoice_number ?? $payment->id);
+                            @endphp
+                            <tr id="merchant-transaction-row-inv-{{ $payment->id }}" data-transaction-id="{{ $payment->id }}" data-transaction-status="{{ $payment->status }}" data-updated-at="{{ $payment->updated_at?->toDateTimeString() }}" class="hover:bg-slate-900/40 transition-colors duration-150">
+                                    <td class="px-4 py-4 align-top">
+                                        <div class="text-sm font-semibold text-white">INV-{{ str_pad($payment->id, 4, '0', STR_PAD_LEFT) }}</div>
+                                        <div class="mt-1 text-xs text-slate-400">Invoice <span class="font-mono text-slate-300">#{{ $payment->invoice_number ?? $payment->id }}</span></div>
+                                    </td>
+                                    <td class="px-4 py-4 align-top">
+                                        <span class="inline-flex items-center gap-2 rounded-lg px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em]" style="background-color: rgba(255,255,255,0.02);">
+                                            <svg class="h-4 w-4 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 14l2-2 4 4"/></svg>
+                                            {{ __('merchant.transactions.invoice') }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-4 align-top">
+                                        <span class="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-1 text-sm font-semibold text-white">{{ $currency }}</span>
+                                    </td>
+                                    <td class="px-4 py-4 align-top text-right">
+                                        <div class="text-lg font-semibold text-white">{{ number_format((float)$payment->amount, 8, '.', '') }}</div>
+                                        <div class="text-xs text-slate-400">{{ $currency }}</div>
+                                    </td>
+                                    <td class="px-4 py-4 align-top">
+                                        <div class="font-medium text-white">{{ $payment->recipient->name ?? '-' }}</div>
+                                    </td>
+                                    <td class="px-4 py-4 align-top">
+                                        <span class="status-badge inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
+                                    </td>
+                                    <td class="px-4 py-4 align-top text-slate-400">{{ $payment->created_at->format('d M Y') }}<div class="text-xs mt-1">{{ $payment->created_at->format('H:i') }}</div></td>
+                                    <td class="px-4 py-4 align-top">
+                                        <button onclick="event.stopPropagation(); viewTransactionDetail('{{ $payment->id }}', 'payment', event)" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:translate-x-0.5">View <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/></svg></button>
+                                    </td>
+                                </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-                        <!-- Status (compact badge) -->
-                        <td class="px-3 py-2">
-                            @php $transactionStatus = strtolower((string)$transaction->status); @endphp
-                            @if(in_array($transactionStatus, ['completed','confirmed']))
-                                <span class="tx-status-cell inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">✓ {{ __('merchant.transactions.completed') }}</span>
-                            @elseif(in_array($transactionStatus, ['pending','processing']))
-                                <span class="tx-status-cell inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">⏱ {{ __('merchant.transactions.pending') }}</span>
-                            @else
-                                <span class="tx-status-cell inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">✗ {{ __('merchant.transactions.failed') }}</span>
-                            @endif
-                        </td>
+        <div class="space-y-4 lg:hidden">
+            @foreach($transactions as $transaction)
+                @php
+                    $transactionType = ucfirst($transaction->type ?? '');
+                    $currency = $transaction->wallet?->currency ?? $transaction->currency ?? 'ETH';
+                    $statusLabel = ucfirst($transaction->status ?? '');
+                    $statusClass = in_array($transaction->status, ['processing','pending']) ? 'bg-amber-100 text-amber-700 border-amber-200' : (in_array($transaction->status, ['confirmed','completed']) ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-200 text-slate-700 border-slate-300');
+                    $walletLabel = $transaction->wallet?->wallet_address ?: $transaction->receiver_wallet_address ?: $transaction->sender_wallet_address;
+                    $walletShort = $walletLabel ? substr($walletLabel, 0, 8) . '...' . substr($walletLabel, -6) : 'Unknown';
+                    $txHash = $transaction->tx_hash;
+                    $hashLabel = $txHash ? (strlen($txHash) > 18 ? substr($txHash, 0, 10) . '...' . substr($txHash, -8) : $txHash) : __('merchant.transactions.waiting_for_broadcast');
+                @endphp
+                <div id="merchant-transaction-row-{{ $transaction->id }}" class="rounded-[28px] border border-slate-700/70 bg-slate-900/80 p-5 shadow-sm shadow-slate-950/10" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-medium text-slate-400">#TRX-{{ str_pad($transaction->id, 4, '0', STR_PAD_LEFT) }}</p>
+                            <p class="mt-2 text-xl font-semibold text-white">{{ $transaction->type === 'deposit' ? '+' : '-' }}{{ number_format((float)$transaction->amount, 8, '.', '') }} {{ $currency }}</p>
+                        </div>
+                        <span class="status-badge inline-flex rounded-full border px-3 py-2 text-xs font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
+                    </div>
+                    <div class="mt-4 grid gap-3">
+                        <div class="rounded-3xl bg-slate-950/80 px-4 py-3">
+                            <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Type</p>
+                            <p class="mt-2 text-sm font-semibold text-white">{{ $transactionType }}</p>
+                        </div>
+                        <div class="rounded-3xl bg-slate-950/80 px-4 py-3">
+                            <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Wallet</p>
+                            <p class="mt-2 text-sm font-mono text-slate-200">{{ $walletShort }}</p>
+                        </div>
+                        <div class="rounded-3xl bg-slate-950/80 px-4 py-3">
+                            <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Date</p>
+                            <p class="mt-2 text-sm text-slate-200">{{ $transaction->created_at->format('Y/m/d H:i') }}</p>
+                        </div>
+                        <div class="rounded-3xl bg-slate-950/80 px-4 py-3">
+                            <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Hash</p>
+                            <p class="mt-2 text-sm font-mono text-slate-200 break-words" data-hash-cell>{{ $hashLabel }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-5 flex flex-wrap items-center gap-3">
+                        <button onclick="event.stopPropagation(); viewTransactionDetail('{{ $transaction->id }}', 'transaction', event)" class="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500">View Transaction</button>
+                    </div>
+                </div>
+            @endforeach
 
-                        <!-- Tx Hash (short, with copy and tooltip) -->
-                        <td class="px-3 py-2 text-xs text-gray-700">
-                            @php $txHash = $transaction->tx_hash; @endphp
-                            @if(!$txHash && in_array(strtolower($transaction->status), ['processing','pending']))
-                                <span class="tx-hash text-gray-500">{{ __('merchant.transactions.waiting_for_broadcast') }}</span>
-                            @elseif($txHash)
-                                <div class="flex items-center gap-2">
-                                    <a href="{{ $explorerBase }}{{ $txHash }}" target="_blank" rel="noopener noreferrer" class="tx-hash truncate" title="{{ $txHash }}">{{ strlen($txHash) > 16 ? substr($txHash, 0, 10) . '...' . substr($txHash, -6) : $txHash }}</a>
-                                    <button type="button" class="copy-hash-btn text-gray-500 hover:text-gray-700 p-1" data-hash="{{ $txHash }}" title="{{ __('merchant.transactions.copy') }}">
-                                        <i class="far fa-copy text-xs"></i>
-                                    </button>
-                                </div>
-                            @else
-                                <span class="tx-hash text-gray-500">-</span>
-                            @endif
-                        </td>
+            @foreach($paymentRequests as $payment)
+                <div id="merchant-transaction-inv-{{ $payment->id }}" class="rounded-[28px] border border-slate-700/70 bg-slate-900/80 p-5 shadow-sm shadow-slate-950/10" data-transaction-id="inv-{{ $payment->id }}" data-transaction-status="{{ $payment->status }}">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-medium text-slate-400">INV-{{ str_pad($payment->id, 4, '0', STR_PAD_LEFT) }}</p>
+                            <p class="mt-2 text-xl font-semibold text-white">{{ number_format((float)$payment->amount, 8, '.', '') }} {{ $payment->currency }}</p>
+                        </div>
+                        <span class="status-badge inline-flex rounded-full border px-3 py-2 text-xs font-semibold {{ in_array($payment->status, ['paid','completed']) ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-amber-100 text-amber-700 border-amber-200' }}">{{ ucfirst($payment->status) }}</span>
+                    </div>
+                    <div class="mt-4 grid gap-3">
+                        <div class="rounded-3xl bg-slate-950/80 px-4 py-3">
+                            <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Type</p>
+                            <p class="mt-2 text-sm font-semibold text-white">{{ __('merchant.transactions.invoice') }}</p>
+                        </div>
+                        <div class="rounded-3xl bg-slate-950/80 px-4 py-3">
+                            <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Recipient</p>
+                            <p class="mt-2 text-sm font-mono text-slate-200">{{ $payment->recipient->name ?? '-' }}</p>
+                        </div>
+                        <div class="rounded-3xl bg-slate-950/80 px-4 py-3">
+                            <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Date</p>
+                            <p class="mt-2 text-sm text-slate-200">{{ $payment->created_at->format('Y/m/d H:i') }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-5 flex flex-wrap items-center gap-3">
+                        <button onclick="event.stopPropagation(); viewTransactionDetail('{{ $payment->id }}', 'payment', event)" class="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500">View Invoice</button>
+                    </div>
+                </div>
+            @endforeach
+        </div>
 
-                        <!-- Date -->
-                        <td class="px-3 py-2 text-gray-600 text-xs">{{ $transaction->created_at->format('Y/m/d H:i') }}</td>
+        @if(($transactions->count() ?? 0) + ($paymentRequests->count() ?? 0) === 0)
+            <div class="rounded-[28px] border border-slate-700/70 bg-slate-900/80 p-12 text-center text-slate-300">
+                <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-800 text-white">
+                    <i class="fas fa-inbox text-2xl"></i>
+                </div>
+                <h2 class="mt-6 text-2xl font-semibold text-white">{{ __('merchant.transactions.no_transactions') }}</h2>
+                <p class="mt-2 text-sm text-slate-400">{{ __('merchant.transactions.no_transactions_subtext') ?? 'No transactions found.' }}</p>
+                <button type="button" onclick="location.reload();" class="mt-6 inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500">Refresh</button>
+            </div>
+        @endif
 
-                        <!-- Action -->
-                        <td class="px-3 py-2">
-                            <button onclick="event.stopPropagation(); viewTransactionDetail('{{ $transaction->id }}', 'transaction', event)" class="text-indigo-600 hover:text-indigo-800 p-1">
-                                <i class="fas fa-eye text-sm"></i>
-                            </button>
-                        </td>
-                    </tr>
-                @empty
-                @endforelse
+        @if($transactions->hasPages())
+            <div class="mt-8 flex justify-center">
+                {{ $transactions->links() }}
+            </div>
+        @endif
 
-                <!-- Payment Requests -->
-                @forelse($paymentRequests as $payment)
-                    <?php $refTempP = $payment->invoice_number ?? 'INV-' . $payment->id; ?>
-                    <tr id="merchant-transaction-row-{{ $payment->id }}"
-                        data-transaction-id="{{ $payment->id }}"
-                        data-transaction-status="{{ $payment->status }}"
-                                            data-updated-at="{{ $payment->updated_at?->toDateTimeString() }}"
-                                            data-customer="{{ e($payment->recipient->name ?? '') }}"
-                                            data-description="{{ e(__('merchant.transactions.invoice_number_prefix') . ' #' . $payment->invoice_number) }}"
-                                            data-reference="{{ e($refTempP) }}"
-                                            data-amount="{{ \App\Support\NumberHelper::formatCryptoAmount($payment->amount) }}"
-                                            data-currency="{{ e($payment->currency) }}"
-                                            data-txhash=""
-                                            data-date="{{ $payment->created_at->format('Y/m/d H:i') }}"
-                                            class="hover:bg-gray-50 cursor-pointer" onclick="viewTransactionDetail('{{ $payment->id }}', 'payment', event)">
-
-                        <td class="px-3 py-2" dir="ltr"><code class="bg-gray-100 text-black px-2 py-1 rounded text-xs">{{ substr($refTempP, 0, 18) }}</code></td>
-                        <td class="px-3 py-2 text-gray-700 font-semibold text-xs">{{ $payment->currency }}</td>
-                        <td class="px-3 py-2"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">{{ __('merchant.transactions.invoice') }}</span></td>
-                        <td class="px-3 py-2 font-semibold text-xs">{{ \App\Support\NumberHelper::formatCryptoAmount($payment->amount) }} <span class="text-gray-500">{{ $payment->currency }}</span></td>
-                        <td class="px-3 py-2">
-                            @php $paymentStatus = strtolower((string)$payment->status); @endphp
-                            @if(in_array($paymentStatus, ['paid','completed']))
-                                <span class="tx-status-cell inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">✓ {{ __('merchant.transactions.paid') }}</span>
-                            @elseif(in_array($paymentStatus, ['pending','processing']))
-                                <span class="tx-status-cell inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">⏱ {{ __('merchant.transactions.pending') }}</span>
-                            @else
-                                <span class="tx-status-cell inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">✗ {{ __('merchant.transactions.cancelled') }}</span>
-                            @endif
-                        </td>
-                        <td class="px-3 py-2 text-xs text-gray-700">-</td>
-                        <td class="px-3 py-2 text-gray-600 text-xs">{{ $payment->created_at->format('Y/m/d H:i') }}</td>
-                        <td class="px-3 py-2"><button onclick="event.stopPropagation(); viewTransactionDetail('{{ $payment->id }}', 'payment', event)" class="text-indigo-600 hover:text-indigo-800 p-1"><i class="fas fa-eye text-sm"></i></button></td>
-                    </tr>
-                @empty
-                @endforelse
-
-                @if($transactions->count() === 0 && $paymentRequests->count() === 0)
-                    <tr>
-                        <td colspan="8" class="px-3 py-8 text-center text-gray-500">
-                            <i class="fas fa-inbox text-3xl text-gray-300 mb-4 block"></i>
-                            {{ __('merchant.transactions.no_transactions') }}
-                        </td>
-                    </tr>
-                @endif
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Pagination -->
-    @if($transactions->hasPages())
-        <div class="px-3 py-2 border-t border-gray-200 text-sm">
-            {{ $transactions->links() }}
+    @else
+        <div class="rounded-[28px] border border-slate-700/70 bg-slate-900/80 p-12 text-center text-slate-300">
+            <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-800 text-white">
+                <i class="fas fa-inbox text-2xl"></i>
+            </div>
+            <h2 class="mt-6 text-2xl font-semibold text-white">{{ __('merchant.transactions.no_transactions') }}</h2>
+            <p class="mt-2 text-sm text-slate-400">{{ __('merchant.transactions.no_transactions_subtext') ?? 'No transactions found.' }}</p>
+            <button type="button" onclick="location.reload();" class="mt-6 inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500">Refresh</button>
         </div>
     @endif
 
-<!-- Transaction Detail Modal -->
-<div id="detailModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-4xl mx-4 max-h-screen overflow-y-auto">
-        <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-800">{{ __('merchant.transactions.transaction_details') }}</h3>
-            <button onclick="closeDetailModal()" class="text-gray-500 hover:text-gray-700">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
+    <!-- Transaction Detail Modal -->
+    <div id="detailModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-4xl mx-4 max-h-screen overflow-y-auto">
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800">{{ __('merchant.transactions.transaction_details') }}</h3>
+                <button onclick="closeDetailModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
 
-        <div id="modalContent" class="space-y-4">
-            <!-- Content will be loaded here -->
-        </div>
+            <div id="modalContent" class="space-y-4">
+                <!-- Content will be loaded here -->
+            </div>
 
-        <div class="mt-8 flex gap-2 border-t border-gray-200 pt-4">
-            <button onclick="closeDetailModal()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold hover:bg-gray-300 transition">
-                {{ __('merchant.transactions.close') }}
-            </button>
-            <button onclick="downloadTransaction()" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">
-                <i class="fas fa-download ml-2"></i>{{ __('merchant.transactions.download') }}
-            </button>
+            <div class="mt-8 flex gap-2 border-t border-gray-200 pt-4">
+                <button onclick="closeDetailModal()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold hover:bg-gray-300 transition">
+                    {{ __('merchant.transactions.close') }}
+                </button>
+                <button onclick="downloadTransaction()" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">
+                    <i class="fas fa-download ml-2"></i>{{ __('merchant.transactions.download') }}
+                </button>
+            </div>
         </div>
     </div>
-</div>
+
+    </div>
+
 
 @push('scripts')
 <script>

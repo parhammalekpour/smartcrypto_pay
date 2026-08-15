@@ -6,83 +6,94 @@
 
 @section('content')
 @php $isRtl = app()->getLocale() === 'fa'; @endphp
+@php
+    $network = strtolower((string)env('ETHEREUM_NETWORK', 'sepolia'));
+    $explorerBase = $network === 'mainnet' ? 'https://etherscan.io/tx/' : ($network === 'sepolia' ? 'https://sepolia.etherscan.io/tx/' : 'https://etherscan.io/tx/');
+@endphp
 
-<div class="transactions-shell max-w-7xl mx-auto px-4 py-6" x-data="{ refreshing: false }" dir="{{ $isRtl ? 'rtl' : 'ltr' }}">
-    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div class="space-y-3">
-            <h1 class="text-3xl font-semibold text-slate-900">{{ __('transactions.page_title') }}</h1>
-            <p class="max-w-2xl text-sm text-slate-500">Track and manage your crypto transactions.</p>
-        </div>
+<div class="transactions-shell max-w-[1400px] w-full mx-auto px-6 py-6" x-data="{ refreshing: false }" dir="{{ $isRtl ? 'rtl' : 'ltr' }}">
 
-        <button type="button" @click="refreshing = true; window.location.reload();" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-            <span x-show="!refreshing">Refresh Transactions</span>
-            <span x-show="refreshing" class="inline-flex items-center gap-2">
-                <svg class="h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
-                Refreshing...
-            </span>
-        </button>
-    </div>
 
     <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div class="rounded-3xl border border-slate-200/60 bg-slate-950/90 p-5 shadow-sm shadow-slate-900/10">
-            <p class="text-sm uppercase tracking-[0.2em] text-slate-400">Total Transactions</p>
-            <p class="mt-4 text-3xl font-semibold text-white">{{ $stats['total'] ?? 0 }}</p>
+        <!-- Total -->
+        <div class="h-28 rounded-2xl border border-slate-700/40 bg-gradient-to-b from-slate-900/60 to-slate-950/40 p-4 shadow-sm">
+            <div class="h-full flex flex-col items-center justify-center text-center">
+                <p class="text-xs uppercase tracking-widest text-slate-400">Total Transactions</p>
+                <p class="mt-3 text-2xl lg:text-3xl font-semibold text-white">{{ $stats['total'] ?? 0 }}</p>
+            </div>
         </div>
-        <div class="rounded-3xl border border-slate-200/60 bg-emerald-950/90 p-5 shadow-sm shadow-emerald-900/10">
-            <p class="text-sm uppercase tracking-[0.2em] text-emerald-300">Completed</p>
-            <p class="mt-4 text-3xl font-semibold text-white">{{ $stats['completed'] ?? 0 }}</p>
+
+        <!-- Completed -->
+        <div class="h-28 rounded-2xl border border-emerald-700/30 bg-gradient-to-b from-emerald-900/10 to-slate-950/30 p-4 shadow-sm">
+            <div class="h-full flex flex-col items-center justify-center text-center">
+                <p class="text-xs uppercase tracking-widest text-emerald-300">Completed</p>
+                <p class="mt-3 text-2xl lg:text-3xl font-semibold text-white">{{ $stats['completed'] ?? 0 }}</p>
+            </div>
         </div>
-        <div class="rounded-3xl border border-slate-200/60 bg-amber-950/90 p-5 shadow-sm shadow-amber-900/10">
-            <p class="text-sm uppercase tracking-[0.2em] text-amber-300">Pending</p>
-            <p class="mt-4 text-3xl font-semibold text-white">{{ $stats['pending'] ?? 0 }}</p>
+
+        <!-- Pending -->
+        <div class="h-28 rounded-2xl border border-amber-700/30 bg-gradient-to-b from-amber-900/5 to-slate-950/30 p-4 shadow-sm">
+            <div class="h-full flex flex-col items-center justify-center text-center">
+                <p class="text-xs uppercase tracking-widest text-amber-300">Pending</p>
+                <p class="mt-3 text-2xl lg:text-3xl font-semibold text-white">{{ $stats['pending'] ?? 0 }}</p>
+            </div>
         </div>
-        <div class="rounded-3xl border border-slate-200/60 bg-rose-950/90 p-5 shadow-sm shadow-rose-900/10">
-            <p class="text-sm uppercase tracking-[0.2em] text-rose-300">Failed</p>
-            <p class="mt-4 text-3xl font-semibold text-white">{{ $stats['failed'] ?? 0 }}</p>
+
+        <!-- Failed -->
+        <div class="h-28 rounded-2xl border border-rose-700/30 bg-gradient-to-b from-rose-900/5 to-slate-950/30 p-4 shadow-sm">
+            <div class="h-full flex flex-col items-center justify-center text-center">
+                <p class="text-xs uppercase tracking-widest text-rose-300">Failed</p>
+                <p class="mt-3 text-2xl lg:text-3xl font-semibold text-white">{{ $stats['failed'] ?? 0 }}</p>
+            </div>
         </div>
     </div>
 
-    <div class="mt-8 rounded-[28px] border border-slate-200/60 bg-slate-950/90 p-6 shadow-xl shadow-slate-900/10">
-        <div class="grid gap-4 lg:grid-cols-4">
-            <div>
-                <label class="block text-sm font-semibold text-slate-300">Type</label>
-                <select name="type" onchange="this.form.submit()" form="transaction-filters" class="mt-2 w-full rounded-2xl border border-slate-700/70 bg-slate-900 px-4 py-3 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
-                    <option value="" class="bg-slate-950">All</option>
-                    <option value="transfer" @if(request('type') === 'transfer') selected @endif>Transfer</option>
-                    <option value="deposit" @if(request('type') === 'deposit') selected @endif>Deposit</option>
+    <div class="mt-8 rounded-2xl border border-slate-700/40 bg-slate-900/40 backdrop-blur-sm p-5 shadow-sm">
+        <form id="transaction-filters" method="GET" action="{{ route('user.transactions') }}" class="grid gap-3 lg:grid-cols-5 items-center">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:gap-3">
+                <label class="block text-xs font-semibold text-slate-400 mb-1 lg:mb-0 lg:w-32">{{ __('transactions.type_label') }}</label>
+                <select name="type" onchange="this.form.submit()" class="mt-2 lg:mt-0 w-full rounded-lg border border-slate-700/50 bg-slate-900 px-3 h-11 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                    <option value="">{{ __('transactions.all') }}</option>
+                    <option value="transfer" @if(request('type') === 'transfer') selected @endif>{{ __('transactions.type_transfer') }}</option>
+                    <option value="deposit" @if(request('type') === 'deposit') selected @endif>{{ __('transactions.type_deposit') }}</option>
                 </select>
             </div>
-            <div>
-                <label class="block text-sm font-semibold text-slate-300">Asset</label>
-                <select name="currency" onchange="this.form.submit()" form="transaction-filters" class="mt-2 w-full rounded-2xl border border-slate-700/70 bg-slate-900 px-4 py-3 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
-                    <option value="" class="bg-slate-950">All</option>
+            <div class="flex flex-col lg:flex-row lg:items-center lg:gap-3">
+                <label class="block text-xs font-semibold text-slate-400 mb-1 lg:mb-0 lg:w-32">{{ __('transactions.currency_label') }}</label>
+                <select name="currency" onchange="this.form.submit()" class="mt-2 lg:mt-0 w-full rounded-lg border border-slate-700/50 bg-slate-900 px-3 h-11 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                    <option value="">{{ __('transactions.all') }}</option>
                     <option value="BTC" @if(request('currency') === 'BTC') selected @endif>Bitcoin (BTC)</option>
                     <option value="ETH" @if(request('currency') === 'ETH') selected @endif>Ethereum (ETH)</option>
                     <option value="USDT" @if(request('currency') === 'USDT') selected @endif>Tether (USDT)</option>
                 </select>
             </div>
-            <div>
-                <label class="block text-sm font-semibold text-slate-300">Amount</label>
-                <select name="amount_range" onchange="this.form.submit()" form="transaction-filters" class="mt-2 w-full rounded-2xl border border-slate-700/70 bg-slate-900 px-4 py-3 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
-                    <option value="" class="bg-slate-950">All</option>
-                    <option value="0-0.1" @if(request('amount_range') === '0-0.1') selected @endif>Under 0.1</option>
-                    <option value="0.1-1" @if(request('amount_range') === '0.1-1') selected @endif>0.1 to 1</option>
-                    <option value="1-10" @if(request('amount_range') === '1-10') selected @endif>1 to 10</option>
-                    <option value="10+" @if(request('amount_range') === '10+') selected @endif>Over 10</option>
+            <div class="flex flex-col lg:flex-row lg:items-center lg:gap-3">
+                <label class="block text-xs font-semibold text-slate-400 mb-1 lg:mb-0 lg:w-32">{{ __('transactions.amount_label') }}</label>
+                <select name="amount_range" onchange="this.form.submit()" class="mt-2 lg:mt-0 w-full rounded-lg border border-slate-700/50 bg-slate-900 px-3 h-11 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                    <option value="">{{ __('transactions.all') }}</option>
+                    <option value="0-0.1" @if(request('amount_range') === '0-0.1') selected @endif>{{ __('transactions.amount_range_under_0_1') }}</option>
+                    <option value="0.1-1" @if(request('amount_range') === '0.1-1') selected @endif>{{ __('transactions.amount_range_0_1_to_1') }}</option>
+                    <option value="1-10" @if(request('amount_range') === '1-10') selected @endif>{{ __('transactions.amount_range_1_to_10') }}</option>
+                    <option value="10+" @if(request('amount_range') === '10+') selected @endif>{{ __('transactions.amount_range_over_10') }}</option>
                 </select>
             </div>
-            <div>
-                <label class="block text-sm font-semibold text-slate-300">Search</label>
-                <input type="text" name="search" form="transaction-filters" value="{{ request('search') }}" placeholder="Recipient, wallet, or reference" class="mt-2 w-full rounded-2xl border border-slate-700/70 bg-slate-900 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" />
+            <div class="flex flex-col lg:flex-row lg:items-center lg:gap-3">
+                <label class="block text-xs font-semibold text-slate-400 mb-1 lg:mb-0 lg:w-32">{{ __('transactions.search_label') }}</label>
+                <div class="mt-2 lg:mt-0 relative w-full">
+                    <span class="absolute inset-y-0 left-3 flex items-center text-slate-500">
+                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+                    </span>
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('transactions.search_placeholder') }}" class="w-full rounded-lg border border-slate-700/50 bg-slate-900 pl-10 pr-3 h-11 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                </div>
             </div>
-        </div>
-        <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="text-sm text-slate-400">Use filters to refine the transaction timeline.</div>
-            <div class="flex flex-wrap gap-3">
-                <button type="submit" form="transaction-filters" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500">Search</button>
-                <a href="{{ route('user.transactions') }}" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-700/80 bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Clear</a>
+
+            <div class="lg:col-span-1 flex items-center justify-end gap-3 mt-2">
+                <button type="submit" class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 h-11 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition">
+                    {{ __('transactions.search_button') }}
+                </button>
+                <a href="{{ route('user.transactions') }}" class="inline-flex items-center justify-center rounded-md border border-slate-700/50 bg-transparent px-4 h-11 text-sm font-semibold text-slate-300 hover:bg-slate-900/60 transition">{{ __('transactions.clear_button') }}</a>
             </div>
-        </div>
+        </form>
     </div>
 
     <form id="transaction-filters" method="GET" action="{{ route('user.transactions') }}" class="hidden"></form>
@@ -117,7 +128,6 @@
                                 <th class="px-4 py-3">Wallet</th>
                                 <th class="px-4 py-3">Status</th>
                                 <th class="px-4 py-3">Date</th>
-                                <th class="px-4 py-3">Action</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-700 border-b border-slate-700/80">
@@ -155,36 +165,93 @@
                                     $txHash = $transaction->tx_hash;
                                     $hashLabel = $txHash ? (strlen($txHash) > 18 ? substr($txHash, 0, 10) . '...' . substr($txHash, -8) : $txHash) : 'Waiting for broadcast';
                                 @endphp
-                                <tr id="transaction-row-{{ $transaction->id }}" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}">
+                                <tr id="transaction-row-{{ $transaction->id }}" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}" class="hover:bg-slate-900/30 transform-gpu hover:scale-[1.01] transition-all duration-200">
                                     <td class="px-4 py-4 align-top">
-                                        <div class="font-semibold text-white">#TX-{{ str_pad($transaction->id, 4, '0', STR_PAD_LEFT) }}</div>
-                                        <div class="mt-1 text-xs text-slate-500">{{ $txHash ? 'Hash:' : 'Reference:' }} <span class="font-mono text-slate-300" data-hash-cell>{{ $hashLabel }}</span></div>
+                                        <div class="flex items-start gap-3">
+                                            <div class="min-w-0">
+                                                <div class="text-sm font-semibold text-white">#TX-{{ str_pad($transaction->id, 4, '0', STR_PAD_LEFT) }}</div>
+                                                <div class="mt-1 text-xs text-slate-400 flex items-center gap-2">
+                                                    <span class="font-mono text-slate-300 truncate" style="max-width:14rem;" data-hash-cell>
+                                                        @if($txHash)
+                                                            <a class="hover:text-white font-mono text-slate-300 truncate" href="{{ ($txHash && $explorerBase) ? ($explorerBase . $txHash) : '#' }}" target="_blank" rel="noopener noreferrer">{{ $hashLabel }}</a>
+                                                        @else
+                                                            {{ $hashLabel }}
+                                                        @endif
+                                                    </span>
+                                                    @if($txHash)
+                                                        <button onclick="event.stopPropagation(); navigator.clipboard.writeText('{{ $txHash }}').then(()=>{ /* visual feedback handled by browser */ }).catch(()=>{});" title="{{ __('transactions.copy_hash') }}" class="ml-2 inline-flex items-center justify-center rounded-md px-2 py-1 bg-slate-800/50 hover:bg-slate-800/70 text-slate-300 transition">
+                                                            <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 16h8M8 12h8M8 8h8"/></svg>
+                                                        </button>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
+
                                     <td class="px-4 py-4 align-top">
-                                        <span class="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
-                                            @if($transaction->type === 'deposit')<i class="fas fa-arrow-down text-emerald-400"></i>@elseif($transaction->type === 'withdraw')<i class="fas fa-arrow-up text-rose-400"></i>@elseif($transaction->type === 'transfer')<i class="fas fa-exchange-alt text-amber-400"></i>@else<i class="fas fa-circle text-slate-400"></i>@endif
-                                            {{ $transactionType }}
+                                        <span class="inline-flex items-center gap-2 rounded-lg px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em]"
+                                              style="background-color: rgba(255,255,255,0.02);">
+                                            @if($transaction->type === 'deposit')
+                                                <svg class="h-4 w-4 text-emerald-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/></svg>
+                                            @elseif($transaction->type === 'withdraw')
+                                                <svg class="h-4 w-4 text-rose-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 20V4m-8 8h16"/></svg>
+                                            @else
+                                                <svg class="h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7h16M4 12h16M4 17h16"/></svg>
+                                            @endif
+                                            <span class="text-slate-300">{{ $transactionType }}</span>
                                         </span>
                                     </td>
+
                                     <td class="px-4 py-4 align-top">
-                                        <span class="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold text-white">
+                                        <span class="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-1 text-sm font-semibold text-white">
                                             {{ $currency }}
                                         </span>
                                     </td>
+
                                     <td class="px-4 py-4 align-top text-right">
-                                        <div class="font-semibold text-white">{{ $transaction->type === 'deposit' ? '+' : '-' }}{{ number_format((float)$transaction->amount, 8, '.', '') }}</div>
-                                        <div class="text-xs text-slate-500">{{ $currency }}</div>
+                                        @php $isDeposit = ($transaction->type === 'deposit'); @endphp
+                                    <div class="text-lg font-semibold {{ $isDeposit ? 'text-emerald-400' : 'text-rose-400' }}">{{ $isDeposit ? '+' : '-' }}{{ number_format((float)$transaction->amount, 8, '.', '') }}</div>
+                                        <div class="text-xs text-slate-400">{{ $currency }}</div>
                                     </td>
+
                                     <td class="px-4 py-4 align-top">
-                                        <div class="font-medium text-white">{{ $walletShort }}</div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="font-mono text-sm text-slate-300">{{ $walletShort }}</div>
+                                            @if($walletLabel)
+                                                <button onclick="event.stopPropagation(); navigator.clipboard.writeText('{{ $walletLabel }}').then(()=>{ this && (this.innerText='Copied!') }).catch(()=>{});" title="Copy address" class="text-slate-400 hover:text-white text-xs">📋</button>
+                                            @endif
+                                        </div>
                                     </td>
+
                                     <td class="px-4 py-4 align-top">
-                                        <span class="status-badge inline-flex rounded-full border px-3 py-2 text-xs font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
+                                        <span class="status-badge inline-flex items-center gap-3 rounded-full px-3 py-1 text-xs font-semibold shadow-sm {{ $statusClass }}" style="backdrop-filter: blur(2px);">
+                                            {{-- Icon is visual only; keep status text mapping as before --}}
+                                            @if((strtolower($transaction->status ?? '') === 'processing') || (strtolower($transaction->status ?? '') === 'pending'))
+                                                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-600/20 flex-none">
+                                                    <svg class="h-4 w-4 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6l4 2"/></svg>
+                                                </span>
+                                            @elseif(in_array(strtolower($transaction->status ?? ''), ['confirmed','completed']))
+                                                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600/20 flex-none">
+                                                    <svg class="h-4 w-4 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/></svg>
+                                                </span>
+                                            @elseif(strtolower($transaction->status ?? '') === 'failed')
+                                                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-600/20 flex-none">
+                                                    <svg class="h-4 w-4 text-rose-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                </span>
+                                            @else
+                                                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-400/20 flex-none">
+                                                    <svg class="h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="3"/></svg>
+                                                </span>
+                                            @endif
+                                            <span>{{ $statusLabel }}</span>
+                                        </span>
                                     </td>
-                                    <td class="px-4 py-4 align-top text-slate-400">{{ $transaction->created_at->format('Y/m/d H:i') }}</td>
-                                    <td class="px-4 py-4 align-top">
-                                        <a href="{{ route('user.transaction.show', ['transaction' => $transaction->id]) }}" class="inline-flex items-center rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">View</a>
+
+                                    <td class="px-4 py-4 align-top text-slate-400">
+                                        <div class="text-sm">{{ $transaction->created_at->format('d M Y') }}</div>
+                                        <div class="text-xs mt-1">{{ $transaction->created_at->format('H:i') }}</div>
                                     </td>
+
                                 </tr>
                             @endforeach
                         </tbody>
@@ -226,42 +293,69 @@
                         $txHash = $transaction->tx_hash;
                         $hashLabel = $txHash ? (strlen($txHash) > 18 ? substr($txHash, 0, 10) . '...' . substr($txHash, -8) : $txHash) : 'Waiting for broadcast';
                     @endphp
-                    <div id="transaction-row-{{ $transaction->id }}" class="rounded-[28px] border border-slate-700/70 bg-slate-900/80 p-5 shadow-sm shadow-slate-950/10" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}">
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
+                    <div id="transaction-row-{{ $transaction->id }}" class="rounded-xl border border-slate-700/60 bg-gradient-to-br from-slate-900/60 via-slate-800/50 to-slate-900/80 p-4 shadow-2xl" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
                                 <p class="text-sm font-medium text-slate-400">#TX-{{ str_pad($transaction->id, 4, '0', STR_PAD_LEFT) }}</p>
-                                <p class="mt-2 text-xl font-semibold text-white">{{ $transaction->type === 'deposit' ? '+' : '-' }}{{ number_format((float)$transaction->amount, 8, '.', '') }} {{ $currency }}</p>
+                                <div class="mt-2 flex items-baseline gap-3">
+                                    <p class="text-lg font-semibold text-white">{{ $transaction->type === 'deposit' ? '+' : '-' }}{{ number_format((float)$transaction->amount, 8, '.', '') }}</p>
+                                    <span class="text-sm text-slate-400">{{ $currency }}</span>
+                                </div>
                             </div>
-                            <span class="status-badge inline-flex rounded-full border px-3 py-2 text-xs font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
+
+                            <span class="status-badge inline-flex items-center gap-3 rounded-full border px-3 py-1 text-xs font-semibold {{ $statusClass }}">
+                                @if((strtolower($transaction->status ?? '') === 'processing') || (strtolower($transaction->status ?? '') === 'pending'))
+                                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-600/20 flex-none">
+                                        <svg class="h-4 w-4 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6l4 2"/></svg>
+                                    </span>
+                                @elseif(in_array(strtolower($transaction->status ?? ''), ['confirmed','completed']))
+                                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600/20 flex-none">
+                                        <svg class="h-4 w-4 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/></svg>
+                                    </span>
+                                @elseif(strtolower($transaction->status ?? '') === 'failed')
+                                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-600/20 flex-none">
+                                        <svg class="h-4 w-4 text-rose-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </span>
+                                @else
+                                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-400/20 flex-none">
+                                        <svg class="h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="3"/></svg>
+                                    </span>
+                                @endif
+                                <span>{{ $statusLabel }}</span>
+                            </span>
                         </div>
-                        <div class="mt-4 grid gap-3">
-                            <div class="rounded-3xl bg-slate-950/80 px-4 py-3">
-                                <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Type</p>
-                                <p class="mt-2 text-sm font-semibold text-white">{{ $transactionType }}</p>
+
+                        <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                            <div class="rounded-lg bg-slate-950/60 px-3 py-2">
+                                <p class="text-xs uppercase tracking-widest text-slate-400">Type</p>
+                                <p class="mt-1 text-sm font-semibold text-white">{{ $transactionType }}</p>
                             </div>
-                            <div class="rounded-3xl bg-slate-950/80 px-4 py-3">
-                                <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Wallet</p>
-                                <p class="mt-2 text-sm font-mono text-slate-200">{{ $walletShort }}</p>
+                            <div class="rounded-lg bg-slate-950/60 px-3 py-2">
+                                <p class="text-xs uppercase tracking-widest text-slate-400">Wallet</p>
+                                <div class="mt-1 flex items-center justify-between">
+                                    <div class="font-mono text-sm text-slate-200 truncate">{{ $walletShort }}</div>
+                                    @if($walletLabel)
+                                        <button onclick="event.stopPropagation(); navigator.clipboard.writeText('{{ $walletLabel }}').then(()=>{ this && (this.innerText='Copied!') }).catch(()=>{});" title="Copy address" class="text-slate-400 text-xs">📋</button>
+                                    @endif
+                                </div>
                             </div>
-                            <div class="rounded-3xl bg-slate-950/80 px-4 py-3">
-                                <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Date</p>
-                                <p class="mt-2 text-sm text-slate-200">{{ $transaction->created_at->format('Y/m/d H:i') }}</p>
+                            <div class="rounded-lg bg-slate-950/60 px-3 py-2">
+                                <p class="text-xs uppercase tracking-widest text-slate-400">Date</p>
+                                <p class="mt-1 text-sm text-slate-200">{{ $transaction->created_at->format('d M Y • H:i') }}</p>
                             </div>
-                            <div class="rounded-3xl bg-slate-950/80 px-4 py-3">
-                                <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Hash</p>
-                                <p class="mt-2 text-sm font-mono text-slate-200 break-words" data-hash-cell>{{ $hashLabel }}</p>
+                            <div class="rounded-lg bg-slate-950/60 px-3 py-2">
+                                <p class="text-xs uppercase tracking-widest text-slate-400">Hash</p>
+                                <p class="mt-1 text-sm font-mono text-slate-200 break-words" data-hash-cell>{{ $hashLabel }}</p>
                             </div>
                         </div>
-                        <div class="mt-5 flex flex-wrap items-center gap-3">
-                            <a href="{{ route('user.transaction.show', ['transaction' => $transaction->id]) }}" class="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500">View Transaction</a>
-                        </div>
+
                     </div>
                 @endforeach
             </div>
         @else
             <div class="rounded-[28px] border border-slate-700/70 bg-slate-900/80 p-12 text-center text-slate-300">
                 <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-800 text-white">
-                    <i class="fas fa-inbox text-2xl"></i>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 13l2 6h14l2-6M16 7V3H8v4M3 13h18"/></svg>
                 </div>
                 <h2 class="mt-6 text-2xl font-semibold text-white">No transactions yet</h2>
                 <p class="mt-2 text-sm text-slate-400">Your crypto transactions will appear here.</p>

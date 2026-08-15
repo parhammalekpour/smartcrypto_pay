@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>مشاهده تراکنش</title>
+  <style>
+    :root{
+      --bg:#0f1724; /* dark blue-gray */
+      --card:#0b1220;
+      --muted:#9aa4b2;
+      --accent:#7c3aed; /* purple */
+      --success:#10b981;
+      --danger:#ef4444;
+      --glass: rgba(255,255,255,0.03);
+    }
+    html,body{height:100%;}
+    body{
+      margin:0; font-family: "Vazir", "IRANSans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(180deg, #071127 0%, #071022 50%, #071126 100%);
+      color:#e6eef6; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+      padding:32px; box-sizing:border-box;
+    }
+    .container{max-width:1100px;margin:0 auto;}
+
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .brand{display:flex;gap:16px;align-items:center}
+    .logo{width:56px;height:56px;background:linear-gradient(135deg,var(--accent),#4f46e5);border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700}
+    .brand h1{font-size:18px;margin:0}
+    .brand p{margin:0;font-size:13px;color:var(--muted)}
+
+    .card{background:linear-gradient(180deg,var(--card), rgba(7,17,34,0.6));border-radius:12px;padding:22px;box-shadow:0 6px 30px rgba(2,6,23,0.7);}
+
+    .top{display:flex;gap:18px;align-items:flex-start}
+    .summary{flex:1}
+    .summary .title{display:flex;align-items:center;gap:14px}
+    .txn-id{font-weight:700;font-size:16px}
+    .badge{padding:6px 10px;border-radius:999px;background:var(--glass);color:var(--muted);font-size:13px}
+
+    .amount-box{margin-top:18px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:18px;border-radius:10px;display:flex;align-items:center;justify-content:space-between}
+    .amount{font-size:28px;font-weight:800}
+    .meta{color:var(--muted);font-size:13px}
+
+    .right-panel{width:300px;min-width:260px}
+    .info-row{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:10px;margin-bottom:10px;background:rgba(255,255,255,0.02)}
+    .info-row strong{font-weight:700}
+
+    .actions{display:flex;gap:10px;margin-top:12px}
+    .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px 12px;border-radius:10px;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+    .btn.primary{background:linear-gradient(90deg,var(--accent),#4f46e5);border:none;color:white}
+
+    .status{display:inline-flex;gap:8px;align-items:center}
+    .status .dot{width:10px;height:10px;border-radius:999px}
+    .status.success .dot{background:var(--success)}
+    .status.failed .dot{background:var(--danger)}
+    .status.pending .dot{background:#f59e0b}
+
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px;margin-top:18px}
+
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:16px;border-radius:10px}
+
+    .timeline{display:flex;flex-direction:column;gap:12px}
+    .tl-item{display:flex;gap:12px;align-items:flex-start}
+    .tl-dot{width:12px;height:12px;border-radius:999px;background:rgba(255,255,255,0.06);margin-top:6px}
+    .tl-body{color:var(--muted)}
+
+    .kv{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed rgba(255,255,255,0.02);font-size:14px}
+    .kv:last-child{border-bottom:none}
+
+    .muted{color:var(--muted)}
+
+    .copy{cursor:pointer;color:var(--muted);font-size:13px}
+
+    footer{margin-top:22px;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:13px}
+
+    /* responsive */
+    @media (max-width:900px){
+      .grid{grid-template-columns:1fr;}
+      .right-panel{width:auto}
+      header{flex-direction:column;align-items:flex-start;gap:12px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo">SC</div>
+        <div>
+          <h1>SmartCryptoPay</h1>
+          <p>نمایش جزییات تراکنش</p>
+        </div>
+      </div>
+      <div class="badge">تراکنش مستقل (قالب استند-آلون)</div>
+    </header>
+
+    <main class="card">
+      <div class="top">
+        <div class="summary">
+          <div class="title">
+            <div>
+              <div class="txn-id" id="txn-id">تراکنش #—</div>
+              <div class="muted" id="txn-sub">بارگذاری اطلاعات...</div>
+            </div>
+            <div style="margin-left:auto;display:flex;flex-direction:column;align-items:flex-end">
+              <div id="statusWrap" class="status pending"><span class="dot"></span><span class="muted" id="statusText">در حال بارگذاری</span></div>
+              <div class="muted" style="font-size:12px;margin-top:8px" id="timeText">—</div>
+            </div>
+          </div>
+
+          <div class="amount-box">
+            <div>
+              <div class="amount" id="amount">—</div>
+              <div class="meta" id="currency">—</div>
+            </div>
+            <div style="text-align:left">
+              <div class="muted">نوع پرداخت</div>
+              <div id="method">—</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <button class="btn primary" id="printBtn">چاپ / پرینت</button>
+            <button class="btn" id="downloadJson">دانلود JSON</button>
+            <div style="margin-left:auto" class="muted">دسترسی سریع</div>
+          </div>
+
+          <div style="margin-top:18px" class="panel">
+            <div style="font-weight:700;margin-bottom:8px">خلاصه</div>
+            <div class="kv"><div class="muted">مبلغ</div><div id="kv-amount">—</div></div>
+            <div class="kv"><div class="muted">کارمزد</div><div id="kv-fee">—</div></div>
+            <div class="kv"><div class="muted">آدرس مقصد</div><div id="kv-to">—</div></div>
+            <div class="kv"><div class="muted">آدرس مبدا</div><div id="kv-from">—</div></div>
+          </div>
+        </div>
+
+        <aside class="right-panel">
+          <div class="panel">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-weight:700">جزییات تراکنش</div>
+              <div class="muted">ID</div>
+            </div>
+
+            <div style="margin-top:12px">
+              <div class="kv"><div class="muted">شناسه</div><div id="hash">— <span class="copy" id="copyHash">کپی</span></div></div>
+              <div class="kv"><div class="muted">بلاک/توکن</div><div id="block">—</div></div>
+              <div class="kv"><div class="muted">وضعیت</div><div id="kv-status">—</div></div>
+              <div class="kv"><div class="muted">تاریخ</div><div id="kv-time">—</div></div>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-top:12px">
+            <div style="font-weight:700;margin-bottom:8px">اقدام‌ها</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn" id="btn-explorer">باز کردن در اکسپلورر</button>
+              <button class="btn" id="btn-copy">کپی شناسه</button>
+              <button class="btn" id="btn-mark">علامت‌گذاری</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="grid">
+        <div class="panel">
+          <div style="font-weight:700;margin-bottom:8px">توسط</div>
+          <div style="display:flex;gap:12px;align-items:center">
+            <div style="width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#1f2937,#111827);display:flex;align-items:center;justify-content:center;font-weight:700">U</div>
+            <div>
+              <div id="userName">—</div>
+              <div class="muted" id="userEmail">—</div>
+            </div>
+          </div>
+
+          <div style="margin-top:14px">
+            <div style="font-weight:700;margin-bottom:8px">رویداد‌ها</div>
+            <div class="timeline" id="timeline">
+              <div class="tl-item"><div class="tl-dot"></div><div class="tl-body">رویدادها بارگذاری نشده‌اند</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div style="font-weight:700;margin-bottom:8px">لاگ و یادداشت‌ها</div>
+          <div id="notes" class="muted">—</div>
+        </div>
+      </div>
+
+      <footer>
+        <div>کپی‌رایت © SmartCryptoPay</div>
+        <div class="muted">این صفحه مستقل و بدون وابستگی به Laravel طراحی شده است</div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    // Utility: format a date to readable Farsi-ish string
+    function fmtDate(iso){
+      try{
+        const d = new Date(iso);
+        return d.toLocaleString('fa-IR');
+      }catch(e){return iso}
+    }
+
+    function getIdFromUrl(){
+      // support both formats: /en/user/transactions/209 and transaction-view.html?id=209
+      const path = location.pathname || '';
+      const parts = path.split('/').filter(Boolean);
+      // if last segment is numeric, assume it's id
+      const last = parts[parts.length-1] || '';
+      if(/^[0-9]+$/.test(last)) return last;
+      const qp = new URLSearchParams(location.search);
+      return qp.get('id') || '209';
+    }
+
+    function setStatusUI(status){
+      const wrap = document.getElementById('statusWrap');
+      const text = document.getElementById('statusText');
+      wrap.classList.remove('success','failed','pending');
+      if(!status) status='pending';
+      if(status.toLowerCase().includes('success') || status.toLowerCase().includes('completed') || status === 'confirmed'){
+        wrap.classList.add('success'); text.innerText='موفق';
+      } else if(status.toLowerCase().includes('fail')){ wrap.classList.add('failed'); text.innerText='ناموفق'; }
+      else { wrap.classList.add('pending'); text.innerText='در انتظار'; }
+    }
+
+    function showData(data){
+      // Map data keys flexibly
+      const id = data.id || data.txn_id || data.transaction_id || getIdFromUrl();
+      document.getElementById('txn-id').innerText = 'تراکنش #' + id;
+      document.getElementById('txn-sub').innerText = data.description || data.title || '';
+      document.getElementById('amount').innerText = (data.amount_display || (data.amount ? data.amount + ' ' + (data.currency || '') : '—'));
+      document.getElementById('currency').innerText = data.currency || '';
+      document.getElementById('method').innerText = data.method || data.payment_method || '—';
+      document.getElementById('timeText').innerText = data.created_at ? fmtDate(data.created_at) : (data.date || '—');
+      document.getElementById('kv-time').innerText = data.created_at ? fmtDate(data.created_at) : (data.date || '—');
+
+      document.getElementById('kv-amount').innerText = data.amount ? data.amount + ' ' + (data.currency || '') : '—';
+      document.getElementById('kv-fee').innerText = data.fee ? data.fee + ' ' + (data.currency || '') : (data.fee_display || '—');
+      document.getElementById('kv-to').innerText = data.to || data.to_address || '—';
+      document.getElementById('kv-from').innerText = data.from || data.from_address || '—';
+
+      document.getElementById('hash').innerHTML = (data.tx_hash || data.hash || '—') + ' <span class="copy" id="copyHash">کپی</span>';
+      document.getElementById('block').innerText = data.block || data.block_number || '—';
+      document.getElementById('kv-status').innerText = data.status || '—';
+
+      document.getElementById('userName').innerText = (data.user && (data.user.name || data.user.username)) || data.user_name || '—';
+      document.getElementById('userEmail').innerText = (data.user && data.user.email) || data.user_email || '';
+
+      document.getElementById('notes').innerText = data.notes || data.memo || '—';
+
+      setStatusUI(data.status || 'pending');
+
+      // timeline
+      const tl = document.getElementById('timeline'); tl.innerHTML='';
+      const events = data.events || data.timeline || [];
+      if(events.length === 0){
+        const div = document.createElement('div'); div.className='tl-item'; div.innerHTML = '<div class="tl-dot"></div><div class="tl-body muted">رویدادی موجود نیست</div>'; tl.appendChild(div);
+      } else {
+        events.forEach(e=>{
+          const div = document.createElement('div'); div.className='tl-item';
+          div.innerHTML = '<div class="tl-dot" style="background:'+ (e.ok? 'var(--success)':'rgba(255,255,255,0.06)') +';"></div><div class="tl-body"><div style="font-weight:700">'+(e.title||e.name||'رویداد')+'</div><div class="muted">'+(e.desc||e.detail||'')+'</div><div class="muted" style="font-size:12px;margin-top:6px">'+(e.time ? fmtDate(e.time) : '')+'</div></div>';
+          tl.appendChild(div);
+        });
+      }
+
+      // copy handlers
+      document.querySelectorAll('#copyHash, #btn-copy').forEach(btn=>btn.addEventListener('click', ()=>{
+        const text = data.tx_hash || data.hash || id;
+        navigator.clipboard.writeText(text).then(()=>{
+          btn.innerText='کپی شد'; setTimeout(()=>btn.innerText='کپی شناسه',1200);
+        });
+      }));
+
+      document.getElementById('btn-explorer').addEventListener('click', ()=>{
+        const base = data.explorer || 'https://explorer.example.com/tx/';
+        const hash = data.tx_hash || data.hash || id;
+        window.open(base + hash,'_blank');
+      });
+
+      document.getElementById('printBtn').addEventListener('click', ()=>{ window.print(); });
+
+      document.getElementById('downloadJson').addEventListener('click', ()=>{
+        const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'transaction-'+id+'.json'; a.click();
+      });
+
+      // explorer link on tx id
+      const txSub = document.getElementById('txn-sub');
+      txSub.addEventListener && txSub.addEventListener('click', ()=>{});
+    }
+
+    function fallbackSample(id){
+      return {
+        id: id,
+        transaction_id: id,
+        amount: '0.235 BTC',
+        amount_display: '0.235 BTC (~$9,200)',
+        currency: 'BTC',
+        fee: '0.0001 BTC',
+        created_at: new Date().toISOString(),
+        status: 'confirmed',
+        tx_hash: '0x' + Math.random().toString(16).slice(2,18),
+        block: 1729823,
+        method: 'On-chain Bitcoin',
+        from: 'bc1qexamplefromaddress...',
+        to: 'bc1qexampletoaddress...',
+        notes: 'پرداخت از طریق کیف پول خارجی. مقدار با کارمزد هماهنگ شده است.',
+        user: {name:'رضا حسینی', email:'reza@example.com'},
+        events: [
+          {title:'ساخت تراکنش', desc:'در صف ارسال', time:new Date(Date.now()-3600*1000).toISOString(), ok:true},
+          {title:'ارسال به شبکه', desc:'تراکنش به شبکه ارسال شد', time:new Date(Date.now()-1800*1000).toISOString(), ok:true},
+          {title:'تایید نهایی', desc:'تعداد تاییدها تکمیل شد', time:new Date().toISOString(), ok:true}
+        ],
+        explorer: 'https://mocks-explorer.test/tx/'
+      };
+    }
+
+    async function load(){
+      const id = getIdFromUrl();
+      const idEl = document.getElementById('txn-id');
+      idEl.innerText = 'تراکنش #' + id;
+      // Try to fetch JSON from a standard API endpoint (not Laravel-specific)
+      const apiPaths = [
+        '/api/transactions/'+id,
+        '/api/tx/'+id,
+        '/transactions/'+id+'.json'
+      ];
+      let data = null;
+      for(const p of apiPaths){
+        try{
+          const res = await fetch(p, {cache:'no-store'});
+          if(res.ok){ data = await res.json(); break; }
+        }catch(e){ /* ignore */ }
+      }
+      if(!data){
+        // fallback sample
+        data = fallbackSample(id);
+      }
+      showData(data);
+    }
+
+    // Start
+    load();
+  </script>
+</body>
+</html>

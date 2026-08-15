@@ -4,6 +4,8 @@ namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use App\Jobs\BlockchainScanJob;
+use App\Jobs\UpdateDepositConfirmationsJob;
 
 class Kernel extends ConsoleKernel
 {
@@ -11,25 +13,28 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\BlockchainScan::class,
         \App\Console\Commands\BlockchainProcessDeposits::class,
         \App\Console\Commands\WalletSyncBalances::class,
-        \App\Console\Commands\EthereumSignTest::class,
     ];
 
     protected function schedule(Schedule $schedule): void
     {
-        // Dispatch the blockchain scan as a queued job every minute
-        $schedule->job(new \App\Jobs\BlockchainScanJob(50), 'blockchain')
+        // Blockchains are polled on a one-minute interval and dispatched to the blockchain queue.
+        $schedule->job(new BlockchainScanJob(50), 'blockchain')
             ->everyMinute()
             ->withoutOverlapping()
-            ->onOneServer();
+            ->onOneServer()
+            ->name('blockchain.scan');
 
-        // Dispatch the confirmation updater job every minute (updates pending deposits confirmations)
-        $schedule->job(new \App\Jobs\UpdateDepositConfirmationsJob(), 'blockchain')
+        $schedule->job(new UpdateDepositConfirmationsJob(), 'blockchain')
             ->everyMinute()
             ->withoutOverlapping()
-            ->onOneServer();
+            ->onOneServer()
+            ->name('blockchain.confirmations');
 
-        // Keep processing confirmed deposits (legacy command) as a fallback
-        $schedule->command('blockchain:process-deposits')->everyMinute();
+        $schedule->command('blockchain:process-deposits')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->name('blockchain.process-deposits');
     }
 
     protected function commands(): void
