@@ -1,0 +1,28 @@
+diff --git a/app/Http/Controllers/WalletController.php b/app/Http/Controllers/WalletController.php
+index b1e900d..2fae261 100644
+--- a/app/Http/Controllers/WalletController.php
++++ b/app/Http/Controllers/WalletController.php
+@@ -111,6 +111,23 @@ public function storeWallet(Request $request)
+         return back()->with('success', __('wallets.create_wallet_success', ['currency' => $request->currency]));
+     }
+ 
++    public function rename(Request $request, Wallet $wallet)
++    {
++        if ($wallet->user_id !== auth()->id()) {
++            abort(403, 'Unauthorized');
++        }
++
++        $validated = $request->validate([
++            'name' => ['nullable', 'string', 'max:80'],
++        ]);
++
++        $wallet->update([
++            'name' => trim((string) ($validated['name'] ?? '')) !== '' ? trim((string) $validated['name']) : null,
++        ]);
++
++        return back()->with('success', __('wallets.rename_wallet_success'));
++    }
++
+     /**
+      * Delete a user's wallet. Only owner can delete and only when balance is zero.
+      */

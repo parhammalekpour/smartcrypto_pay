@@ -15,7 +15,9 @@ class PaymentRequest extends Model
         'amount',
         'currency',
         'token',
-        'status'
+        'status',
+        // Optional: references the merchant's Wallet.id to receive funds for this request
+        'destination_wallet_id'
     ];
 
     public function merchant()

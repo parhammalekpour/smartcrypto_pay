@@ -5,12 +5,13 @@
 
 class AutoRefreshManager {
     constructor(options = {}) {
-        // Configuration
-        this.enabled = options.enabled !== false; // Enabled by default
-        this.mode = options.mode || 'event'; // 'event' or 'interval'
-        this.refreshInterval = options.refreshInterval || 0; // 0 = no interval, only events
-        this.refreshDelay = options.refreshDelay || 10000; // تأخیر بعد از آپریشن (پیش‌فرض 10 ثانیه)
-        this.pollingInterval = options.pollingInterval || 10000; // Poll every 10 seconds
+        // Auto-refresh is intentionally disabled because it caused page reloads during wallet sends.
+        // The app now redirects to the transaction history page after submit and keeps the browser in control.
+        this.enabled = false;
+        this.mode = 'event';
+        this.refreshInterval = 0;
+        this.refreshDelay = 10000;
+        this.pollingInterval = 10000;
         this.storageKey = 'autoRefreshEnabled';
         this.modeKey = 'autoRefreshMode';
         
@@ -28,9 +29,14 @@ class AutoRefreshManager {
     }
 
     init() {
-        // Load preferences from localStorage
+        // Force auto-refresh off globally. The app intentionally handles redirects after a wallet send.
         this.loadPreferences();
-        
+
+        // Do not start any polling or refresh cycle.
+        if (!this.enabled) {
+            return;
+        }
+
         // Initialize last check time
         if (!localStorage.getItem('autoRefreshLastCheck')) {
             localStorage.setItem('autoRefreshLastCheck', new Date(Date.now() - 60000).toISOString());
@@ -61,16 +67,10 @@ class AutoRefreshManager {
     }
 
     loadPreferences() {
-        const storedEnabled = localStorage.getItem(this.storageKey);
-        const storedMode = localStorage.getItem(this.modeKey);
-        
-        if (storedEnabled !== null) {
-            this.enabled = storedEnabled === 'true';
-        }
-        
-        if (storedMode !== null) {
-            this.mode = storedMode;
-        }
+        this.enabled = false;
+        this.mode = 'event';
+        localStorage.setItem(this.storageKey, 'false');
+        localStorage.setItem(this.modeKey, 'event');
     }
 
     savePreferences() {
@@ -166,6 +166,10 @@ class AutoRefreshManager {
     }
 
     startPolling() {
+        if (!this.enabled) {
+            return;
+        }
+
         if (this.pollingId) {
             clearInterval(this.pollingId);
         }
@@ -285,34 +289,8 @@ class AutoRefreshManager {
     }
 
     refresh(source = 'manual') {
-        if (!this.enabled) {
-            return;
-        }
-        
-        // Prevent too frequent refreshes (min 2 seconds apart)
-        const now = Date.now();
-        if (now - this.lastRefreshTime < 2000) {
-            return;
-        }
-        
-        if (this.isRefreshing) {
-            return;
-        }
-        
-        this.isRefreshing = true;
-        this.lastRefreshTime = now;
-        
-        // Add visual feedback
-        this.showRefreshIndicator(source);
-        
-        // Debugging: trace and suppress reload temporarily to identify callers
-        console.trace('[AUTO-REFRESH] refresh triggered, source:', source);
-        // Prevent an immediate full reload during investigation. Replace with a logged message so the page doesn't keep reloading while we debug.
-        setTimeout(() => {
-            console.warn('[AUTO-REFRESH] (DEBUG) reload suppressed. Source:', source);
-            // Uncomment next line to actually reload after debugging is complete.
-            // window.location.reload();
-        }, 500);
+        // Auto-refresh is disabled by design. Do not reload or poll the page after form submits.
+        return;
     }
 
     showRefreshIndicator(source = 'manual') {

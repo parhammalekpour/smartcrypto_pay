@@ -432,7 +432,7 @@ use Morilog\Jalali\Jalalian;
                             @foreach($wallets as $wallet)
                                 <tr>
                                     <td><strong>{{ $wallet->currency }}</strong></td>
-                                    <td>{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }}</td>
+                                    <td>{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->display_balance) }}</td>
                                     <td style="font-size: 0.85em; color: #666;">{{ substr($wallet->wallet_address, 0, 20) }}...</td>
                                 </tr>
                             @endforeach

@@ -183,7 +183,7 @@
                                 <svg x-show="copied" x-transition class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                                     <path d="M5 12.5 9.5 17 19 7.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
-                                <span x-text="copied ? 'Copied' : 'Copy'">Copy</span>
+                                <span x-text="copied ? 'Copied' : 'Copy'">{{ __('common.copy') }}</span>
                             </button>
                         </div>
                     </div>
@@ -266,3 +266,4 @@
         </footer>
     </div>
 </div>
+

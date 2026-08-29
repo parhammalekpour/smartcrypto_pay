@@ -52,34 +52,47 @@ class CryptoPrice
     protected function readCache($symbol)
     {
         $path = $this->getCachePath();
-        if (! file_exists($path)) {
+        if (! file_exists($path) || ! is_readable($path)) {
             return null;
         }
 
-        $json = file_get_contents($path);
-        if ($json === false) {
+        $json = @file_get_contents($path);
+        if ($json === false || trim($json) === '') {
             return null;
         }
 
         $data = json_decode($json, true);
-        if (! is_array($data) || ! isset($data[$symbol])) {
+        if (! is_array($data) || ! isset($data[$symbol]) || ! is_array($data[$symbol])) {
+            Log::warning('Invalid crypto price cache: missing symbol entry.', ['symbol' => $symbol, 'cache_path' => $path]);
+            return null;
+        }
+
+        $price = $data[$symbol]['price'] ?? null;
+        $timestamp = $data[$symbol]['timestamp'] ?? null;
+        if (! is_numeric($price) || ! is_numeric($timestamp)) {
+            Log::warning('Invalid crypto price cache: malformed price payload.', ['symbol' => $symbol, 'cache_path' => $path, 'payload' => $data[$symbol]]);
             return null;
         }
 
         return [
-            'price' => (float) ($data[$symbol]['price'] ?? 0),
-            'timestamp' => (int) ($data[$symbol]['timestamp'] ?? 0),
+            'price' => (float) $price,
+            'timestamp' => (int) $timestamp,
         ];
     }
 
     protected function writeCache($symbol, $price)
     {
         $path = $this->getCachePath();
+        $dir = dirname($path);
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
         $data = [];
 
         if (file_exists($path)) {
-            $json = file_get_contents($path);
-            if ($json !== false) {
+            $json = @file_get_contents($path);
+            if ($json !== false && trim($json) !== '') {
                 $decoded = json_decode($json, true);
                 if (is_array($decoded)) {
                     $data = $decoded;
@@ -92,7 +105,7 @@ class CryptoPrice
             'timestamp' => time(),
         ];
 
-        @file_put_contents($path, json_encode($data));
+        @file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
     }
 
 

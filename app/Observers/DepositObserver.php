@@ -15,19 +15,32 @@ class DepositObserver
         $this->balanceService = new BalanceSyncService();
     }
 
+    public function created(Deposit $deposit)
+    {
+        $this->syncForWallet($deposit);
+    }
+
     public function updated(Deposit $deposit)
     {
-        // If deposit status became confirmed, trigger wallet balance sync
-        if ($deposit->wasChanged('status') && $deposit->status === 'confirmed') {
-            try {
-                $wallet = $deposit->wallet;
-                if ($wallet) {
-                    Log::info('Deposit confirmed: ' . $deposit->id . ' triggering balance sync for wallet ' . $wallet->id);
-                    $this->balanceService->syncWallet($wallet);
-                }
-            } catch (\Throwable $e) {
-                Log::error('DepositObserver failed to sync balance for deposit ' . ($deposit->id ?? '?') . ': ' . $e->getMessage());
+        if ($deposit->wasChanged('status')) {
+            $this->syncForWallet($deposit);
+        }
+    }
+
+    protected function syncForWallet(Deposit $deposit): void
+    {
+        try {
+            $wallet = $deposit->wallet;
+            if ($wallet) {
+                $this->balanceService->syncWallet($wallet);
+                Log::info('Deposit observer synced wallet balance', [
+                    'deposit_id' => $deposit->id,
+                    'wallet_id' => $wallet->id,
+                    'status' => $deposit->status,
+                ]);
             }
+        } catch (\Throwable $e) {
+            Log::error('DepositObserver failed to sync balance for deposit ' . ($deposit->id ?? '?') . ': ' . $e->getMessage());
         }
     }
 }

@@ -32,7 +32,7 @@ class WalletBalanceUpdated implements ShouldBroadcast
         return [
             'wallet_id' => $this->wallet->id,
             'balance' => $this->balances['balance'] ?? null,
-            'confirmed' => $this->balances['confirmed'] ?? null,
+            'onchain_balance' => $this->balances['confirmed'] ?? null,
             'pending' => $this->balances['pending'] ?? null,
             'last_scanned_block' => $this->wallet->last_scanned_block ?? null,
         ];

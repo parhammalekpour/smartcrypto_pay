@@ -39,6 +39,7 @@ class TransactionApiController extends Controller
             'sender_wallet_address' => $transaction->sender_wallet_address,
             'receiver_wallet_address' => $transaction->receiver_wallet_address,
             'tx_hash' => $transaction->tx_hash,
+            'reference' => $transaction->reference,
             'block_number' => $transaction->block_number,
             'confirmations' => (int)($transaction->confirmations ?? 0),
             'created_at' => $transaction->created_at?->toDateTimeString(),

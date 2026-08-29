@@ -20,38 +20,36 @@ const WalletBalance = (function() {
     function findWalletCards() {
         const candidates = [];
 
-        // Cards are top-level containers that include either:
-        // - an anchor link with sender_wallet_id query param (user.send route)
-        // - a form action pointing to /wallet/demo-deposit/{id}
-        // - a form action to user.wallets.destroy or /user/wallets/{id}
+        document.querySelectorAll('[data-wallet-id]').forEach(card => {
+            if (card.dataset.walletId) {
+                candidates.push(card);
+            }
+        });
 
-        // Strategy: find all elements that contain an anchor or form matching patterns and treat the closest parent card as the wallet card.
-
-        // 1) anchors with sender_wallet_id
+        // Fallback for older cards without the explicit attribute.
         document.querySelectorAll('a[href*="sender_wallet_id="]').forEach(a => {
             const card = a.closest('div');
             if (card) candidates.push(card);
         });
 
-
-        // 3) delete wallet forms (route user.wallets.destroy) that include wallet id
         document.querySelectorAll('form[action*="/user/wallets/"]').forEach(f => {
             const card = f.closest('div');
             if (card) candidates.push(card);
         });
 
-        // 4) fallback: every element that contains a .text-3xl balance paragraph and a wallet address paragraph (font-mono)
         document.querySelectorAll('p.text-3xl').forEach(p => {
             const card = p.closest('div');
             if (card && card.querySelector('p.font-mono')) candidates.push(card);
         });
 
-        // Deduplicate
         return Array.from(new Set(candidates));
     }
 
     function extractWalletIdFromCard(card) {
-        // Try anchor
+        if (card && card.dataset && card.dataset.walletId) {
+            return String(card.dataset.walletId);
+        }
+
         const a = card.querySelector('a[href*="sender_wallet_id="]');
         if (a) {
             try {
@@ -59,14 +57,11 @@ const WalletBalance = (function() {
                 const id = url.searchParams.get('sender_wallet_id');
                 if (id) return id;
             } catch (e) {
-                // fallback to regex
                 const m = a.getAttribute('href').match(/sender_wallet_id=(\d+)/);
                 if (m) return m[1];
             }
         }
 
-
-        // Try user wallets delete form /user/wallets/{id}
         const deleteForm = card.querySelector('form[action*="/user/wallets/"]');
         if (deleteForm) {
             const action = deleteForm.getAttribute('action');
@@ -74,7 +69,6 @@ const WalletBalance = (function() {
             if (m) return m[1];
         }
 
-        // Try data in a route href that contains wallet id as last segment
         const linkWithId = card.querySelector('a[href*="/wallet/"]');
         if (linkWithId) {
             const action = linkWithId.getAttribute('href');
@@ -86,8 +80,10 @@ const WalletBalance = (function() {
     }
 
     function findBalanceElement(card) {
-        // Primary: p.text-3xl
-        let el = card.querySelector('p.text-3xl');
+        let el = card.querySelector('.wallet-balance-value');
+        if (el) return el;
+
+        el = card.querySelector('p.text-3xl');
         if (el) return el;
 
         // Secondary: first bold/large number inside card
@@ -152,19 +148,29 @@ const WalletBalance = (function() {
         const { balanceEl } = meta;
         if (!walletId || !balanceEl) return;
 
+        const version = (meta.latestIssuedVersion ?? 0) + 1;
+        meta.latestIssuedVersion = version;
+
         // Show skeleton
         setSkeleton(balanceEl);
 
         try {
             const resp = await axios.get(`/api/wallet/${walletId}/balance`, { timeout: 8000 });
             const data = resp.data || {};
-            const newBal = formatBalanceRaw(data.wallet_balance ?? data.balance ?? data.available ?? '0');
+            const confirmedBalance = data.confirmed_balance ?? data.confirmed ?? data.wallet_balance ?? data.balance ?? data.available ?? '0';
+            const newBal = formatBalanceRaw(confirmedBalance);
+
+            // Ignore stale responses from older requests.
+            if (version !== meta.latestIssuedVersion) {
+                return;
+            }
+
             const prev = meta.lastValue ?? (balanceEl.dataset?.initialValue ?? balanceEl.textContent.trim());
 
             // Update displayed USD price data attribute if present
             const usdEl = meta.usdEl;
-            if (usdEl && data.confirmed_balance !== undefined) {
-                usdEl.setAttribute('data-balance', data.confirmed_balance);
+            if (usdEl && confirmedBalance !== undefined) {
+                usdEl.setAttribute('data-balance', confirmedBalance);
             }
 
             // Animate number change only if different
@@ -182,14 +188,21 @@ const WalletBalance = (function() {
             balanceEl.setAttribute('title', 'Synced ' + new Date().toLocaleTimeString());
 
         } catch (err) {
+            // Ignore stale request failures; newer update already wins.
+            if (version !== meta.latestIssuedVersion) {
+                return;
+            }
+
             // On error, restore previous value and annotate
             const prev = meta.lastValue ?? (balanceEl.dataset?.initialValue ?? balanceEl.textContent.trim());
             balanceEl.textContent = prev || '0';
             balanceEl.setAttribute('title', 'Unable to refresh balance');
             console.error('Failed to fetch wallet balance for', walletId, err?.message || err);
         } finally {
-            // Ensure skeleton cleared
-            clearSkeleton(balanceEl);
+            // Ensure skeleton cleared only for the newest active update.
+            if (version === meta.latestIssuedVersion) {
+                clearSkeleton(balanceEl);
+            }
         }
     }
 
@@ -211,11 +224,16 @@ const WalletBalance = (function() {
             try {
                 const channel = window.Echo.private(`wallet.${walletId}`);
                 channel.listen('WalletBalanceUpdated', (e) => {
-                    // e.balance or e.wallet_balance
-                    const payloadBalance = e.balance ?? e.wallet_balance ?? e.balances?.balance ?? null;
+                    console.log('Echo balance update:', e);
+                    const version = (meta.latestIssuedVersion ?? 0) + 1;
+                    meta.latestIssuedVersion = version;
+
+                    // Prefer the confirmed on-chain balance for the displayed wallet value.
+                    const payloadBalance = e.confirmed ?? e.confirmed_balance ?? e.balance ?? e.wallet_balance ?? e.balances?.confirmed ?? e.balances?.balance ?? null;
                     if (payloadBalance !== null && meta.balanceEl) {
                         const newBal = formatBalanceRaw(payloadBalance);
                         const prev = meta.lastValue ?? (meta.balanceEl.dataset?.initialValue ?? meta.balanceEl.textContent.trim());
+
                         if (Number(prev) !== Number(newBal)) {
                             animateChange(meta.balanceEl, parseFloat(prev || 0), parseFloat(newBal));
                         } else {
@@ -251,7 +269,7 @@ const WalletBalance = (function() {
                     balanceEl.dataset.initialValue = (balanceEl.textContent || '').trim() || '0';
                 }
 
-                wallets.set(walletId, { cardEl: card, balanceEl, usdEl, lastValue: balanceEl.dataset.initialValue, lastEchoAt: null });
+                wallets.set(walletId, { cardEl: card, balanceEl, usdEl, lastValue: balanceEl.dataset.initialValue, lastEchoAt: null, latestIssuedVersion: 0 });
             });
 
             // Initial fetch for all wallets

@@ -63,15 +63,24 @@ class WalletController extends Controller
     {
         $wallets = auth()->user()->wallets ?? collect();
 
-        // Quick sync balances for the current user's wallets to ensure UI shows up-to-date values
+        // Quick sync balances for the current user's wallets to ensure UI shows up-to-date values.
+        // Always reload the collection after syncing so the view reads the updated database values,
+        // not the stale Eloquent model instances that were loaded before the sync.
         try {
             $balanceService = new \App\Services\BalanceSyncService();
             foreach ($wallets as $wallet) {
                 try {
-                    $balanceService->syncWallet($wallet);
+                    $syncResult = $balanceService->syncWallet($wallet);
+                    $wallet->display_balance = $syncResult['confirmed'] ?? ($wallet->balance ?? '0');
                 } catch (\Throwable $e) {
+                    $wallet->display_balance = $wallet->balance ?? '0';
                     Log::error('Quick sync failed for wallet ' . ($wallet->id ?? '?') . ': ' . $e->getMessage());
                 }
+            }
+
+            $wallets = auth()->user()->wallets()->get();
+            foreach ($wallets as $wallet) {
+                $wallet->display_balance = $balanceService->calculateWalletBalance($wallet)['confirmed'] ?? ($wallet->balance ?? '0');
             }
         } catch (\Throwable $e) {
             // Guard - do not block page rendering on sync errors
@@ -449,8 +458,32 @@ class WalletController extends Controller
                 break;
         }
 
-        $wallet->increment('balance', $amount);
+        // Create a confirmed deposit record so BalanceSyncService treats this as an on-chain confirmed deposit
+        try {
+            \App\Models\Deposit::create([
+                'wallet_id' => $wallet->id,
+                'user_id' => auth()->id(),
+                'currency' => $wallet->currency,
+                'amount' => $amount,
+                'status' => 'confirmed',
+                'confirmed_at' => now(),
+                'processed_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            // If deposit creation fails, log and continue — the demo should still create a transaction record
+            \Illuminate\Support\Facades\Log::error('Demo deposit: failed to create Deposit record for wallet ' . ($wallet->id ?? '?') . ': ' . $e->getMessage());
+        }
 
+        // Recompute and persist canonical confirmed balance via BalanceSyncService
+        try {
+            $balanceService = new \App\Services\BalanceSyncService();
+            $balanceService->syncWallet($wallet);
+            $wallet->refresh();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Demo deposit: balance sync failed for wallet ' . ($wallet->id ?? '?') . ': ' . $e->getMessage());
+        }
+
+        // Create a transaction record representing the demo deposit activity
         Transaction::create([
             'wallet_id'   => $wallet->id,
             'sender_id'   => null,
@@ -567,16 +600,6 @@ class WalletController extends Controller
             $request
         ) {
 
-            $senderWallet->decrement(
-                'balance',
-                $request->amount
-            );
-
-            $receiverWallet->increment(
-                'balance',
-                $request->amount
-            );
-
             // Create transaction for sender
             Transaction::create([
                 'wallet_id'   => $senderWallet->id,
@@ -626,6 +649,15 @@ class WalletController extends Controller
                 'fa-inbox'
             );
         });
+
+        // Recompute canonical balances for affected wallets so wallet->balance is authored only by BalanceSyncService
+        try {
+            $balanceService = new \App\Services\BalanceSyncService();
+            $balanceService->syncWallet($senderWallet);
+            $balanceService->syncWallet($receiverWallet);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Post-transfer balance sync failed: ' . $e->getMessage());
+        }
 
         return back()->with(
             'success',

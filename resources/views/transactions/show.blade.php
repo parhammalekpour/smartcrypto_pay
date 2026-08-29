@@ -110,7 +110,7 @@
                     </div>
                     <div class="rounded-3xl border border-slate-800/40 bg-slate-900/80 p-5">
                         <p class="text-sm uppercase tracking-[0.2em] text-slate-400">{{ __('transactions.source') ?? 'Source' }}</p>
-                        <p class="mt-3 text-sm text-slate-200">{{ $transaction->tx_hash ? 'Blockchain' : 'Pending broadcast' }}</p>
+                        <p class="mt-3 text-sm text-slate-200">{{ ($transaction->tx_hash ?? $transaction->reference) ? 'Blockchain' : 'Pending broadcast' }}</p>
                     </div>
                     <div class="rounded-3xl border border-slate-800/40 bg-slate-900/80 p-5">
                         <p class="text-sm uppercase tracking-[0.2em] text-slate-400">{{ __('transactions.recipient_wallet') ?? 'Recipient wallet' }}</p>
@@ -126,7 +126,8 @@
     function transactionPage(transactionId) {
         return {
             id: transactionId,
-            txHash: {{ $transaction->tx_hash ? json_encode($transaction->tx_hash) : 'null' }},
+            txHash: {{ ($transaction->tx_hash ?? $transaction->reference) ? json_encode($transaction->tx_hash ?? $transaction->reference) : 'null' }},
+            reference: {{ $transaction->reference ? json_encode($transaction->reference) : 'null' }},
             status: '{{ $transaction->status }}',
             blockNumber: {{ $transaction->block_number !== null ? json_encode($transaction->block_number) : 'null' }},
             confirmations: {{ $transaction->confirmations !== null ? json_encode($transaction->confirmations) : 'null' }},
@@ -220,9 +221,10 @@
 
             _applyIncoming(data) {
                 if (!data) return false;
-                // update txHash independently if present
-                if (data.tx_hash && data.tx_hash !== this.txHash) {
-                    this.txHash = data.tx_hash;
+                // update txHash independently if present (fallback to reference)
+                const incomingHash = data.tx_hash || data.reference || null;
+                if (incomingHash && incomingHash !== this.txHash) {
+                    this.txHash = incomingHash;
                     this.explorerLink = this.txHash ? ('https://sepolia.etherscan.io/tx/' + this.txHash) : '';
                 }
 

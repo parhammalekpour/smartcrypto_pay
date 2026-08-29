@@ -40,11 +40,11 @@
         </div>
         <div class="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
             <p class="text-emerald-600 text-sm font-semibold">{{ __('merchant.settlements.total_settled_amount') }}</p>
-            <p class="text-2xl font-bold text-emerald-800 mt-2">${{ number_format($settlements->sum('amount'), 2) }}</p>
+            <p class="text-2xl font-bold text-emerald-800 mt-2">{{ \App\Support\NumberHelper::formatCryptoAmount($totalSettledAmount ?? 0) }}</p>
         </div>
         <div class="bg-teal-50 rounded-lg p-4 border border-teal-200">
             <p class="text-teal-600 text-sm font-semibold">{{ __('merchant.settlements.average_payment') }}</p>
-            <p class="text-2xl font-bold text-teal-800 mt-2">${{ number_format($settlements->avg('amount'), 2) }}</p>
+            <p class="text-2xl font-bold text-teal-800 mt-2">{{ \App\Support\NumberHelper::formatCryptoAmount($averagePayment ?? 0) }}</p>
         </div>
     </div>
 

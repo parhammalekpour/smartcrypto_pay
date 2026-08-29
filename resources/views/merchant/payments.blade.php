@@ -66,7 +66,7 @@
             </div>
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">{{ __('merchant.payments.currency') }}</label>
-                <select name="currency" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900">
+                <select id="currency-select" name="currency" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900">
                     <option value="">{{ __('merchant.payments.select_currency') }}</option>
                     <option value="BTC">Bitcoin (BTC)</option>
                     <option value="ETH">Ethereum (ETH)</option>
@@ -74,6 +74,64 @@
                 </select>
             </div>
         </div>
+
+        <div class="mt-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">{{ __('merchant.payments.destination_wallet') }}</label>
+            <select id="destination-wallet-select" name="destination_wallet_id" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900">
+                <option value="">{{ __('merchant.payments.select_wallet') ?? 'Select destination wallet' }}</option>
+                @foreach($merchantWallets ?? collect() as $w)
+                    <option value="{{ $w->id }}" data-currency="{{ $w->currency }}">{{ $w->currency }} / {{ ucfirst($w->network ?? $w->currency) }} — {{ substr($w->wallet_address,0,6) . '...' . substr($w->wallet_address, -4) }}</option>
+                @endforeach
+            </select>
+            <p class="text-xs text-gray-500 mt-2">{{ __('merchant.payments.destination_wallet_help') }}</p>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var currency = document.getElementById('currency-select');
+                var wallet = document.getElementById('destination-wallet-select');
+
+                function filterWallets() {
+                    var cur = currency.value;
+                    // Reset selection
+                    wallet.value = '';
+
+                    var options = wallet.querySelectorAll('option');
+                    var hasVisible = false;
+
+                    options.forEach(function (opt) {
+                        // placeholder option (no data-currency) should always be visible and enabled
+                        if (!opt.dataset.currency) {
+                            opt.hidden = false;
+                            opt.disabled = false;
+                            return;
+                        }
+
+                        if (!cur) {
+                            // hide/disable all wallet options until a currency is chosen
+                            opt.hidden = true;
+                            opt.disabled = true;
+                        } else {
+                            if (opt.dataset.currency === cur) {
+                                opt.hidden = false;
+                                opt.disabled = false;
+                                hasVisible = true;
+                            } else {
+                                opt.hidden = true;
+                                opt.disabled = true;
+                            }
+                        }
+                    });
+
+                    // Enable the select only when a currency is chosen and at least one matching wallet exists
+                    wallet.disabled = !(cur && hasVisible);
+                }
+
+                currency.addEventListener('change', filterWallets);
+                // Run once on load
+                filterWallets();
+            });
+        </script>
 
         <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition" @if(!auth()->user()->kyc_verified) disabled @endif>
             <i class="fas fa-arrow-right ml-2"></i>{{ __('merchant.payments.create_request') }}

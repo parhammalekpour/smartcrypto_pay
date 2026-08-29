@@ -56,6 +56,19 @@ return new class extends Migration
 
     public function up(): void
     {
+        if (!Schema::hasTable('deposits')) {
+            return;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $indexes = DB::select("PRAGMA index_list('deposits')");
+            foreach ($indexes as $index) {
+                if (isset($index->name) && strtolower((string) $index->name) === 'deposits_tx_hash_currency_unique') {
+                    return;
+                }
+            }
+        }
+
         $indexNames = [];
         $compositeExists = false;
 

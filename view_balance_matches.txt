@@ -1,0 +1,91 @@
+﻿E:\smart-cryptopay\resources\views\admin\wallets_user.blade.php:21:                    <th class="py-2">{{ __('admin.wallets.balance') }}</th>
+E:\smart-cryptopay\resources\views\admin\wallets_user.blade.php:31:                        <td class="py-3">{{ number_format($wallet->balance, 8) }}</td>
+E:\smart-cryptopay\resources\views\merchant\dashboard.blade.php:427:                                <th>Balance</th>
+E:\smart-cryptopay\resources\views\merchant\dashboard.blade.php:435:                                    <td>{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }}</td>
+E:\smart-cryptopay\resources\views\merchant\send.blade.php:25:                                {{ $wallet->currency }} - {{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }}
+E:\smart-cryptopay\resources\views\merchant\transactions.blade.php:138:                                $statusClass = in_array($transaction->status, ['processing','pending']) ? 'bg-amber-100 text-amber-700 border-amber-200' : (in_array($transaction->status, ['confirmed','completed']) ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : (in_array($transaction->status, ['failed']) ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-slate-200 text-slate-700 border-slate-300'));
+E:\smart-cryptopay\resources\views\merchant\transactions.blade.php:189:                                        @elseif(in_array(strtolower($transaction->status ?? ''), ['confirmed','completed']))
+E:\smart-cryptopay\resources\views\merchant\transactions.blade.php:249:                    $statusClass = in_array($transaction->status, ['processing','pending']) ? 'bg-amber-100 text-amber-700 border-amber-200' : (in_array($transaction->status, ['confirmed','completed']) ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-200 text-slate-700 border-slate-300');
+E:\smart-cryptopay\resources\views\merchant\transactions.blade.php:500:        'confirmed': 3,
+E:\smart-cryptopay\resources\views\merchant\transactions.blade.php:513:        return ['confirmed','completed','failed','cancelled'].includes((status||'').toLowerCase());
+E:\smart-cryptopay\resources\views\merchant\transactions.blade.php:518:        if (['completed','confirmed'].includes(normalized)) return '<span class="tx-status-cell inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">✓ {{ __('merchant.transactions.completed') }}</span>';
+E:\smart-cryptopay\resources\views\merchant\wallets.blade.php:108:                <!-- Balance -->
+E:\smart-cryptopay\resources\views\merchant\wallets.blade.php:110:                    <p class="text-gray-500 text-xs mb-1">{{ __('wallets.balance') }}</p>
+E:\smart-cryptopay\resources\views\merchant\wallets.blade.php:111:                    <p class="text-3xl font-bold text-gray-800">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->display_balance ?? $wallet->balance) }}</p>
+E:\smart-cryptopay\resources\views\merchant\wallets.blade.php:113:                        {{ __('wallets.estimated_value') }}: <span class="font-semibold usd-price" data-currency="{{ $wallet->currency }}" data-balance="{{ $wallet->display_balance ?? $wallet->balance }}">≈ $0.00</span>
+E:\smart-cryptopay\resources\views\merchant\wallets.blade.php:147:                    @if(floatval($wallet->balance) > 0)
+E:\smart-cryptopay\resources\views\merchant\wallets.blade.php:148:                        <a href="{{ route('tickets.create', ['subject' => __('wallets.delete_ticket_subject', ['currency' => $wallet->currency]), 'message' => __('wallets.delete_ticket_message', ['address' => $wallet->wallet_address, 'balance' => $wallet->balance, 'currency' => $wallet->currency])]) }}" onclick="alert('{{ __('wallets.delete_wallet_balance_alert') }}');" class="p-2 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition flex items-center justify-center gap-1 whitespace-nowrap" title="{{ __('wallets.delete_wallet_ticket_title') }}">
+E:\smart-cryptopay\resources\views\merchant\wallets.blade.php:295:            const balance = parseFloat(element.getAttribute('data-balance')) || 0;
+E:\smart-cryptopay\resources\views\merchant\wallets.blade.php:306:            const usdValue = balance * price;
+E:\smart-cryptopay\resources\views\transactions\show.blade.php:145:                'confirmed': '{{ __('common.confirmed') }}',
+E:\smart-cryptopay\resources\views\transactions\show.blade.php:154:                'confirmed': 3,
+E:\smart-cryptopay\resources\views\transactions\show.blade.php:161:                return ['confirmed', 'completed', 'failed', 'cancelled'].includes((status||'').toLowerCase());
+E:\smart-cryptopay\resources\views\transactions\show.blade.php:176:                if (status === 'confirmed') {
+E:\smart-cryptopay\resources\views\transactions\show.blade.php:177:                    this.statusDetail = '{{ addslashes('This transaction has been confirmed on the blockchain.') }}';
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:9:    <!-- Quick Balance Overview -->
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:11:        <!-- Total Balance -->
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:18:                    <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">{{ __('dashboard.total_balance') }}</span>
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:19:                    <button type="button" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition" data-toggle-total-balance aria-label="{{ __('dashboard.toggle_balance_visibility') }}">
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:24:            <p class="text-white/80 text-sm mb-1">{{ __('dashboard.total_balance') }}</p>
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:25:            <p class="text-3xl font-bold" data-total-balance data-actual-balance="{{ $totalBalance ?? 0 }}">${{ number_format($totalBalance ?? 0, 2) }}</p>
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:151:                                <span class="text-sm font-bold text-gray-800">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }}</span>
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:207:                                    if ($transaction->type === 'deposit' && $transaction->deposit?->status === 'confirmed') {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:269:// Real-time balance update using latest crypto prices
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:270:let walletBalances = @json($wallets->map(fn($w) => ['currency' => $w->currency, 'balance' => $w->balance])->values());
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:330:        updateTotalBalance();
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:337:const balanceToggleKey = 'dashboard-total-balance-hidden';
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:338:let isTotalBalanceHidden = false;
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:340:function getStoredBalanceHidden() {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:342:        return localStorage.getItem(balanceToggleKey) === 'true';
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:348:function setStoredBalanceHidden(value) {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:350:        localStorage.setItem(balanceToggleKey, value ? 'true' : 'false');
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:356:isTotalBalanceHidden = getStoredBalanceHidden();
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:358:function updateBalanceToggleButton() {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:359:    const toggleButton = document.querySelector('[data-toggle-total-balance] i');
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:364:    toggleButton.classList.toggle('fa-eye', !isTotalBalanceHidden);
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:365:    toggleButton.classList.toggle('fa-eye-slash', isTotalBalanceHidden);
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:368:function setTotalBalanceText(amount) {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:369:    const balanceElement = document.querySelector('[data-total-balance]');
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:370:    if (!balanceElement) {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:374:    balanceElement.dataset.actualBalance = amount;
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:375:    if (isTotalBalanceHidden) {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:376:        balanceElement.textContent = '••••••';
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:378:        balanceElement.textContent = formatPrice(amount);
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:382:function toggleTotalBalanceVisibility() {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:383:    isTotalBalanceHidden = !isTotalBalanceHidden;
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:384:    setStoredBalanceHidden(isTotalBalanceHidden);
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:385:    updateBalanceToggleButton();
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:387:    const balanceElement = document.querySelector('[data-total-balance]');
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:388:    if (!balanceElement) {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:392:    const currentAmount = parseFloat(balanceElement.dataset.actualBalance) || 0;
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:393:    setTotalBalanceText(currentAmount);
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:396:const totalBalanceToggleButton = document.querySelector('[data-toggle-total-balance]');
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:397:if (totalBalanceToggleButton) {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:398:    totalBalanceToggleButton.addEventListener('click', toggleTotalBalanceVisibility);
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:399:    updateBalanceToggleButton();
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:402:function updateTotalBalance() {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:405:    walletBalances.forEach(wallet => {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:415:        total += wallet.balance * price;
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:418:    setTotalBalanceText(total);
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:422:const initialBalanceElement = document.querySelector('[data-total-balance]');
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:423:if (initialBalanceElement) {
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:424:    const initialActualBalance = parseFloat(initialBalanceElement.dataset.actualBalance) || 0;
+E:\smart-cryptopay\resources\views\user\dashboard-new.blade.php:425:    setTotalBalanceText(initialActualBalance);
+E:\smart-cryptopay\resources\views\user\send.blade.php:43:                                {{ $wallet->currency }} - {{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }}
+E:\smart-cryptopay\resources\views\user\transactions.blade.php:157:                                        'confirmed' => 'Confirmed',
+E:\smart-cryptopay\resources\views\user\transactions.blade.php:166:                                        'confirmed' => 'bg-emerald-600/10 text-emerald-400 border-emerald-600/30',
+E:\smart-cryptopay\resources\views\user\transactions.blade.php:242:                                            @elseif(in_array(strtolower($transaction->status ?? ''), ['confirmed','completed']))
+E:\smart-cryptopay\resources\views\user\transactions.blade.php:285:                            'confirmed' => 'Confirmed',
+E:\smart-cryptopay\resources\views\user\transactions.blade.php:294:                            'confirmed' => 'bg-emerald-600/10 text-emerald-400 border-emerald-600/30',
+E:\smart-cryptopay\resources\views\user\transactions.blade.php:320:                                @elseif(in_array(strtolower($transaction->status ?? ''), ['confirmed','completed']))
+E:\smart-cryptopay\resources\views\user\transactions.blade.php:393:        'confirmed': '{{ __('common.confirmed') }}',
+E:\smart-cryptopay\resources\views\user\transactions.blade.php:402:        'confirmed': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+E:\smart-cryptopay\resources\views\user\transactions.blade.php:413:        'confirmed': 3,
+E:\smart-cryptopay\resources\views\user\transactions.blade.php:420:        return ['confirmed', 'completed', 'failed', 'cancelled'].includes(status);
+E:\smart-cryptopay\resources\views\user\wallets.blade.php:165:                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{{ __('wallets.balance') }}</p>
+E:\smart-cryptopay\resources\views\user\wallets.blade.php:166:                        <p class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->display_balance ?? $wallet->balance) }} <span class="text-lg font-medium text-slate-500">{{ $wallet->currency }}</span></p>
+E:\smart-cryptopay\resources\views\user\wallets.blade.php:169:                            <span class="ml-1 font-semibold text-slate-700 usd-price" data-currency="{{ $wallet->currency }}" data-balance="{{ $wallet->display_balance ?? $wallet->balance }}">≈ $0.00</span>
+E:\smart-cryptopay\resources\views\user\wallets.blade.php:193:                        @if(floatval($wallet->balance) > 0)
+E:\smart-cryptopay\resources\views\user\wallets.blade.php:194:                            <a href="{{ route('tickets.create', ['subject' => __('wallets.delete_ticket_subject', ['currency' => $wallet->currency]), 'message' => __('wallets.delete_ticket_message', ['address' => $wallet->wallet_address, 'balance' => $wallet->balance, 'currency' => $wallet->currency])]) }}" onclick="alert('{{ __('wallets.delete_wallet_balance_alert') }}');" class="wallet-action-btn bg-rose-50 text-rose-700 hover:bg-rose-100" title="{{ __('wallets.delete_wallet_ticket_title') }}">
+E:\smart-cryptopay\resources\views\user\wallets.blade.php:349:            const balance = parseFloat(element.getAttribute('data-balance')) || 0;
+E:\smart-cryptopay\resources\views\user\wallets.blade.php:360:            const usdValue = balance * price;

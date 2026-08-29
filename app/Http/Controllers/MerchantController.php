@@ -81,6 +81,17 @@ class MerchantController extends Controller
     public function wallets()
     {
         $wallets = auth()->user()->wallets ?? collect();
+
+        try {
+            $balanceService = new \App\Services\BalanceSyncService();
+            $wallets = auth()->user()->wallets()->get();
+            foreach ($wallets as $wallet) {
+                $wallet->display_balance = $balanceService->calculateWalletBalance($wallet)['confirmed'] ?? ($wallet->balance ?? '0');
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Merchant wallet balance refresh failed: ' . $e->getMessage());
+        }
+
         return view('merchant.wallets', compact('wallets'));
     }
 
@@ -455,12 +466,16 @@ class MerchantController extends Controller
 
     public function settlements()
     {
-        $settlements = PaymentRequest::where('merchant_id', auth()->id())
-            ->where('status', 'paid')
-            ->latest()
-            ->paginate(20);
+        $query = PaymentRequest::where('merchant_id', auth()->id())
+            ->where('status', 'paid');
+
+        // Compute aggregates using the query (not the paginated collection)
+        $totalSettledAmount = $query->sum('amount');
+        $averagePayment = $query->avg('amount');
+
+        $settlements = $query->latest()->paginate(20);
         
-        return view('merchant.settlements', compact('settlements'));
+        return view('merchant.settlements', compact('settlements', 'totalSettledAmount', 'averagePayment'));
     }
 
     public function settings()
@@ -601,86 +616,228 @@ class MerchantController extends Controller
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
-        if (strtoupper((string)$wallet->currency) !== 'ETH') {
-            return back()->withErrors(['sender_wallet_id' => 'Only ETH wallets can be used for Sepolia outgoing transfers.'])->withInput();
-        }
-
         if (empty($wallet->wallet_address)) {
             return back()->withErrors(['sender_wallet_id' => 'Sender wallet address is missing.'])->withInput();
         }
 
-        $destination = trim($request->wallet_address);
+        $destination = trim((string)$request->wallet_address);
         $ethService = new EthereumService();
+
+        // Validate destination address
         if (!$ethService->isValidAddress($destination)) {
             return back()->withErrors(['wallet_address' => 'Invalid Ethereum destination address.'])->withInput();
         }
 
-        if (strtolower($wallet->wallet_address) === strtolower($destination)) {
+        // Prevent sending to same wallet
+        if (strtolower((string)$wallet->wallet_address) === strtolower($destination)) {
             return back()->withErrors(['wallet_address' => 'Destination address cannot be the sender wallet.'])->withInput();
         }
 
-        $amount = trim((string)$request->amount);
-        if (!preg_match('/^\d+(\.\d+)?$/', $amount) || bccomp($amount, '0', 18) <= 0) {
-            return back()->withErrors(['amount' => 'The amount must be a positive ETH string value greater than zero.'])->withInput();
+        // Determine currency from wallet (do not trust request)
+        $currency = strtoupper(trim((string)$wallet->currency));
+        if (!in_array($currency, ['ETH', 'USDT'], true)) {
+            return back()->withErrors(['sender_wallet_id' => 'Selected wallet currency is not supported for outgoing transfers.'])->withInput();
         }
 
+        $amount = EthereumService::normalizeHumanAmountInput((string)$request->amount) ?? '';
+        if ($currency === 'ETH') {
+            // ETH flow
+            if (!preg_match('/^\d+(\.\d+)?$/', $amount) || bccomp($amount, '0', 18) <= 0) {
+                return back()->withErrors(['amount' => 'The amount must be a positive ETH value greater than zero.'])->withInput();
+            }
+
+            try {
+                $amountWei = $ethService->parseEther($amount);
+                if (!preg_match('/^\d+$/', (string)$amountWei) || bccomp((string)$amountWei, '0', 0) <= 0) {
+                    return back()->withErrors(['amount' => 'The amount must be greater than zero.'])->withInput();
+                }
+            } catch (\Throwable $e) {
+                Log::error('ParseEther failure: ' . $e->getMessage());
+                return back()->withErrors(['amount' => 'Invalid ETH amount.'])->withInput();
+            }
+
+            // On-chain checks and gas estimation (do RPC outside DB lock)
+            try {
+                $onchainBalance = trim((string)$ethService->getBalance($wallet->wallet_address));
+                if ($onchainBalance === '' || !preg_match('/^\d+(\.\d+)?$/', $onchainBalance)) {
+                    return back()->withErrors(['amount' => 'Unable to read ETH balance from blockchain.'])->withInput();
+                }
+
+                $diagnose = $ethService->estimateGas($wallet->wallet_address, $destination, $amount);
+                $gasLimit = isset($diagnose['estimate']['gasLimit']) ? (string)$diagnose['estimate']['gasLimit'] : ($diagnose['gasLimit'] ?? null);
+                $gasPrice = isset($diagnose['gasPrice']) ? (string)$diagnose['gasPrice'] : ($diagnose['gasPrice'] ?? null);
+
+                if ($gasLimit === null) {
+                    return back()->withErrors(['amount' => 'Unable to estimate gas for ETH transfer.'])->withInput();
+                }
+
+                if ($gasPrice === null) {
+                    try { $gasPrice = (string)$ethService->getGasPrice(); } catch (\Throwable $_) { $gasPrice = null; }
+                }
+
+                if ($gasPrice === null || !preg_match('/^\d+$/', (string)$gasPrice)) {
+                    return back()->withErrors(['amount' => 'Unable to determine gas price for ETH transfer.'])->withInput();
+                }
+
+                // gas cost
+                $gasCostWei = bcmul($gasLimit, $gasPrice, 0);
+                $gasCostEth = bcdiv($gasCostWei, '1000000000000000000', 18);
+
+                // Ensure on-chain balance covers amount + gas
+                if (bccomp($onchainBalance, bcadd($amount, $gasCostEth, 18), 18) < 0) {
+                    return back()->withErrors(['amount' => 'Insufficient ETH on-chain balance to cover amount plus gas.'])->withInput();
+                }
+            } catch (\Throwable $e) {
+                Log::error('ETH on-chain balance or gas estimation failed.', ['wallet_id' => $wallet->id, 'error' => $e->getMessage()]);
+                return back()->withErrors(['amount' => 'Unable to verify ETH balance or gas. Please try again later.'])->withInput();
+            }
+
+            // Create transaction under DB lock
+            try {
+                $transaction = DB::transaction(function () use ($wallet, $amount, $destination) {
+                    $lockedWallet = Wallet::where('id', $wallet->id)->lockForUpdate()->firstOrFail();
+
+                    $dbBalance = (string)$lockedWallet->balance;
+                    if (bccomp($dbBalance, $amount, 18) < 0) {
+                        throw new \RuntimeException('Insufficient local wallet balance to create withdrawal.');
+                    }
+
+                    return Transaction::create([
+                        'wallet_id' => $lockedWallet->id,
+                        'user_id' => null,
+                        'merchant_id' => auth()->id(),
+                        'sender_id' => auth()->id(),
+                        'recipient_id' => null,
+                        'type' => 'withdraw',
+                        'amount' => $amount,
+                        'currency' => 'ETH',
+                        'status' => 'processing',
+                        'reference' => null,
+                        'description' => 'ETH Sepolia send',
+                        'sender_wallet_address' => $lockedWallet->wallet_address,
+                        'receiver_wallet_address' => $destination,
+                        'tx_hash' => null,
+                    ]);
+                });
+            } catch (\Throwable $e) {
+                Log::error('Failed to create ETH withdrawal transaction (lock step).', ['wallet_id' => $wallet->id, 'user_id' => auth()->id(), 'amount' => $amount, 'destination' => $destination, 'error' => $e->getMessage()]);
+                return back()->withErrors(['amount' => 'Unable to create the transaction record.'])->withInput();
+            }
+
+            // Dispatch job after commit to the blockchain queue, which is the queue the workers monitor for on-chain broadcasts.
+            try {
+                \App\Jobs\SendCryptoTransaction::dispatch($transaction->id)
+                    ->onQueue('blockchain')
+                    ->afterCommit();
+            } catch (\Throwable $e) {
+                Log::error('Failed to dispatch ETH withdrawal job.', ['transaction_id' => $transaction->id, 'wallet_id' => $wallet->id, 'error' => $e->getMessage()]);
+                try { $transaction->update(['status' => 'failed']); } catch (\Throwable $_) { Log::warning('Failed to mark transaction as failed after dispatch error', ['transaction_id' => $transaction->id]); }
+                return back()->withErrors(['wallet_address' => 'Unable to queue transaction for processing. Please try again later.'])->withInput();
+            }
+
+            if (config('queue.default') === 'sync') { Log::warning('Queue is configured as sync. ETH withdrawal job is running inline.'); }
+
+            return redirect()->route('merchant.transactions')->with('success', 'Transaction is queued and being processed. It will appear in your transaction history as pending.');
+        }
+
+        // USDT flow
+        $contract = trim((string)(config('ethereum.usdt_contract_address') ?? env('USDT_CONTRACT_ADDRESS', '')));
+        if ($contract === '') {
+            Log::error('USDT withdrawal attempted without contract configuration.', ['wallet_id' => $wallet->id, 'user_id' => auth()->id()]);
+            return back()->withErrors(['amount' => 'USDT contract is not configured.'])->withInput();
+        }
+
+        if (!$ethService->isValidAddress($contract)) {
+            Log::error('Invalid USDT contract address configured.', ['contract' => $contract]);
+            return back()->withErrors(['amount' => 'USDT contract configuration is invalid.'])->withInput();
+        }
+
+        if (!preg_match('/^\d+(\.\d{1,6})?$/', $amount) || bccomp($amount, '0', 6) <= 0) {
+            return back()->withErrors(['amount' => 'The amount must be a positive USDT value with up to 6 decimal places.'])->withInput();
+        }
+
+        // On-chain USDT balance
         try {
-            $amountWei = $ethService->parseEther($amount);
-            if ((string)$amountWei === '0' || (int)$amountWei <= 0) {
-                return back()->withErrors(['amount' => 'The amount must be greater than zero.'])->withInput();
+            $onchainUSDTBalance = trim((string)$ethService->getTokenBalance($contract, $wallet->wallet_address));
+            if ($onchainUSDTBalance === '') { return back()->withErrors(['amount' => 'Unable to read USDT balance from blockchain.'])->withInput(); }
+            if (!preg_match('/^\d+(\.\d+)?$/', $onchainUSDTBalance)) {
+                Log::error('Invalid USDT balance returned from EthereumService.', ['wallet_id' => $wallet->id, 'balance' => $onchainUSDTBalance]);
+                return back()->withErrors(['amount' => 'Invalid USDT balance returned from blockchain.'])->withInput();
+            }
+            if (bccomp($onchainUSDTBalance, $amount, 6) < 0) {
+                return back()->withErrors(['amount' => 'Insufficient USDT balance on-chain.'])->withInput();
             }
         } catch (\Throwable $e) {
-            Log::error('ParseEther failure: ' . $e->getMessage());
-            return back()->withErrors(['amount' => 'Invalid ETH amount.'])->withInput();
+            Log::error('USDT balance check failed.', ['wallet_id' => $wallet->id, 'wallet_address' => $wallet->wallet_address, 'contract' => $contract, 'amount' => $amount, 'error' => $e->getMessage()]);
+            return back()->withErrors(['amount' => 'Unable to verify USDT balance. Please try again later.'])->withInput();
         }
 
-        // Create transaction record with 'processing' status and dispatch background job.
-        // Do not perform any estimate, signing, or RPC broadcast inside the HTTP request.
-
-        // Ensure user wallet has sufficient balance for the requested amount (gas will be handled in the job)
-        $walletBalance = (string)$wallet->balance;
-        if (bccomp($walletBalance, $amount, 18) < 0) {
-            return back()->withErrors(['amount' => 'Insufficient ETH balance for requested amount.'])->withInput();
-        }
-
-        // Persist a 'processing' transaction entry immediately so job can pick it up.
-        $transaction = Transaction::create([
-            'wallet_id' => $wallet->id,
-            'user_id' => null,
-            'merchant_id' => auth()->id(),
-            'sender_id' => auth()->id(),
-            'recipient_id' => null,
-            'type' => 'withdraw',
-            'amount' => $amount,
-            'currency' => 'ETH',
-            'status' => 'processing',
-            'reference' => null,
-            'description' => 'ETH Sepolia send',
-            'sender_wallet_address' => $wallet->wallet_address,
-            'receiver_wallet_address' => $destination,
-            'tx_hash' => null,
-        ]);
-
+        // Estimate token gas
         try {
-            \App\Jobs\SendCryptoTransaction::dispatch($transaction->id)->onQueue(config('queue.connections.database.queue', 'default'));
+            $est = $ethService->estimateTokenGas($contract, $wallet->wallet_address, $destination, $amount);
+            $gasLimit = isset($est['gasLimit']) ? (string)$est['gasLimit'] : null;
+            $gasPriceWei = isset($est['gasPrice']) ? (string)$est['gasPrice'] : null;
+
+            if ($gasLimit === null) { return back()->withErrors(['amount' => 'Unable to estimate gas for USDT transfer.'])->withInput(); }
+            if ($gasPriceWei === null) {
+                try { $gasPriceWei = (string)$ethService->getGasPrice(); } catch (\Throwable $_) { $gasPriceWei = null; }
+            }
+            if ($gasPriceWei === null || !preg_match('/^\d+$/', $gasPriceWei)) { return back()->withErrors(['amount' => 'Unable to determine gas price for USDT transfer.'])->withInput(); }
+
+            $gasCostWei = bcmul($gasLimit, $gasPriceWei, 0);
+            $estimatedGasCostEth = bcdiv($gasCostWei, '1000000000000000000', 18);
+
+            $ethBalance = trim((string)$ethService->getBalance($wallet->wallet_address));
+            if ($ethBalance === '' || !preg_match('/^\d+(\.\d+)?$/', $ethBalance)) { return back()->withErrors(['amount' => 'Unable to verify ETH gas balance.'])->withInput(); }
+            if (bccomp($ethBalance, $estimatedGasCostEth, 18) < 0) { return back()->withErrors(['amount' => 'Insufficient ETH balance to pay gas for the USDT transfer.'])->withInput(); }
         } catch (\Throwable $e) {
-            // If dispatch fails, mark transaction as failed and inform user
-            Log::error('Failed to dispatch SendCryptoTransaction job', ['transaction_id' => $transaction->id, 'error' => $e->getMessage()]);
-            $transaction->status = 'failed';
-            $transaction->save();
-            return back()->withErrors(['wallet_address' => 'Unable to queue transaction for processing. Please try again later.'])->withInput();
+            Log::error('USDT gas estimation or ETH balance check failed.', ['wallet_id' => $wallet->id, 'error' => $e->getMessage()]);
+            return back()->withErrors(['amount' => 'Unable to verify gas or ETH balance for USDT transfer.'])->withInput();
         }
 
-        // Warn if queue driver is 'sync' since that would run the job synchronously and defeat the async goal
-        if (config('queue.default') === 'sync') {
-            Log::warning('Queue connection is configured as sync; background job will run inline. Set QUEUE_CONNECTION=database and run a queue worker for true background processing.');
+        // Create transaction under DB lock
+        try {
+            $transaction = DB::transaction(function () use ($wallet, $amount, $destination) {
+                $lockedWallet = Wallet::where('id', $wallet->id)->lockForUpdate()->firstOrFail();
+                $dbBalance = (string)$lockedWallet->balance;
+                if (bccomp($dbBalance, $amount, 6) < 0) { throw new \RuntimeException('Insufficient local wallet balance to create USDT withdrawal.'); }
+
+                return Transaction::create([
+                    'wallet_id' => $lockedWallet->id,
+                    'user_id' => null,
+                    'merchant_id' => auth()->id(),
+                    'sender_id' => auth()->id(),
+                    'recipient_id' => null,
+                    'type' => 'withdraw',
+                    'amount' => $amount,
+                    'currency' => 'USDT',
+                    'status' => 'processing',
+                    'reference' => null,
+                    'description' => 'USDT Sepolia send',
+                    'sender_wallet_address' => $lockedWallet->wallet_address,
+                    'receiver_wallet_address' => $destination,
+                    'tx_hash' => null,
+                ]);
+            });
+        } catch (\Throwable $e) {
+            Log::error('Failed to create USDT withdrawal transaction (lock step).', ['wallet_id' => $wallet->id, 'user_id' => auth()->id(), 'amount' => $amount, 'destination' => $destination, 'error' => $e->getMessage()]);
+            return back()->withErrors(['amount' => 'Unable to create the transaction record.'])->withInput();
         }
 
-        // Keep the user on the transactions list after creating the transaction instead
-        // of redirecting to the transaction detail page.
-        return redirect()
-            ->route('merchant.transactions')
-            ->with('success', 'Transaction has been queued and is being processed.');
+        // Dispatch job to the blockchain queue, which is the queue the workers monitor for on-chain broadcasts.
+        try {
+            \App\Jobs\SendCryptoTransaction::dispatch($transaction->id)
+                ->onQueue('blockchain')
+                ->afterCommit();
+        } catch (\Throwable $e) {
+            Log::error('Failed to dispatch USDT withdrawal job.', ['transaction_id' => $transaction->id, 'wallet_id' => $wallet->id, 'error' => $e->getMessage()]);
+            try { $transaction->update(['status' => 'failed']); } catch (\Throwable $_) { Log::warning('Failed to mark transaction as failed after dispatch error', ['transaction_id' => $transaction->id]); }
+            return back()->withErrors(['wallet_address' => 'Unable to queue USDT transaction for processing. Please try again later.'])->withInput();
+        }
+
+        if (config('queue.default') === 'sync') { Log::warning('Queue is configured as sync. USDT withdrawal job is running inline.'); }
+
+        return redirect()->route('merchant.transactions')->with('success', 'USDT transaction is queued and being processed. It will appear in your transaction history as pending.');
     }
 
     public function showTransaction(Transaction $transaction)
@@ -789,16 +946,6 @@ class MerchantController extends Controller
             $request
         ) {
 
-            $senderWallet->decrement(
-                'balance',
-                $request->amount
-            );
-
-            $receiverWallet->increment(
-                'balance',
-                $request->amount
-            );
-
             // Create transaction for sender
             Transaction::create([
                 'wallet_id'   => $senderWallet->id,
@@ -848,6 +995,15 @@ class MerchantController extends Controller
                 'fa-inbox'
             );
         });
+
+        // Recompute canonical balances for affected wallets so wallet->balance is authored only by BalanceSyncService
+        try {
+            $balanceService = new \App\Services\BalanceSyncService();
+            $balanceService->syncWallet($senderWallet);
+            $balanceService->syncWallet($receiverWallet);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Post-transfer balance sync failed (merchant): ' . $e->getMessage());
+        }
 
         return back()->with(
             'success',

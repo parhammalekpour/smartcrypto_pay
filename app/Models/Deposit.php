@@ -18,13 +18,25 @@ class Deposit extends Model
         'tx_hash',
         'sender_wallet_address',
         'block_number',
+        'block_hash',
+        'transaction_index',
+        'receipt_status',
         'status',
         'confirmations',
+        'confirmed_at',
         'processed_at',
+        'reorged_at',
+        'reorg_reason',
+        'canonical_checked_at',
     ];
 
     protected $casts = [
         'processed_at' => 'datetime',
+        'confirmed_at' => 'datetime',
+        'reorged_at' => 'datetime',
+        'canonical_checked_at' => 'datetime',
+        'transaction_index' => 'integer',
+        'confirmations' => 'integer',
     ];
 
     public function wallet()

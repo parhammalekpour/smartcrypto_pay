@@ -24,13 +24,26 @@ class Wallet extends Model
         'currency',
         'name',
         'balance',
+        'onchain_balance',
         'last_scanned_block'
     ];
 
     protected $casts = [
         'balance' => 'string',
+        'onchain_balance' => 'string',
         'last_scanned_block' => 'integer'
     ];
+
+    public function getDisplayBalanceAttribute(): string
+    {
+        $onchainBalance = trim((string) ($this->onchain_balance ?? ''));
+        if ($onchainBalance !== '') {
+            return $onchainBalance;
+        }
+
+        $availableBalance = trim((string) ($this->balance ?? ''));
+        return $availableBalance !== '' ? $availableBalance : '0';
+    }
 
     /**
      * When creating a wallet, if no wallet_address exists, generate an HD wallet

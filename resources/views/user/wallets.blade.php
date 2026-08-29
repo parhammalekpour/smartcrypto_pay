@@ -129,7 +129,7 @@
     @if($wallets && $wallets->count() > 0)
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             @foreach($wallets as $wallet)
-                <div class="wallet-card p-6 transition">
+                <div class="wallet-card p-6 transition" data-wallet-id="{{ $wallet->id }}">
                     <div class="flex items-start justify-between gap-3 pb-4 border-b border-slate-200">
                         <div class="flex items-center gap-3">
                             <div class="flex h-12 w-12 items-center justify-center rounded-2xl
@@ -163,11 +163,23 @@
 
                     <div class="mt-5">
                         <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{{ __('wallets.balance') }}</p>
-                        <p class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }} <span class="text-lg font-medium text-slate-500">{{ $wallet->currency }}</span></p>
+                        <p class="mt-2 text-3xl font-semibold tracking-tight text-slate-900 wallet-balance-value" data-wallet-id="{{ $wallet->id }}">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->display_balance ?? $wallet->balance) }} <span class="text-lg font-medium text-slate-500">{{ $wallet->currency }}</span></p>
                         <p class="mt-2 text-sm text-slate-500">
                             <span class="font-medium text-slate-400">{{ __('wallets.estimated_value') }}:</span>
-                            <span class="ml-1 font-semibold text-slate-700 usd-price" data-currency="{{ $wallet->currency }}" data-balance="{{ $wallet->balance }}">≈ $0.00</span>
+                            <span class="ml-1 font-semibold text-slate-700 usd-price" data-currency="{{ $wallet->currency }}" data-balance="{{ $wallet->display_balance ?? $wallet->balance }}">≈ $0.00</span>
                         </p>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs text-slate-500">{{ __('wallets.available_balance') }}</p>
+                            <p class="mt-1 text-lg font-semibold">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }} {{ $wallet->currency }}</p>
+                        </div>
+
+                        <div>
+                            <p class="text-xs text-slate-500">{{ __('wallets.blockchain_balance') }}</p>
+                            <p class="mt-1 text-lg font-semibold">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->onchain_balance ?? 0) }} {{ $wallet->currency }}</p>
+                        </div>
                     </div>
 
                     <div class="mt-5">

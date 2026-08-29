@@ -13,6 +13,15 @@
 
 <div class="transactions-shell max-w-[1400px] w-full mx-auto px-6 py-6" x-data="{ refreshing: false }" dir="{{ $isRtl ? 'rtl' : 'ltr' }}">
 
+    @if(session('success'))
+        <div class="mb-4 p-4 rounded-lg bg-green-50 border border-green-200 text-green-700 font-semibold">
+            {!! session('success') !!}
+            @if($transactions && $transactions->count() > 0)
+                <a href="#transaction-row-{{ $transactions->first()->id }}" class="ml-4 underline text-green-700">View latest</a>
+            @endif
+        </div>
+    @endif
+
 
     <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <!-- Total -->
@@ -152,20 +161,20 @@
                                         default => ucfirst($transaction->status ?? 'Unknown'),
                                     };
                                     $statusClass = match ($transaction->status ?? '') {
-                                        'processing' => 'bg-amber-100 text-amber-700 border-amber-200',
+                                        'processing' => 'bg-amber-600/10 text-amber-400 border-amber-600/30',
                                         'pending' => 'bg-amber-100 text-amber-700 border-amber-200',
-                                        'confirmed' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                                        'confirmed' => 'bg-emerald-600/10 text-emerald-400 border-emerald-600/30',
                                         'completed' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
-                                        'failed' => 'bg-rose-100 text-rose-700 border-rose-200',
+                                        'failed' => 'bg-rose-600/10 text-rose-400 border-rose-600/30',
                                         'cancelled' => 'bg-slate-200 text-slate-700 border-slate-300',
                                         default => 'bg-slate-100 text-slate-700 border-slate-200',
                                     };
                                     $walletLabel = $transaction->wallet?->wallet_address ?: $transaction->receiver_wallet_address ?: $transaction->sender_wallet_address;
                                     $walletShort = $walletLabel ? substr($walletLabel, 0, 8) . '...' . substr($walletLabel, -6) : 'Unknown';
-                                    $txHash = $transaction->tx_hash;
+                                    $txHash = $transaction->tx_hash ?? $transaction->reference;
                                     $hashLabel = $txHash ? (strlen($txHash) > 18 ? substr($txHash, 0, 10) . '...' . substr($txHash, -8) : $txHash) : 'Waiting for broadcast';
                                 @endphp
-                                <tr id="transaction-row-{{ $transaction->id }}" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}" class="hover:bg-slate-900/30 transform-gpu hover:scale-[1.01] transition-all duration-200">
+                                <tr id="transaction-row-{{ $transaction->id }}" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash ?? $transaction->reference }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}" class="hover:bg-slate-900/30 transform-gpu hover:scale-[1.01] transition-all duration-200">
                                     <td class="px-4 py-4 align-top">
                                         <div class="flex items-start gap-3">
                                             <div class="min-w-0">
@@ -280,20 +289,20 @@
                             default => ucfirst($transaction->status ?? 'Unknown'),
                         };
                         $statusClass = match ($transaction->status ?? '') {
-                            'processing' => 'bg-amber-100 text-amber-700 border-amber-200',
+                            'processing' => 'bg-amber-600/10 text-amber-400 border-amber-600/30',
                             'pending' => 'bg-amber-100 text-amber-700 border-amber-200',
-                            'confirmed' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                            'confirmed' => 'bg-emerald-600/10 text-emerald-400 border-emerald-600/30',
                             'completed' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
-                            'failed' => 'bg-rose-100 text-rose-700 border-rose-200',
+                            'failed' => 'bg-rose-600/10 text-rose-400 border-rose-600/30',
                             'cancelled' => 'bg-slate-200 text-slate-700 border-slate-300',
                             default => 'bg-slate-100 text-slate-700 border-slate-200',
                         };
                         $walletLabel = $transaction->wallet?->wallet_address ?: $transaction->receiver_wallet_address ?: $transaction->sender_wallet_address;
                         $walletShort = $walletLabel ? substr($walletLabel, 0, 8) . '...' . substr($walletLabel, -6) : 'Unknown';
-                        $txHash = $transaction->tx_hash;
+                        $txHash = $transaction->tx_hash ?? $transaction->reference;
                         $hashLabel = $txHash ? (strlen($txHash) > 18 ? substr($txHash, 0, 10) . '...' . substr($txHash, -8) : $txHash) : 'Waiting for broadcast';
                     @endphp
-                    <div id="transaction-row-{{ $transaction->id }}" class="rounded-xl border border-slate-700/60 bg-gradient-to-br from-slate-900/60 via-slate-800/50 to-slate-900/80 p-4 shadow-2xl" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}">
+                    <div id="transaction-row-{{ $transaction->id }}" class="rounded-xl border border-slate-700/60 bg-gradient-to-br from-slate-900/60 via-slate-800/50 to-slate-900/80 p-4 shadow-2xl" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash ?? $transaction->reference }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}">
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <p class="text-sm font-medium text-slate-400">#TX-{{ str_pad($transaction->id, 4, '0', STR_PAD_LEFT) }}</p>
@@ -454,11 +463,12 @@
         const existingStatus = (row.dataset.transactionStatus || '').toLowerCase();
         const incomingStatus = (data.status || '').toLowerCase();
 
-        // Update hash independently when present
+        // Update hash independently when present (use tx_hash or fallback to reference)
         const hashCell = row.querySelector('[data-hash-cell]');
         if (hashCell) {
-            if (data.tx_hash) {
-                hashCell.innerHTML = '<a class="font-mono text-slate-300 hover:text-white" href="' + explorerBase + data.tx_hash + '" target="_blank" rel="noopener noreferrer">' + shortHash(data.tx_hash) + '</a>';
+            const displayHash = data.tx_hash || data.reference || '';
+            if (displayHash) {
+                hashCell.innerHTML = '<a class="font-mono text-slate-300 hover:text-white" href="' + explorerBase + displayHash + '" target="_blank" rel="noopener noreferrer">' + shortHash(displayHash) + '</a>';
             } else if (!isFinal(existingStatus)) {
                 hashCell.textContent = '{{ __('merchant.transactions.waiting_for_broadcast') ?? "Waiting for broadcast..." }}';
             }
@@ -469,7 +479,7 @@
         // apply updates
         row.dataset.transactionStatus = data.status || '';
         row.dataset.updatedAt = data.updated_at || row.dataset.updatedAt || '';
-        if (data.tx_hash) row.dataset.txHash = data.tx_hash || '';
+        if (data.tx_hash || data.reference) row.dataset.txHash = data.tx_hash || data.reference || '';
 
         const badge = row.querySelector('.status-badge');
         if (badge) {
@@ -517,6 +527,17 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('[data-transaction-id]').forEach(startPolling);
+
+        @if(session('success') && $transactions && $transactions->count() > 0)
+            (function(){
+                var el = document.getElementById('transaction-row-{{ $transactions->first()->id }}');
+                if(el){
+                    el.classList.add('ring-2','ring-indigo-500','bg-indigo-900/40');
+                    setTimeout(function(){ el.classList.remove('ring-2','ring-indigo-500'); }, 8000);
+                    try { el.scrollIntoView({behavior:'smooth', block:'center'}); } catch(e){}
+                }
+            })();
+        @endif
     });
 })();
 </script>

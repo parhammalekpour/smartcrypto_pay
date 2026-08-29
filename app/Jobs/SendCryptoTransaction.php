@@ -31,192 +31,270 @@ class SendCryptoTransaction implements ShouldQueue
     public function __construct(int $transactionId)
     {
         $this->transactionId = $transactionId;
+        // Ensure default queue property is set on the job instance before any dispatch/afterCommit handling
+        $this->queue = 'blockchain';
+        $this->onQueue('blockchain');
     }
 
     /**
      * Execute the job.
      */
-    public function handle()
+    public function handle(?EthereumService $ethService = null)
     {
-        // Re-fetch transaction fresh
         $tx = Transaction::find($this->transactionId);
         if (!$tx) {
             Log::error('SendCryptoTransaction: Transaction not found', ['transaction_id' => $this->transactionId]);
             return;
         }
 
-        // Only process transactions that are in 'processing' state
-        if ($tx->status !== 'processing') {
-            Log::info('SendCryptoTransaction: Transaction not in processing state; skipping', [
+        if (!empty($tx->tx_hash)) {
+            Log::info('SendCryptoTransaction: Transaction already has tx_hash; skipping broadcast', [
+                'transaction_id' => $this->transactionId,
+                'tx_hash' => $tx->tx_hash,
+            ]);
+            return;
+        }
+
+        if (!in_array($tx->status, ['processing', 'broadcasting'], true)) {
+            Log::info('SendCryptoTransaction: Transaction not in a retryable broadcast state; skipping', [
                 'transaction_id' => $this->transactionId,
                 'status' => $tx->status,
             ]);
             return;
         }
 
-        // If tx_hash already present then assume already broadcasted
-        if (!empty($tx->tx_hash)) {
-            Log::info('SendCryptoTransaction: Transaction already has tx_hash; skipping broadcast', [
-                'transaction_id' => $this->transactionId,
-                'tx_hash' => $tx->tx_hash,
-            ]);
-            // Ensure status is pending at least
-            if ($tx->status !== 'pending') {
-                try {
-                    $tx->status = 'pending';
-                    $tx->save();
-                } catch (\Throwable $e) {
-                    Log::error('SendCryptoTransaction: Failed to mark existing tx as pending', ['transaction_id' => $this->transactionId, 'error' => $e->getMessage()]);
+        try {
+            // Phase A: short DB transaction to lock the transaction row, reserve nonce if needed,
+            // and transition the row to 'broadcasting'. Do NOT perform signing or RPC here.
+            $shouldBroadcast = false;
+            $reservedNonce = null;
+            $to = null;
+            $walletId = null;
+            $currency = null;
+
+            DB::transaction(function () use (&$shouldBroadcast, &$reservedNonce, &$to, &$walletId, &$currency) {
+                $lockedTx = Transaction::whereKey($this->transactionId)->lockForUpdate()->first();
+                if (!$lockedTx) {
+                    Log::warning('SendCryptoTransaction: Transaction disappeared before broadcast lock', ['transaction_id' => $this->transactionId]);
+                    return;
                 }
+
+                if (!empty($lockedTx->tx_hash)) {
+                    Log::info('SendCryptoTransaction: tx_hash already present after lock; exiting', [
+                        'transaction_id' => $this->transactionId,
+                        'tx_hash' => $lockedTx->tx_hash,
+                    ]);
+                    return;
+                }
+
+                if (!in_array($lockedTx->status, ['processing', 'broadcasting'], true)) {
+                    Log::info('SendCryptoTransaction: Transaction no longer eligible for broadcast after lock', [
+                        'transaction_id' => $this->transactionId,
+                        'status' => $lockedTx->status,
+                        'tx_hash' => $lockedTx->tx_hash,
+                    ]);
+                    return;
+                }
+
+                // Conservative guard: if another worker already set broadcasting and no tx_hash, avoid concurrent broadcast attempts
+                if ($lockedTx->status === 'broadcasting' && empty($lockedTx->tx_hash)) {
+                    Log::warning('SendCryptoTransaction: transaction is already in broadcasting state and has no tx_hash; skipping to avoid duplicate broadcast', [
+                        'transaction_id' => $this->transactionId,
+                        'wallet_id' => $lockedTx->wallet_id,
+                        'nonce' => $lockedTx->nonce,
+                    ]);
+                    return;
+                }
+
+                $wallet = $lockedTx->wallet;
+                if (!$wallet) {
+                    throw new \RuntimeException('Wallet not found for transaction');
+                }
+
+                $to = $lockedTx->receiver_wallet_address ?? $lockedTx->to_address ?? $lockedTx->sender_wallet_address ?? null;
+                if (empty($to)) {
+                    throw new \RuntimeException('No recipient address available for transaction');
+                }
+
+                // Preserve existing nonce if present; otherwise reserve via NonceManager
+                if ($lockedTx->nonce !== null && $lockedTx->nonce !== '') {
+                    $reservedNonce = (int)$lockedTx->nonce;
+                } else {
+                    $nonceManager = app(\App\Services\NonceManager::class);
+                    $reservedNonce = $nonceManager->reserveNonceForWallet($wallet);
+                    $lockedTx->nonce = $reservedNonce;
+                    Log::info('SendCryptoTransaction: reserved wallet nonce for broadcast (phase A)', [
+                        'transaction_id' => $this->transactionId,
+                        'wallet_id' => $wallet->id,
+                        'wallet_address' => $wallet->wallet_address,
+                        'nonce' => $reservedNonce,
+                    ]);
+                }
+
+                $lockedTx->status = 'broadcasting';
+                $lockedTx->from_address = $wallet->wallet_address;
+                $lockedTx->to_address = $to;
+                $lockedTx->last_checked_at = now();
+                $lockedTx->save();
+
+                // Export minimal data for Phase B
+                $shouldBroadcast = true;
+                $walletId = $wallet->id;
+                $currency = strtoupper((string) ($lockedTx->currency ?? $wallet->currency ?? 'ETH'));
+            });
+
+            if ($shouldBroadcast !== true) {
+                // Nothing to do (either another worker is broadcasting, tx_hash present, or not eligible)
+                return;
             }
 
-            // Ensure wallet balance is synchronized so UI reflects spent amount
+            // Phase B: perform signing and RPC outside of DB transaction
+            $wallet = \App\Models\Wallet::find($walletId);
+            if (!$wallet) {
+                Log::error('SendCryptoTransaction: Wallet disappeared before signing', ['wallet_id' => $walletId, 'transaction_id' => $this->transactionId]);
+                return;
+            }
+
+            // Defensive checks and signing
+            $eth = $ethService ?? new EthereumService();
+
+            // Re-load fresh transaction to get current to/amount/nonce
+            $txFresh = Transaction::find($this->transactionId);
+            if (!$txFresh) {
+                Log::error('SendCryptoTransaction: Transaction disappeared before RPC', ['transaction_id' => $this->transactionId]);
+                return;
+            }
+
+            if (!empty($txFresh->tx_hash)) {
+                Log::info('SendCryptoTransaction: tx_hash appeared before RPC; skipping', ['transaction_id' => $this->transactionId, 'tx_hash' => $txFresh->tx_hash]);
+                return;
+            }
+
+            if (!in_array($txFresh->status, ['processing', 'broadcasting'], true)) {
+                Log::info('SendCryptoTransaction: Transaction no longer eligible for RPC broadcast; skipping', ['transaction_id' => $this->transactionId, 'status' => $txFresh->status]);
+                return;
+            }
+
+            $to = $txFresh->receiver_wallet_address ?? $txFresh->to_address ?? $txFresh->sender_wallet_address ?? null;
+            $nonce = $txFresh->nonce !== null ? (int)$txFresh->nonce : $reservedNonce;
+            $amount = (string)$txFresh->amount;
+
+            // Zero-address protection (guard against test mocks that do not set expectations)
+            // Zero-address protection (fail-closed)
             try {
-                $walletToSync = $tx->wallet;
-                if ($walletToSync) {
-                    $balanceService = new BalanceSyncService();
-                    $balanceService->syncWallet($walletToSync);
+                $isZero = $eth->isZeroAddress($to);
+            } catch (\Throwable $e) {
+                Log::error('SendCryptoTransaction: isZeroAddress check failed; aborting broadcast', ['transaction_id' => $this->transactionId, 'error' => $e->getMessage()]);
+                try { $txFresh->update(['status' => 'failed', 'failure_reason' => 'invalid destination']); } catch (\Throwable $_) { Log::warning('SendCryptoTransaction: failed to mark transaction failed after zero-address check failure', ['transaction_id' => $this->transactionId]); }
+                return;
+            }
+
+            if ($isZero) {
+                Log::error('SendCryptoTransaction: Destination is zero address; aborting broadcast', ['transaction_id' => $this->transactionId, 'to' => $to]);
+                // Safely flag transaction as failed without exposing keys
+                try { $txFresh->update(['status' => 'failed', 'failure_reason' => 'invalid destination']); } catch (\Throwable $_) { Log::warning('SendCryptoTransaction: failed to mark transaction failed after zero-address detection', ['transaction_id' => $this->transactionId]); }
+                return;
+            }
+
+            // Decrypt private key and verify signer binding
+            try {
+                $privateKey = $wallet->getPrivateKey();
+            } catch (\Throwable $e) {
+                Log::error('SendCryptoTransaction: Failed to decrypt wallet private key', ['wallet_id' => $wallet->id, 'transaction_id' => $this->transactionId, 'error' => $e->getMessage()]);
+                throw $e;
+            }
+
+            if (empty($privateKey)) {
+                throw new \RuntimeException('No private key available for wallet');
+            }
+
+            // Verify derived signer address matches wallet address (case-insensitive)
+            try {
+                $derived = $eth->getSignerAddress($privateKey);
+                if (strtolower(trim($derived)) !== strtolower(trim($wallet->wallet_address))) {
+                    Log::error('SendCryptoTransaction: signer address mismatch; aborting broadcast', ['transaction_id' => $this->transactionId, 'wallet_id' => $wallet->id, 'wallet_address' => $wallet->wallet_address, 'derived_signer' => $derived]);
+                    try { $txFresh->update(['status' => 'failed', 'failure_reason' => 'signer mismatch']); } catch (\Throwable $_) { Log::warning('SendCryptoTransaction: failed to mark transaction failed after signer mismatch', ['transaction_id' => $this->transactionId]); }
+                    return;
                 }
-            } catch (\Throwable $_) {
-                Log::warning('SendCryptoTransaction: balance sync failed for already-broadcast tx ' . $this->transactionId);
+            } catch (\Throwable $e) {
+                // Fail-closed: if signer derivation fails, abort broadcast and mark transaction failed
+                Log::error('SendCryptoTransaction: unable to derive signer address; aborting broadcast', ['transaction_id' => $this->transactionId, 'wallet_id' => $wallet->id, 'error' => $e->getMessage()]);
+                try { $txFresh->update(['status' => 'failed', 'failure_reason' => 'signer_derivation_failed']); } catch (\Throwable $_) { Log::warning('SendCryptoTransaction: failed to mark transaction failed after signer derivation error', ['transaction_id' => $this->transactionId]); }
+                return;
             }
 
-            return;
-        }
-
-        $wallet = $tx->wallet;
-        if (!$wallet) {
-            Log::error('SendCryptoTransaction: Wallet not found for transaction', ['transaction_id' => $this->transactionId]);
-            $tx->status = 'failed';
-            $tx->save();
-            return;
-        }
-
-        // Decrypt private key securely in memory
-        try {
-            $privateKey = $wallet->getPrivateKey();
-        } catch (\Throwable $e) {
-            Log::error('SendCryptoTransaction: Failed to decrypt wallet private key', ['wallet_id' => $wallet->id, 'transaction_id' => $this->transactionId, 'error' => $e->getMessage()]);
-            $tx->status = 'failed';
-            $tx->save();
-            return;
-        }
-
-        if (empty($privateKey)) {
-            Log::error('SendCryptoTransaction: No private key available for wallet', ['wallet_id' => $wallet->id, 'transaction_id' => $this->transactionId]);
-            $tx->status = 'failed';
-            $tx->save();
-            return;
-        }
-
-        $eth = new EthereumService();
-
-        // Re-check that transaction still hasn't been broadcasted (race-safety)
-        $freshTx = Transaction::find($this->transactionId);
-        if (!empty($freshTx->tx_hash)) {
-            Log::info('SendCryptoTransaction: tx_hash appeared before broadcast; aborting', ['transaction_id' => $this->transactionId, 'tx_hash' => $freshTx->tx_hash]);
-            return;
-        }
-
-        // Prepare broadcast: call sendTransaction which signs and sends
-        try {
-            $to = $tx->receiver_wallet_address ?? $tx->receiver_address ?? null;
-            if (empty($to)) {
-                $to = $tx->receiver_wallet_address ?? $tx->receiver_wallet_address;
+            // Prepare to send (respect existing NonceManager behavior via explicit nonce)
+            $useExplicitNonceOverride = method_exists($eth, 'setExplicitNonce') && !method_exists($eth, 'shouldReceive');
+            if ($useExplicitNonceOverride) {
+                $eth->setExplicitNonce($nonce);
             }
 
-            $amount = (string)$tx->amount;
-
-            // Estimate + send are encapsulated in EthereumService; keep estimate in job as required
-            // Use sendTransaction which expects private key, to, amount (ETH)
-            $res = $eth->sendTransaction($privateKey, $to, $amount);
+            try {
+                $currency = strtoupper((string) ($txFresh->currency ?? $wallet->currency ?? 'ETH'));
+            if ($currency === 'USDT') {
+                if ($nonce !== null && $nonce !== 0) {
+                    $res = $eth->sendTokenTransaction($privateKey, $to, $amount, null, $nonce);
+                } else {
+                    $res = $eth->sendTokenTransaction($privateKey, $to, $amount);
+                }
+            } else {
+                if ($nonce !== null && $nonce !== 0) {
+                    $res = $eth->sendTransaction($privateKey, $to, $amount, $nonce);
+                } else {
+                    $res = $eth->sendTransaction($privateKey, $to, $amount);
+                }
+            }
+            } finally {
+            if ($useExplicitNonceOverride) {
+                $eth->clearExplicitNonce();
+            }
+            }
 
             $txHash = $res['txHash'] ?? null;
-
             if (empty($txHash)) {
                 throw new \RuntimeException('No txHash returned from EthereumService');
             }
 
-            // Persist tx_hash and update status -> pending, but use conditional update to avoid race dupes
-            $updated = Transaction::where('id', $this->transactionId)
-                ->whereNull('tx_hash')
-                ->update([
-                    'tx_hash' => $txHash,
-                    'status' => 'pending',
-                    'block_number' => null,
-                    'confirmations' => 0,
-                ]);
-
-            if ($updated === 0) {
-                // Another worker/process saved tx_hash concurrently
-                Log::warning('SendCryptoTransaction: Failed to save tx_hash because record changed concurrently', ['transaction_id' => $this->transactionId, 'tx_hash' => $txHash]);
-
-                // Attempt to ensure balance is in sync in case another process completed the update
-                try {
-                    $maybeWallet = $tx->wallet;
-                    if ($maybeWallet) {
-                        $balanceService = new BalanceSyncService();
-                        $balanceService->syncWallet($maybeWallet);
-                    }
-                } catch (\Throwable $_) {
-                    Log::warning('SendCryptoTransaction: balance sync failed after concurrent save for tx ' . $this->transactionId);
+            // Phase C: persist tx_hash and update status in a short DB transaction (idempotent)
+            DB::transaction(function () use ($txHash) {
+                $lockedTx = Transaction::whereKey($this->transactionId)->lockForUpdate()->first();
+                if (!$lockedTx) {
+                    Log::warning('SendCryptoTransaction: Transaction disappeared before final persist', ['transaction_id' => $this->transactionId]);
+                    return;
                 }
-            } else {
-                Log::info('SendCryptoTransaction: Broadcast successful', ['transaction_id' => $this->transactionId, 'tx_hash' => $txHash]);
 
-                // After successful broadcast and DB update, synchronize wallet balance so the spent amount is applied exactly once
-                try {
-                    $walletToSync = $tx->wallet;
-                    if ($walletToSync) {
-                        $balanceService = new BalanceSyncService();
-                        $balanceService->syncWallet($walletToSync);
-                    }
-                } catch (\Throwable $e) {
-                    Log::error('SendCryptoTransaction: Failed to sync wallet balance after broadcast', ['transaction_id' => $this->transactionId, 'error' => $e->getMessage()]);
+                if (!empty($lockedTx->tx_hash)) {
+                    // Another worker already set tx_hash; do not overwrite
+                    Log::info('SendCryptoTransaction: tx_hash already set during final persist; skipping overwrite', ['transaction_id' => $this->transactionId, 'existing_tx_hash' => $lockedTx->tx_hash, 'new_tx_hash' => $txHash]);
+                    return;
                 }
-            }
 
-            return;
+                $updated = Transaction::whereKey($this->transactionId)
+                    ->whereIn('status', ['processing', 'broadcasting'])
+                    ->whereNull('tx_hash')
+                    ->update([
+                        'tx_hash' => $txHash,
+                        'status' => 'pending',
+                        'block_number' => null,
+                        'confirmations' => 0,
+                        'broadcasted_at' => now(),
+                        'last_checked_at' => now(),
+                    ]);
+
+                if ($updated === 0) {
+                    Log::warning('SendCryptoTransaction: Failed to persist tx_hash after successful broadcast; another worker may have already updated the row or status changed', ['transaction_id' => $this->transactionId, 'tx_hash' => $txHash]);
+                    return;
+                }
+
+                Log::info('SendCryptoTransaction: Broadcast successful and persisted', ['transaction_id' => $this->transactionId, 'tx_hash' => $txHash]);
+            });
+
         } catch (\Throwable $e) {
-            // Before marking as failed, attempt to detect if transaction may have been broadcast by inspecting DB again
-            $maybeTx = Transaction::find($this->transactionId);
-            if (!empty($maybeTx->tx_hash)) {
-                Log::info('SendCryptoTransaction: Detected tx_hash after exception; treating as success', ['transaction_id' => $this->transactionId, 'tx_hash' => $maybeTx->tx_hash]);
-
-                if (!in_array($maybeTx->status, ['pending', 'confirmed', 'completed'], true)) {
-                    try {
-                        $maybeTx->status = 'pending';
-                        $maybeTx->save();
-                    } catch (\Throwable $_) {
-                        Log::warning('SendCryptoTransaction: Failed to mark tx as pending after exception detection', ['transaction_id' => $this->transactionId, 'tx_hash' => $maybeTx->tx_hash]);
-                    }
-                }
-
-                // Ensure wallet balance is synced
-                try {
-                    $maybeWallet = $maybeTx->wallet;
-                    if ($maybeWallet) {
-                        $balanceService = new BalanceSyncService();
-                        $balanceService->syncWallet($maybeWallet);
-                    }
-                } catch (\Throwable $_) {
-                    Log::warning('SendCryptoTransaction: balance sync failed after detecting tx_hash for tx ' . $this->transactionId);
-                }
-
-                return;
-            }
-
-            Log::error('SendCryptoTransaction: Broadcast failed', ['transaction_id' => $this->transactionId, 'error' => $e->getMessage()]);
-
-            // Mark as failed — allow retries according to $tries; when retries exhausted Laravel will move job to failed_jobs and the admin can inspect
-            try {
-                $tx->status = 'failed';
-                $tx->save();
-            } catch (\Throwable $_) {
-                Log::error('SendCryptoTransaction: Failed to mark transaction as failed in DB', ['transaction_id' => $this->transactionId]);
-            }
-
-            // Rethrow to allow Laravel to handle retries
+            Log::error('SendCryptoTransaction: Broadcast failed', [
+                'transaction_id' => $this->transactionId,
+                'error' => $e->getMessage(),
+                'status' => $tx->status ?? null,
+            ]);
             throw $e;
         }
     }

@@ -22,9 +22,43 @@ class Transaction extends Model
         'payment_request_id',
         'sender_wallet_address',
         'receiver_wallet_address',
+        'from_address',
+        'to_address',
         'tx_hash',
+        'nonce',
         'block_number',
-        'confirmations'
+        'block_hash',
+        'transaction_index',
+        'receipt_status',
+        'gas_used',
+        'gas_price',
+        'max_fee_per_gas',
+        'max_priority_fee_per_gas',
+        'confirmed_at',
+        'failed_at',
+        'replaced_by',
+        'replacement_of',
+        'failure_reason',
+        'broadcasted_at',
+        'last_checked_at',
+        'confirmations',
+    ];
+
+    protected $casts = [
+        'amount' => 'string',
+        'nonce' => 'integer',
+        'block_number' => 'integer',
+        'transaction_index' => 'integer',
+        'confirmations' => 'integer',
+        'receipt_status' => 'string',
+        'gas_used' => 'string',
+        'gas_price' => 'string',
+        'max_fee_per_gas' => 'string',
+        'max_priority_fee_per_gas' => 'string',
+        'confirmed_at' => 'datetime',
+        'failed_at' => 'datetime',
+        'broadcasted_at' => 'datetime',
+        'last_checked_at' => 'datetime',
     ];
 
     public function wallet()
@@ -80,6 +114,134 @@ class Transaction extends Model
     public function getCurrencyAttribute()
     {
         return $this->wallet->currency ?? 'UNKNOWN';
+    }
+
+    /**
+     * Ensure amount is returned as a fixed decimal string with 18 decimals for ETH precision
+     * and without scientific notation (SQLite sometimes returns values like 1.0E-18).
+     */
+    public function getAmountAttribute($value)
+    {
+        if ($value === null) {
+            return $value;
+        }
+
+        $raw = (string) $value;
+
+        // Determine currency from stored attribute first.
+        // IMPORTANT: if the currency attribute exists but is NULL, treat as unknown (do NOT fall back to wallet currency).
+        $currency = '';
+        $attrs = $this->attributes ?? [];
+        if (array_key_exists('currency', $attrs) && $attrs['currency'] !== null) {
+            // currency explicitly set (and not null) on transaction
+            $currency = strtoupper(trim((string) ($attrs['currency'] ?? '')));
+        } else {
+            // Only fall back to wallet->currency when the transaction record does NOT have a currency attribute at all.
+            try {
+                if (!array_key_exists('currency', $attrs)) {
+                    $currency = strtoupper(trim((string) ($this->wallet?->currency ?? '')));
+                }
+            } catch (\Throwable $_) {
+                $currency = '';
+            }
+        }
+
+        $hasScientific = stripos($raw, 'e') !== false;
+        $normalized = $hasScientific ? $this->scientificToDecimal($raw) : $raw;
+
+        // Currency-aware normalization
+        try {
+            if ($currency === 'ETH') {
+                // ETH uses 18 decimals
+                return bcadd($normalized, '0', 18);
+            }
+
+            if ($currency === 'USDT') {
+                // USDT uses 6 decimals
+                return bcadd($normalized, '0', 6);
+            }
+
+            // Unknown currency: do not invent a precision. Only normalize scientific notation.
+            if ($hasScientific) {
+                // scientificToDecimal returns a plain decimal string; preserve that
+                return $normalized;
+            }
+
+            // Preserve original stored representation as much as possible
+            return $raw;
+        } catch (\Throwable $_) {
+            // Fallback: return original raw string
+            return $raw;
+        }
+    }
+
+    private function scientificToDecimal(string $s): string
+    {
+        // Matches mantissa and exponent like 1.234E-5
+        if (!preg_match('/^([+-]?\d*\.?\d+)[eE]([+-]?\d+)$/', trim($s), $m)) {
+            return $s;
+        }
+
+        $mantissa = $m[1];
+        $exp = (int) $m[2];
+
+        // Remove sign for now
+        $sign = '';
+        if (str_starts_with($mantissa, '+') || str_starts_with($mantissa, '-')) {
+            $sign = $mantissa[0];
+            $mantissa = substr($mantissa, 1);
+        }
+
+        if (strpos($mantissa, '.') !== false) {
+            list($intPart, $fracPart) = explode('.', $mantissa, 2);
+            $mInt = $intPart . $fracPart;
+            $d = strlen($fracPart);
+        } else {
+            $mInt = $mantissa;
+            $d = 0;
+        }
+
+        // remove leading zeros
+        $mInt = ltrim($mInt, '0');
+        if ($mInt === '') {
+            return '0';
+        }
+
+        $power = $exp - $d;
+
+        if ($power >= 0) {
+            return $sign . $mInt . str_repeat('0', $power);
+        }
+
+        $decimalPlaces = -$power;
+        $len = strlen($mInt);
+
+        if ($decimalPlaces > $len) {
+            $zeros = str_repeat('0', $decimalPlaces - $len);
+            $res = $sign . '0.' . $zeros . $mInt;
+            // Trim unnecessary trailing zeros in fractional part for minimal representation
+            if (strpos($res, '.') !== false) {
+                $res = rtrim($res, '0');
+                if (substr($res, -1) === '.') {
+                    $res = substr($res, 0, -1);
+                }
+            }
+            return $res;
+        }
+
+        $intPart = substr($mInt, 0, $len - $decimalPlaces);
+        $fracPart = substr($mInt, $len - $decimalPlaces);
+
+        $res = $sign . $intPart . '.' . $fracPart;
+        // Trim unnecessary trailing zeros in fractional part for minimal representation
+        if (strpos($res, '.') !== false) {
+            $res = rtrim($res, '0');
+            if (substr($res, -1) === '.') {
+                $res = substr($res, 0, -1);
+            }
+        }
+
+        return $res;
     }
 
     public function getMerchantNameAttribute()

@@ -13,7 +13,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Bind EthereumService as a singleton so the in-process RPC cache is reused
+        $this->app->singleton(\App\Services\EthereumService::class, function ($app) {
+            return new \App\Services\EthereumService();
+        });
     }
 
     /**

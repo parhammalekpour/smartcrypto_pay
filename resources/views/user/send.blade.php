@@ -11,8 +11,26 @@
     <div class="lg:col-span-2 bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-800 mb-6 pb-4 border-b border-gray-200">{{ __('user.send_crypto_title') }}</h3>
 
-        <form method="POST" action="{{ route('user.send.post') }}" class="space-y-6">
+        <form method="POST" action="{{ route('user.send.post') }}" class="space-y-6" data-no-auto-refresh id="send-crypto-form">
             @csrf
+
+            {{-- Flash success --}}
+            @if(session('success'))
+                <div class="mb-4 p-4 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-semibold">
+                    {!! session('success') !!}
+                </div>
+            @endif
+
+            {{-- Global errors --}}
+            @if($errors->any())
+                <div class="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                    <ul class="list-disc pl-5">
+                        @foreach($errors->all() as $err)
+                            <li>{{ $err }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             <!-- Select Wallet to Send From -->
             <div>
@@ -82,8 +100,9 @@
 
             <!-- Submit -->
             <div class="flex gap-3">
-                <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition" @if(!$two || !$two->enabled_at) disabled @endif>
-                    <i class="fas fa-paper-plane ml-2"></i>{{ __('common.send') }}
+                <button type="submit" id="send-crypto-submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2" @if(!$two || !$two->enabled_at) disabled @endif>
+                    <span id="send-crypto-spinner" class="hidden"><i class="fas fa-spinner fa-spin"></i></span>
+                    <span id="send-crypto-button-text"><i class="fas fa-paper-plane ml-2"></i>{{ __('common.send') }}</span>
                 </button>
                 <a href="{{ route('user.dashboard') }}" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold hover:bg-gray-300 transition text-center">
                     {{ __('common.cancel') }}
@@ -121,5 +140,27 @@
         </ul>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    var form = document.getElementById('send-crypto-form');
+    var btn = document.getElementById('send-crypto-submit');
+    if(!form || !btn) return;
+    form.addEventListener('submit', function(e){
+        // Prevent double submit
+        if(btn.dataset.submitted === '1'){
+            e.preventDefault();
+            return;
+        }
+        btn.dataset.submitted = '1';
+        // Show spinner and change text
+        var spinner = document.getElementById('send-crypto-spinner');
+        var text = document.getElementById('send-crypto-button-text');
+        if(spinner) spinner.classList.remove('hidden');
+        if(text) text.textContent = 'Sending...';
+        btn.disabled = true;
+    }, {capture: true});
+});
+</script>
 
 @endsection

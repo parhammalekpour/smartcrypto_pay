@@ -145,21 +145,23 @@ class AdminController extends Controller
             return back()->with('info', 'این تراکنش از قبل لغو شده است.');
         }
 
-        if ($transaction->wallet) {
-            if ($transaction->type === 'deposit') {
-                $transaction->wallet->decrement('balance', $transaction->amount);
-            } elseif ($transaction->type === 'transfer') {
-                if ($transaction->sender_id) {
-                    $transaction->wallet->increment('balance', $transaction->amount);
-                } elseif ($transaction->recipient_id) {
-                    $transaction->wallet->decrement('balance', $transaction->amount);
-                }
-            }
-        }
+        $affectedWallet = $transaction->wallet;
 
+        // Mark transaction as cancelled. Do not mutate wallet->balance directly; instead let BalanceSyncService recompute
         $transaction->status = 'cancelled';
         $transaction->save();
         $this->logAction('transaction_cancelled', $transaction->id, 'transaction', $transaction->id, ['status' => 'cancelled']);
+
+        // Recompute wallet balances for the affected wallet to ensure canonical confirmed balance remains authoritative
+        if ($affectedWallet) {
+            try {
+                $balanceService = new \App\Services\BalanceSyncService();
+                $balanceService->syncWallet($affectedWallet);
+            } catch (\Throwable $e) {
+                // Log and continue — do not block cancellation on sync failures
+                \Illuminate\Support\Facades\Log::warning('Admin cancelTransaction: balance sync failed for wallet ' . ($affectedWallet->id ?? '?') . ': ' . $e->getMessage());
+            }
+        }
 
         return back()->with('success', 'تراکنش با موفقیت لغو شد.');
     }

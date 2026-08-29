@@ -148,7 +148,7 @@
                                 {{ substr($wallet->wallet_address, 0, 32) }}...
                             </div>
                             <div class="flex items-center justify-between">
-                                <span class="text-sm font-bold text-gray-800">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }}</span>
+                                <span class="text-sm font-bold text-gray-800">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->display_balance) }}</span>
                                 <a href="{{ route('user.wallets') }}" class="text-indigo-600 text-xs font-semibold hover:underline">{{ __('dashboard.details') }} →</a>
                             </div>
                         </div>

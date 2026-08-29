@@ -127,7 +127,6 @@
                             <th class="px-4 py-3">{{ __('merchant.transactions.wallet') ?? 'Wallet' }}</th>
                             <th class="px-4 py-3">{{ __('merchant.transactions.status_label') ?? 'Status' }}</th>
                             <th class="px-4 py-3">{{ __('merchant.transactions.date') ?? 'Date' }}</th>
-                            <th class="px-4 py-3">{{ __('merchant.transactions.actions') ?? 'Action' }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-700 border-b border-slate-700/80">
@@ -139,10 +138,10 @@
                                 $statusClass = in_array($transaction->status, ['processing','pending']) ? 'bg-amber-100 text-amber-700 border-amber-200' : (in_array($transaction->status, ['confirmed','completed']) ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : (in_array($transaction->status, ['failed']) ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-slate-200 text-slate-700 border-slate-300'));
                                 $walletLabel = $transaction->wallet?->wallet_address ?: $transaction->receiver_wallet_address ?: $transaction->sender_wallet_address;
                                 $walletShort = $walletLabel ? substr($walletLabel, 0, 8) . '...' . substr($walletLabel, -6) : 'Unknown';
-                                $txHash = $transaction->tx_hash;
+                                $txHash = $transaction->tx_hash ?? $transaction->reference;
                                 $hashLabel = $txHash ? (strlen($txHash) > 18 ? substr($txHash, 0, 10) . '...' . substr($txHash, -8) : $txHash) : __('merchant.transactions.waiting_for_broadcast');
                             @endphp
-                            <tr id="merchant-transaction-row-{{ $transaction->id }}" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}" class="hover:bg-slate-900/40 transition-colors duration-150">
+                            <tr id="merchant-transaction-row-{{ $transaction->id }}" data-transaction-id="{{ $transaction->id }}" data-transaction-status="{{ $transaction->status }}" data-tx-hash="{{ $transaction->tx_hash ?? $transaction->reference }}" data-updated-at="{{ $transaction->updated_at?->toDateTimeString() }}" class="hover:bg-slate-900/40 transition-colors duration-150">
                                 <td class="px-4 py-4 align-top">
                                     <div class="text-sm font-semibold text-white">#TRX-{{ str_pad($transaction->id, 4, '0', STR_PAD_LEFT) }}</div>
                                     <div class="mt-1 text-xs text-slate-400 flex items-center gap-2">
@@ -198,12 +197,6 @@
                                     </span>
                                 </td>
                                 <td class="px-4 py-4 align-top text-slate-400">{{ $transaction->created_at->format('d M Y') }}<div class="text-xs mt-1">{{ $transaction->created_at->format('H:i') }}</div></td>
-                                <td class="px-4 py-4 align-top">
-                                    <button onclick="event.stopPropagation(); viewTransactionDetail('{{ $transaction->id }}', 'transaction', event)" class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500">
-                                            <svg class="h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7S3.732 16.057 2.458 12z"/></svg>
-                                            <span>{{ __('transactions.view_button') }}</span>
-                                        </button>
-                                </td>
                             </tr>
                         @endforeach
 
@@ -240,9 +233,6 @@
                                         <span class="status-badge inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
                                     </td>
                                     <td class="px-4 py-4 align-top text-slate-400">{{ $payment->created_at->format('d M Y') }}<div class="text-xs mt-1">{{ $payment->created_at->format('H:i') }}</div></td>
-                                    <td class="px-4 py-4 align-top">
-                                        <button onclick="event.stopPropagation(); viewTransactionDetail('{{ $payment->id }}', 'payment', event)" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:translate-x-0.5">View <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/></svg></button>
-                                    </td>
                                 </tr>
                         @endforeach
                     </tbody>
@@ -555,14 +545,14 @@
         const existingStatus = (row.dataset.transactionStatus || '').toLowerCase();
         const incomingStatus = (data.status || '').toLowerCase();
 
-        // update hash cell independently
-        if (data.tx_hash) {
-            const wrapper = row.querySelector('td:nth-child(6)');
+        // update hash cell independently (use tx_hash or fallback to reference)
+        const displayHash = data.tx_hash || data.reference || '';
+        const wrapper = row.querySelector('td:nth-child(6)');
+        if (displayHash) {
             if (wrapper) {
-                wrapper.innerHTML = '<div class="flex items-center gap-2"><a href="'+explorerBaseLocal+data.tx_hash+'" target="_blank" rel="noopener noreferrer" class="tx-hash text-xs text-gray-700">'+shortHash(data.tx_hash)+'</a><button type="button" class="copy-hash-btn text-gray-500 hover:text-gray-700 p-1" data-hash="'+data.tx_hash+'" title="{{ __('merchant.transactions.copy') }}"><i class="far fa-copy text-xs"></i></button></div>';
+                wrapper.innerHTML = '<div class="flex items-center gap-2"><a href="'+explorerBaseLocal+displayHash+'" target="_blank" rel="noopener noreferrer" class="tx-hash text-xs text-gray-700">'+shortHash(displayHash)+'</a><button type="button" class="copy-hash-btn text-gray-500 hover:text-gray-700 p-1" data-hash="'+displayHash+'" title="{{ __('merchant.transactions.copy') }}"><i class="far fa-copy text-xs"></i></button></div>';
             }
         } else {
-            const wrapper = row.querySelector('td:nth-child(6)');
             if (wrapper && !isFinal(existingStatus)) wrapper.textContent = (data.status === 'processing' || data.status === 'pending') ? '{{ __('merchant.transactions.waiting_for_broadcast') }}' : '-';
         }
 
@@ -570,7 +560,7 @@
 
         row.dataset.transactionStatus = data.status || '';
         if (data.updated_at) row.dataset.updatedAt = data.updated_at;
-        if (data.tx_hash) row.dataset.txhash = data.tx_hash || '';
+        if (data.tx_hash || data.reference) row.dataset.txhash = data.tx_hash || data.reference || '';
 
         const statusCell = row.querySelector('.tx-status-cell') || row.querySelector('td:nth-child(5)');
         if (statusCell) {

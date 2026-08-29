@@ -68,10 +68,10 @@
 @if($wallets && $wallets->count() > 0)
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         @foreach($wallets as $wallet)
-            <div class="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border-t-4 
+            <div class="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border-t-4 data-wallet-card
                 @if($wallet->currency === 'BTC') border-t-orange-500
                 @elseif($wallet->currency === 'ETH') border-t-gray-500
-                @else border-t-teal-500 @endif">
+               @else border-t-teal-500 @endif" data-wallet-id="{{ $wallet->id }}">
                 
                 <!-- Header -->
                 <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
@@ -108,9 +108,9 @@
                 <!-- Balance -->
                 <div class="mb-4">
                     <p class="text-gray-500 text-xs mb-1">{{ __('wallets.balance') }}</p>
-                    <p class="text-3xl font-bold text-gray-800">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->balance) }}</p>
+                    <p class="text-3xl font-bold text-gray-800 wallet-balance-value" data-wallet-id="{{ $wallet->id }}">{{ \App\Support\NumberHelper::formatCryptoAmount($wallet->display_balance ?? $wallet->balance) }}</p>
                     <p class="text-xs text-gray-400 mt-2">
-                        {{ __('wallets.estimated_value') }}: <span class="font-semibold usd-price" data-currency="{{ $wallet->currency }}" data-balance="{{ $wallet->balance }}">≈ $0.00</span>
+                        {{ __('wallets.estimated_value') }}: <span class="font-semibold usd-price" data-currency="{{ $wallet->currency }}" data-balance="{{ $wallet->display_balance ?? $wallet->balance }}">≈ $0.00</span>
                     </p>
                 </div>
 

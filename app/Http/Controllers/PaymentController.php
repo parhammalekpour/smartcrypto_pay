@@ -52,6 +52,9 @@ class PaymentController extends Controller
  
         $customers = auth()->user()->customers()->orderBy('name')->get();
 
+        // Merchant wallets (used to let merchant choose destination wallet)
+        $merchantWallets = Wallet::where('user_id', auth()->id())->orderBy('currency')->get();
+
         // Compute next invoice number for convenience (prefill, editable)
         $nextInvoiceNumber = 'INV-001';
 
@@ -96,7 +99,7 @@ class PaymentController extends Controller
             $nextInvoiceNumber = $candidate;
         }
 
-        return view('merchant.payments', compact('payments', 'pendingCount', 'paidCount', 'customers', 'nextInvoiceNumber'));
+        return view('merchant.payments', compact('payments', 'pendingCount', 'paidCount', 'customers', 'merchantWallets', 'nextInvoiceNumber'));
     }
 
     public function store(Request $request)
@@ -118,8 +121,10 @@ class PaymentController extends Controller
             'amount' => 'required|numeric|min:0.00000001',
             'currency' => 'required',
             'recipient_username' => 'required|string|max:255',
+            'destination_wallet_id' => 'required|integer',
         ], [
-            'invoice_number.unique' => 'شماره فاکتور تکراری است. لطفاً شماره دیگری وارد کنید.'
+            'invoice_number.unique' => 'شماره فاکتور تکراری است. لطفاً شماره دیگری وارد کنید.',
+            'destination_wallet_id.required' => 'Please select a destination wallet.'
         ]);
  
         $recipient = User::where('name', $request->recipient_username)->first();
@@ -132,6 +137,19 @@ class PaymentController extends Controller
             ->where('user_id', $recipient->id)
             ->first();
 
+        // Validate destination wallet belongs to merchant and matches the chosen currency
+        $destinationWallet = Wallet::where('id', $request->destination_wallet_id)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if (!$destinationWallet) {
+            return back()->withErrors(['destination_wallet_id' => 'Selected wallet not found or does not belong to you.'])->withInput();
+        }
+
+        if ($destinationWallet->currency !== $request->currency) {
+            return back()->withErrors(['destination_wallet_id' => 'Selected wallet currency does not match the chosen currency.'])->withInput();
+        }
+
         PaymentRequest::create([
             'merchant_id' => auth()->id(),
             'recipient_user_id' => $recipient->id,
@@ -140,7 +158,8 @@ class PaymentController extends Controller
             'amount' => $request->amount,
             'currency' => $request->currency,
             'token' => Str::random(32),
-            'status' => 'pending'
+            'status' => 'pending',
+            'destination_wallet_id' => $destinationWallet->id,
         ]);
 
         return back()->with(
@@ -229,20 +248,35 @@ class PaymentController extends Controller
         // Note: other flows (e.g., sensitive account actions) may still require 2FA elsewhere in the application.
 
 
-        // کیف پول merchant (اگر نبود ساخته می‌شود)
-        $merchantWallet = Wallet::firstOrCreate(
-            [
-                'user_id' => $payment->merchant_id,
-                'currency' => $payment->currency,
-            ],
-            [
-                'wallet_address' => strtoupper($payment->currency)
-                    . '-MERCHANT-'
-                    . uniqid(),
+        // If a destination wallet was selected for this payment request, prefer using it.
+        $merchantWallet = null;
 
-                'balance' => 0
-            ]
-        );
+        if (!empty($payment->destination_wallet_id)) {
+            $candidate = Wallet::where('id', $payment->destination_wallet_id)
+                ->where('user_id', $payment->merchant_id)
+                ->first();
+
+            if ($candidate && $candidate->currency === $payment->currency) {
+                $merchantWallet = $candidate;
+            }
+        }
+
+        // Fallback: create/find an internal merchant wallet for this currency as before
+        if (!$merchantWallet) {
+            $merchantWallet = Wallet::firstOrCreate(
+                [
+                    'user_id' => $payment->merchant_id,
+                    'currency' => $payment->currency,
+                ],
+                [
+                    'wallet_address' => strtoupper($payment->currency)
+                        . '-MERCHANT-'
+                        . uniqid(),
+
+                    'balance' => 0
+                ]
+            );
+        }
 
         // جلوگیری از انتقال به خود
         if ($customerWallet->id === $merchantWallet->id) {
@@ -257,24 +291,13 @@ class PaymentController extends Controller
             $payment
         ) {
 
-            // کم کردن از کاربر
-            $customerWallet->decrement(
-                'balance',
-                $payment->amount
-            );
-
-            // اضافه کردن به merchant
-            $merchantWallet->increment(
-                'balance',
-                $payment->amount
-            );
-
-            // تغییر وضعیت پرداخت
+            // Record ledger transactions: do NOT mutate wallets.balance directly. Create transaction records representing the payment.
+            // Change payment status to paid
             $payment->update([
                 'status' => 'paid'
             ]);
 
-            // تراکنش کاربر
+            // Transaction for payer (customer)
             Transaction::create([
                 'wallet_id' => $customerWallet->id,
                 'sender_id' => auth()->id(),
@@ -287,7 +310,7 @@ class PaymentController extends Controller
                 'payment_request_id' => $payment->id
             ]);
 
-            // تراکنش merchant
+            // Transaction for merchant (credit)
             Transaction::create([
                 'wallet_id' => $merchantWallet->id,
                 'sender_id' => auth()->id(),
@@ -325,7 +348,17 @@ class PaymentController extends Controller
                 'success',
                 'fa-inbox'
             );
+
         });
+
+        // Recompute canonical balances for participating wallets so wallet->balance remains authored only by BalanceSyncService
+        try {
+            $balanceService = new \App\Services\BalanceSyncService();
+            $balanceService->syncWallet($customerWallet);
+            $balanceService->syncWallet($merchantWallet);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Post-payment balance sync failed: ' . $e->getMessage());
+        }
 
         return redirect()
             ->route('user.pending-payments')

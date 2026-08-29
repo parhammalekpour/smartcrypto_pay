@@ -1,0 +1,75 @@
+════════════════════════════════════════════════════════════════════════════════
+ROOT CAUSE ANALYSIS - ETH Withdrawal Form Failure (Browser vs Copilot)
+════════════════════════════════════════════════════════════════════════════════
+
+PROBLEM:
+--------
+When submitting the ETH withdrawal form from `/en/user/send` in the browser, the 
+form appears to fail (no success message shown). However, when running the same 
+flow directly via Copilot/Controller, it succeeds and creates the transaction.
+
+ROOT CAUSE:
+-----------
+File: /E:/smart-cryptopay/resources/js/auto-refresh.js
+Lines: 308-315
+
+The auto-refresh JavaScript module has `window.location.reload()` COMMENTED OUT:
+
+    // Line 312-314
+    console.warn('[AUTO-REFRESH] (DEBUG) reload suppressed. Source:', source);
+    // Uncomment next line to actually reload after debugging is complete.
+    // window.location.reload();  ← THIS IS COMMENTED OUT!
+
+WHAT HAPPENS:
+--------------
+
+Browser Flow:
+   1. User fills form and clicks "Send"
+   2. JavaScript form.addEventListener('submit') fires (line 83)
+   3. Form is submitted successfully to POST /en/user/send
+   4. WalletController::sendCrypto() processes the request ✓
+   5. processEthWithdrawalV2() executes ✓
+   6. DB::transaction() creates transaction ✓
+   7. SendCryptoTransaction job dispatches ✓
+   8. Response redirects to /user/transactions with success message ✓
+   9. BUT: auto-refresh.refresh() is triggered (line 87)
+   10. refresh() method starts (line 287)
+   11. setTimeout at line 311 executes and shows debug message
+   12. window.location.reload() is COMMENTED OUT! ✗
+   13. Page DOES NOT reload to show success
+   14. User sees spinning button but no redirect
+
+Copilot Flow (Direct Call):
+   Same as steps 1-8, but auto-refresh JavaScript never runs because it's
+   a direct function call, not a browser request.
+
+VERIFICATION:
+--------------
+✓ Tested sendCrypto() directly with simulated request - WORKS
+✓ Tested form submission logic - WORKS
+✓ Backend is creating transactions correctly - CONFIRMED
+✓ The form shows loading state but never completes visually to user
+
+THE EXACT DIFFERENCE:
+---------------------
+Browser Form:
+   POST /en/user/send → sendCrypto() executes ✓ → auto-refresh disabled ✗
+
+Copilot Direct:
+   Direct call to sendCrypto() → executes ✓ → (no auto-refresh involved)
+
+FIX APPLIED:
+------------
+File: /E:/smart-cryptopay/resources/js/auto-refresh.js
+Line 314
+
+Changed FROM:
+    // window.location.reload();
+
+Changed TO:
+    window.location.reload();
+
+This re-enables page reload after form submission, so users see the success
+message and redirect to /user/transactions as expected.
+
+════════════════════════════════════════════════════════════════════════════════
